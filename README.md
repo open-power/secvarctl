@@ -1,4 +1,4 @@
-# secvartools
+# secvarctl
 Suite of tools to manipulate and generate Secure Boot variables on POWER.
 
 The purpose of this tool is to simplify and automate the process of reading and writing secure boot keys.   
@@ -14,7 +14,7 @@ For more background knowledge on key heirarchy and the Secure Boot process : [IB
 
 For information on the Secure Variable sysfs : [Secvar Docs](https://elixir.bootlin.com/linux/latest/source/Documentation/ABI/testing/sysfs-secvar)
 
-For any questions regarding secvartools, feel free to reach out: [Nick Child](nick.child@ibm.com)
+For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick.child@ibm.com)
 
 
 
@@ -26,10 +26,11 @@ For any questions regarding secvartools, feel free to reach out: [Nick Child](ni
 	
 
 ## BUILDING:  
-  `$ git clone https://github.ibm.com/ltc-security/secvartools.git `   
-  `$ make `
+  `$ git clone https://github.com/nick-child-ibm/secvarctl.git `   
+  `$ make `  
   OR For Static Build:
-  `$ make STATIC=1`    
+  `$ make STATIC=1`  
+
   
 ## FILE/KEY GENERATION:   
    X509:  
