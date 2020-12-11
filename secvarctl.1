@@ -1,0 +1,430 @@
+.TH secvarctl 1 "1 OCTOBER 2020" "version 0.1"
+.SH NAME
+.B secvarctl
+- A command line tool for simplifying the reading and writing of secure boot variables.
+.PP
+Commands are:
+.RS
+.B read 
+- read from the secure variable directory and print out information on their current contents
+
+.PP
+.B write 
+- update the given variable's key value
+.PP
+.B validate
+- checks that the format and basic content requirements are met for the given file type
+.PP
+.B verify
+- checks that the given files are correctly signed by the current variables 
+.PP
+.B generate 
+- generates several different types of file formats relevant to updating secure variables
+.RE
+
+.SH SYNOPSIS
+.B secvarctl 
+[OPTIONS]
+.PP
+.B secvarctl read 
+[OPTIONS] <variable>
+
+.PP
+.B secvarctl write 
+[OPTIONS] <variable> <file>
+.PP
+.B secvarctl validate
+[OPTIONS] <file type> <file>
+.PP
+.B secvarctl verify
+[OPTIONS] -u {Update Variables}
+.PP
+.B secvarctl generate
+<inputFormat>:<outputFormat> [OPTIONS] -i <inputFile> -o <outputFile>
+
+.SH DESCRIPTION
+.B secvarctl
+is a suite of tools to manipulate secure boot keys on POWER.
+The purpose of this tool is to simplify and automate the process of reading, writing and generating secure boot keys. It allows the user to communicate, via terminal commands, with the keys efficiently. These commands are (
+.B read
+,
+.B write
+,
+.B validate
+,
+.B verify
+,
+.B generate
+)
+
+.RS
+.B secvarctl read
+will read from the secure variable directory and print out information on their current contents. By default, the program assumes the data is an EFI Signature List and prints the contents in human readable form.  
+ To print the raw data, use 
+.B -r
+ The default secure variable directiory is 
+.I "/sys/firmware/secvar/vars/" 
+defined in 
+.I secvarctl.h 
+ To specify a path to the variables, use 
+.B -p 
+<newPath>.Expected variable subdirectory names :{"PK", "KEK", "db", "dbx", "TS"} with contained data file "<varName>/data".
+ If no variable name is given, the program will try to print the data for any variable named one of the following 	{'PK','KEK','db','dbx', 'TS'}	
+NOTE 'TS' variable is not an ESL, it is 4 timestamps (64 bytes total) for each of the other variables
+Type one of the variable names to get info on that key, NOTE does not work when 
+.B -f 
+option is present
+ To read the data of any esl file use 
+.B -f 
+<eslFileName>
+.PP
+
+.B secvarctl write 
+will update the given variable's key value. 
+   The new key value is expected to be contained in a PKCS7/Signed Data Authenticated file signed with the current key.
+   By default, the write function will validate the contents of the auth file. If it is a success the file will be written to the variables "update" file.
+   The "update" file is expected to be in "<pathToVars>/<variable>/update".
+   The 
+.B -p 
+<pathToVars> option is the location of the subdirectories {"PK","KEK", "db", "dbx"} which contain an "update" file, the default path is 
+.I "/sys/firmware/secvar/vars/" 
+defined in 
+.I secvarctl.h
+   The 
+.B -v
+option prints process info 
+   The 
+.B -f 
+option skips the validation step and immediadetly writes content of "<file>" to "<variable/upate"
+   The <variable> requirement is expected to be one of the following {"PK","KEK", "db", "dbx"}
+.PP
+.B secvarctl validate
+will determine if the format and basic content requirements are met for the given file
+    The default type of "<file>" is an auth file containing a PKCS7/Signed Data and attatched esl.
+    ALL KEYS ARE EXPECTED TO BE SHA-256 and RSA 2048  
+  THIS FUNCTION DOES NOT DO ANY COMPARISON AGAINST CURRENT KEYS (use 
+.B verify
+for that)
+    For extra process and file content information use 
+.B -v
+for verbose
+    To validate a file that contains update data for the dbx variable use
+.B -x
+    To validate a PKCS7 (expected DER), use 
+.B -p 
+<file>
+    To validate an Efi Signature List (ESL), use 
+.B -e 
+<file>
+    To validate a certificate (x509 in DER or PEM format), use 
+.B -c 
+<file>
+.PP
+.B secvarctl verify 
+will determine if the update files are correctly signed by the current variables or not.
+ The 
+.B -v
+command will give extra information on process information.
+ All given update files are expected to be a signed PKCS7/Signed Data authenticated file containing an attatched new ESL. 
+ The updates should be signed according to the correct hierarchy rules:
+.RS
+ --PK can sign all other keys, (including itself),
+ --KEK can sign db and dbx, cannot sign PK
+ --db/dbx cannot sign KEK or PK
+ --TS holds no power of the variables, only functions to hold the timestamps of the last update for each of the other variables. Cannot be manually updated
+.RE
+ All updates have their format validated before any verification is done.
+ The 
+.B -p 
+<pathToVars> option is used to set the location of current variables with subdirectories {"PK","KEK", "db", "dbx", "TS"} which contain the {"update, "data", "size"} files, the default path is 
+.I "/sys/firmware/secvar/vars/" 
+defined in 
+.I secvarctl.h
+ The 
+.B -c 
+{Current Variables} option is used to specify the current variables manually. See OPTIONS for correct format of {Current variables}.
+ If the
+.B -w
+option is given then, if the verification passes, the updates will be commited to the "update" file of the given variable
+.PP
+.B secvarctl generate
+will use the given input file to generate the output file of the given file format type.
+ The 
+.B -v
+option will give more process information.
+ To specify the desired input and output format the user must use the argument
+.B <inputFormat>:<outputFormat>
+with no spaces between the colon and the format types. 
+The accepted values for <inputFormat> are:
+.RS
+[h]ash , A file containing only hashed data, use -h <hashAlg> to specifify the hash function used (default SHA256) 
+ [c]ert , An x509 certificate (PEM), RSA2048 and SHA256 ONLY
+ [e]sl , An EFI Signature List
+ [p]kcs7 , a PKCS7 file containing signed data
+ [a]uth , A signed authensticated file containing a PKCS7 and the new data 
+ [f]ile , Any file type, Warning: no format validation will be done
+.RE
+The accepted values for <outputFormat> are:
+.RS
+[h]ash , A file containing only hashed data, use -h <hashAlg> to specifify the hash function used (default SHA256) 
+ [e]sl , An EFI Signature List
+ [p]kcs7 , a PKCS7 file containing signed data, must specify public and private keys and digest algorithm (default SHA256) (EXPERIMENTAL!)
+ [a]uth , A signed authenticated file containing a PKCS7 and the new data, must specify public and private keys, digest algorithm (default SHA256) and secure variable name (EXPERIMENTAL!)
+.RE
+All input formats besides [f]ile will be prevalidated. To skip prevalidation of the input file, use
+.B -f 
+to force to generation.  If [h]ash is input or output type be sure to specify the hashing algorithm to use by using the argument 
+.B -h
+<hashAlg>. This argument does not effect the digest algortithm of the signed data in a [p]kcs7 or [a]uth file, these will always use SHA256. 
+ Accepted values for <hashAlg> are one of {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}
+ Additionally, when the output type is [p]kcs7 or [a]uth, the user must give at least one pair of public and private keys 
+.B -c 
+<cert>
+.B -k
+<privKey> to sign the input file with.
+ When generating an [a]uth file, it is required the user give the secure variable name that the auth file is for as 
+.B -n
+<keyName> , where <keyName> is one of {"PK","KEK", "db", "dbx"}. This argument is also useful when the input file is an ESL for the dbx (use 
+.B -n 
+dbx) because then the prevalidation will look for an ESL containing a hash rather than an x509.
+ Also, when the output type is a [p]kcs7 or [a]uth file, the user can use a custom timestamp with 
+.B -t 
+<time> , where <time> is in the format "y-m-d h:m:s". If this argument is not used then the current date and time are used.
+ When using the input type '[f]ile' it will be assumed to be a text file and if output file is '[e]sl', '[p]kcs7' or '[a]uth' it will be hashed according to <hashAlg> (default SHA256).
+  NOTE: GENERATION OF PKCS7 AND AUTH FILES ARE IN EXPERIMENTAL DEVELEPOMENT PHASE. THEY HAVE NOT BEEN THOROUGHLY TESTED YET.
+
+.RE
+
+.SH OPTIONS
+For
+.B secvarctl 
+[OPTIONS]:
+.RS
+.B --usage
+.PP
+.B --help
+.RE
+.PP
+For
+.B secvarctl read 
+[OPTIONS] <variable>:
+.RS
+.B --usage
+.PP 
+.B --help
+.PP
+.B -r 
+, raw output
+.PP
+.B -f 
+<input.esl> , read from file
+.PP
+.B -p 
+</path/to/vars/> , read from path (subdirectories {"PK", "KEK, "db", "dbx", "TS"} each with files {"data", "size"} expected)
+.PP
+<variable>  , one of {"PK", "KEK, "db", "dbx", "TS"}
+.RE
+
+.PP
+For
+.B secvarctl write 
+[OPTIONS] <variable> <file>:
+.RS
+REQUIRED:
+.RS
+<variable> , one of {"PK", "KEK, "db", "dbx"}
+.PP
+<file> , an auth file
+.RE
+OPTIONS:
+.RS
+.B --usage 
+.PP
+.B --help
+.PP
+.B -v 
+, verbose output
+.PP
+.B -f 
+, force update, no validation
+.PP
+.B -p 
+</path/to/vars/> , write to file in path (subdirectories {"PK", "KEK, "db", "dbx"} each with "update" file expected)
+.RE
+.RE
+.PP
+For
+.B secvarctl validate
+[OPTIONS] <file type> <file>:
+.RS
+REQUIRED:
+.RS
+<file> , the input file, assumed to be auth file if not specified
+.RE
+OPTIONS:
+.RS
+.B --usage
+.PP
+.B --help
+.PP
+.B -v 
+, verbose output
+.PP
+.B -x
+, dbx file (contains hash not x509)
+.PP
+.B -e 
+<file> , ESL
+.PP
+.B -p 
+<file> , PKCS7/Signed Data
+.PP
+.B -c 
+<file> , DER or PEM certificate
+.PP
+.B -a 
+<file>, DEFAULT,  a signed authenticated file containg a pkcs7 and appended ESL 
+.RE
+.RE
+.PP
+For
+.B secvarctl verify
+[OPTIONS] -u {Update Variables}:
+.RS
+REQUIRED:
+.RS
+.B -u 
+{Update Variables} , the updates to be run
+.RE
+OPTIONAL:
+.RS
+.B --usage
+.PP 
+.B --help
+.PP
+.B -v 
+, verbose output
+.PP
+.B -p 
+</path/to/vars/>, read from path (subdirectories {"PK", "KEK, "db", "dbx", "TS"} each with files {"data", "size"} expected)
+.PP
+.B -w 
+, write updates if verified
+.PP
+.b -c 
+{Current Variables} , list of current variables
+
+.RE	
+{Update Variables}:
+.RS
+ Format: <varname_1> <file_1> <varname_2> <file_2> ...
+ Where <varname> is one of {"PK", "KEK, "db", "dbx"} and <file> is an auth file
+ Note: Updates are verified in the order they are submitted
+.RE
+{Current Variables}:
+.RS
+Format: <varname_1> <file_1> <varname_2> <file_2> ...
+Where <varname> is one of {"PK", "KEK, "db", "dbx", "TS"} and <file> is an esl file (unless TS)
+.RE
+.RE
+.PP
+For 
+.B secvarctl generate
+<inputFormat>:<outputFormat> [OPTIONS] -i <inputFile> -o <outputFile> :
+.RS
+REQUIRED:
+.RS
+.B <inputFormat>:<outputFormat>
+, {'[c]ert', '[h]ash', '[e]sl', '[p]kcs7', '[a]uth', '[f]ile'}:{ '[h]ash', '[e]sl', '[p]kcs7', '[a]uth'} SEE DESCRIPTION FOR HELP
+.PP
+.B -i
+<inputFile> , input file that has the format specified by <inputFormat>
+.PP
+.B -o
+<outputFile> , output file that will have the format specified by <outputFormat>
+.RE
+OPTIONAL:
+.RS
+.B --usage
+.PP
+.B --help
+.PP
+.B -v
+, verbose output
+.PP
+.B -f
+, force generation, skips validation of input file and assumes it to be formatted according to <inputFormat>
+.PP
+.B -n 
+<keyName> , name of secure boot variable, used when generating an auth file, PKCS7, or when the input file contains hashed data rather than x509 (use '-n dbx'), current <keyName> are: {'PK','KEK','db','dbx'}
+.PP
+.B -t 
+<time> , where time is of the format 'y-m-d h:m:s'. creates a custom timestamp used when generating an auth or PKCS7 file, if not given then current time is used
+.PP
+.B -h 
+<hashAlg> hash function, used when output or input format is hash, current values for <hashAlg> are : {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}
+.PP
+.B -k 
+<privKey> , private key, used when generating pkcs7 or auth file
+.PP
+.B -c 
+<certFile> , x509 certificate (PEM), used when generating pkcs7 or auth file
+.RE
+.RE
+.SH EXAMPLES
+
+To read all current variables in default path:
+    	$secvarctl read
+.PP
+To read the raw data of the PK in a specific location:
+   		$secvarctl read -p /home/user1/myVars/ -r PK
+.PP
+To validate and write an auth file to the default KEK location:
+   		$secvarctl write KEK updateFile.auth
+.PP
+To write to /home/user1/myVars/KEK/update with no formatting checks:
+   		$secvarctl write -p /home/user1/ -f KEK updateFile.auth
+.PP
+To validate the format of an auth file:
+   		$secvarctl validate authFile.auth
+.PP
+To validate the format of a ESL with extra process info:
+   		$secvarctl validate -e eslFile.esl -v
+.PP
+To verify the desired updates against the default path and, if successful, commit the updates:
+   		$secvarctl verify -w -u db dbUpdate.auth KEK kekUpdate.auth 
+.PP
+To verify the desired updates against a specific set of signers with extra process info:
+   		$secvarctl verify -v -c PK myPK.esl KEK myKEK.esl dbx myDBX.esl -u DB dbUpdate.auth PK pkUpdate.auth
+.PP
+To get the attatched ESL from an auth file:
+   		$secvarctl generate a:e -i file.auth -o file.esl
+.PP
+To create an ESL from an x509 certificate:
+      $secvarctl generate c:e -i file.pem -o file.esl
+.PP
+To create SHA512 from a file:
+      $secvarctl generate f:h -h SHA512 -i file.txt -o file.hash
+.PP
+To create ESL from a hash:
+      $secvarctl generate h:e -h 512 -i file.has -o file.esl
+.PP
+To create an auth file from the esl containg a hash for a dbx update: 
+      $secvarctl generate e:a -k signer.key -c signer.crt -n dbx -i file.esl -o file.auth
+.PP
+To create an Auth file from a certificate for a KEK update (this will create an ESL from the certificate and use the ESL for the Auth File):
+      $secvarctl generate c:a -k signer.key -c signer.crt -n KEK -i file.crt -o file.auth 
+.PP
+To create a PKCS7 file from an ESL for a db update with a custom timestamp:
+      $secvarctl generate e:p -k signer.key -c signer.crt -n db -t 2020-10-1 13:45:42 -i file.crt -o file.pkcs7 
+.PP
+To create a empty update to reset the db variable:
+      $touch empty.esl
+      $secvarctl generate e:a -k signer.key -c signer.crt -n db -f -i empty.esl -o db.auth 
+
+.SH AUTHOR
+Nick Child nick.child@ibm.com,
+.PP
+Eric Richter,
+.PP
+Nayna Jain
