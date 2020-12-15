@@ -33,24 +33,24 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 
   
 ## FILE/KEY GENERATION:   
-   X509:  
-      `$openssl req –new –x509 –newKey rsa:2048 –keyout <outPrivate.key> -out <outPublic.crt> -nodes –sha256`    
-   Efi Signature list (ESL):  
-      From an x509 : `$secvarctl generate c:e -i <inputCert> -o <out.esl>`  
-      From a hash: `$secvarctl generate h:e -h <hashAlgUsed> -i <inputHash> -o <out.esl>`  
-      From a generic file (hash done internally) : `$secvarctl generate f:e -h <hashAlgToUse> -i <inputFile> -o <out.esl>`   
-   Signed Auth File (EXPERIMENTAL):    
-    	 From an ESL:`$secvarctl generate e:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -i <inputESL> -o <out.auth> `   
-      From an x509 (ESL created internally):`$secvarctl generate c:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -i <inputCert> -o <out.auth> `   
-      From a hash (ESL created internally): `$secvarctl generate h:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -h <hashAlgUsed> -i <inputHash> -o <out.auth> `   
-      From a file (hash->ESL created internally): `$secvarctl generate f:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -h <hashAlgUsed> -i <inputFile> -o <out.auth> `  
+   + X509:  
+     - `$openssl req –new –x509 –newKey rsa:2048 –keyout <outPrivate.key> -out <outPublic.crt> -nodes –sha256`    
+   + Efi Signature list (ESL):  
+     - From an x509 : `$secvarctl generate c:e -i <inputCert> -o <out.esl>`  
+     - From a hash: `$secvarctl generate h:e -h <hashAlgUsed> -i <inputHash> -o <out.esl>`  
+     - From a generic file (hash done internally) : `$secvarctl generate f:e -h <hashAlgToUse> -i <inputFile> -o <out.esl>`   
+   + Signed Auth File (EXPERIMENTAL):    
+     - From an ESL: `$secvarctl generate e:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -i <inputESL> -o <out.auth> `   
+     - From an x509 (ESL created internally): `$secvarctl generate c:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -i <inputCert> -o <out.auth> `   
+     - From a hash (ESL created internally): `$secvarctl generate h:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -h <hashAlgUsed> -i <inputHash> -o <out.auth> `   
+     - From a file (hash->ESL created internally): `$secvarctl generate f:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -h <hashAlgUsed> -i <inputFile> -o <out.auth> `  
 
 ## USAGE:    
   Secvarctl has 5 main commands   
     `./secvarctl read [options] [variable]`    
     `./secvarctl write [options] <variable> <file>`    
     `./secvarctl validate [options] [fileType] <file>`  
-     `./secvarctl verify [options] -u {update Variables}`
+     `./secvarctl verify [options] -u {update Variables}`  
      `./secvarctl generate <inputFormat>:<outputFormat> [OPTIONS] -i <inputFile> -o <outputFile` 
 ## SUB COMMAND USAGE:
     
@@ -67,7 +67,7 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
        The read command will read from the secure variable directory and print out information on their current contents.
        By default, the program assumes the data is an EFI Signature List and prints the contents in human readable form.  
        To print the raw data, use "-r".
-       The default secure variable directiory is "/sys/firmware/secvar/vars/" defined in secvarctl.h 
+       The default secure variable directiory is "/sys/firmware/secvar/vars/"
        To specify a path to the variables, use "-p <newPath>".Expected variable subdirectory names :{"PK", "KEK", "db", "dbx", "TS"} with contained data file "<varName>/data"
        If no variable name is given, the program will try to print the data for any variable named one of the following 	{'PK','KEK','db','dbx','TS'}	
        Type one of the variable names to get info on that key, NOTE does not work when -f option is present NOTE 'TS' variable is not an ESL, it is 4 timestamps (64 bytes total) for each of the other variables
@@ -86,12 +86,13 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		-p </path/to/vars/> , write to file in path (subdirectories {"PK", "KEK, "db", "dbx"} each with "update" file expected)
 		
        The write command will update the given variable's key value. 
-       The new key value is expected to be contained in a PKCS7/Signed Data Authenticated file signed with the a variable with authority over update variable.
-       By default, the write function will validate the contents of the auth file. If it is a success the file will be written to the variables "update" file.
+       The new key value is expected to be contained in a Signed Authenticated file signed with a variable with authority over the update variable.
+       By default, the write function will validate the format of the auth file. If it is a success the file will be written to the variables "update" file. 
+       NOTE: This command does not guarantee that the update will be successful upon reboot (since no signature checks were performed), use the verify command to validate both format and content. 
        The "update" file is expected to be in "<pathToVars>/<variable>/update".
        The "-p <pathToVars>" option is the location of the subdirectories {"PK","KEK", "db", "dbx"} which contain an "update" file, the default path is "/sys/firmware/secvar/vars/" 
        The "-v" option prints process info 
-       The "-f" option skips the validation step and immediadetly writes content of "<file>" to "<variable/upate"
+       The "-f" option skips the validation step and immediadetly writes content of "<file>" to "<variable>/update"
        The <variable> requirement is expected to be one of the following {"PK","KEK", "db", "dbx"}
        
     VALIDATE:
@@ -101,12 +102,12 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		-e <file> , ESL
 		-p <file> , PKCS7/Signed Data
 		-c <file> , DER or PEM certificate
-		-a <file> , DEFAULT,  a signed authenticated file containg a pkcs7 and appended ESL 
+		-a <file> , DEFAULT,  a signed authenticated file containg a PKCS7 and appended ESL 
 	OPTIONS:
 		--usage
 		--help
 		-v , verbose output
-		-x filetype is for a dbx update, allows data to contain a hash not an x509
+		-x , filetype is for a dbx update, allows data to contain a hash not an x509
 	
          The validate command will print "SUCCESS" or "FAILURE" depending if the format and basic content requirements are met for the given file
         The default type of "<file>" is an auth file containing a PKCS7/Signed Data and attatched esl.
@@ -181,6 +182,15 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		[p]kcs7 , a PKCS7 file containing signed data, must specify secure variable name, public and private keys(EXPERIMENTAL!)
 		[a]uth , A signed authenticated file containing a PKCS7 and the new data, must specify public and private keys secure variable name (EXPERIMENTAL!)
 
-		The generate command is used to generate all the types of files that will be used in the secure variable management process. The file formats that can be generated from a certificate is a hash, ESL, PKCS7 and auth file with commands 'c:h', "c:e", "c:p" and "c:a" respectively. All input files are prevalidated to be correctly formatted according to the specified input format, to skip prevalidation use "-f". A hash function can be specified with -h <hashAlg>, this is useful when generating a hash or when the input file contains a hash. The "-h <hashAlg>" will not effect the digest algorithm used when generating signed data for a PKCS7 (always SHA256). When generating a signed file (PKCS7 or auth), a public and private key will be needed for signing. A PKCS7 and Auth file can be signed with several signers by adding more ' -k <privKey> -c <cert>' pairs. Additionaly, when generating an Auth file the secure variable name must be given as -n <keyName> because it is included in the  message digest. When using the input type '[f]ile' it will be assumed to be a text file and if output file is '[e]sl', '[p]kcs7' or '[a]uth' it will be hashed according to <hashAlg> (default SHA256). GENERATION OF PKCS7 AND AUTH FILES ARE IN EXPERIMENTAL DEVELEPOMENT PHASE. THEY HAVE NOT BEEN THOROUGHLY TESTED YET.
+		The generate command is used to generate all the types of files that will be used in the secure variable management process.
+		The file formats that can be generated from a certificate is a hash, ESL, PKCS7 and auth file with commands 'c:h', "c:e", "c:p" and "c:a" respectively. 
+		All input files are prevalidated to be correctly formatted according to the specified input format, to skip prevalidation use "-f".
+		A hash function can be specified with -h <hashAlg>, this is useful when generating a hash or when the input file contains a hash. 
+		The "-h <hashAlg>" will not effect the digest algorithm used when generating signed data for a PKCS7 (always SHA256). 
+		When generating a signed file (PKCS7 or auth), a public and private key will be needed for signing. 
+		A PKCS7 and Auth file can be signed with several signers by adding more ' -k <privKey> -c <cert>' pairs. 
+		Additionaly, when generating an Auth file the secure variable name must be given as -n <keyName> because it is included in the  message digest. 
+		When using the input type '[f]ile' it will be assumed to be a text file and if output file is '[e]sl', '[p]kcs7' or '[a]uth' it will be hashed according to <hashAlg> (default SHA256). 
+		GENERATION OF PKCS7 AND AUTH FILES ARE IN EXPERIMENTAL DEVELEPOMENT PHASE. THEY HAVE NOT BEEN THOROUGHLY TESTED YET.
 
       
