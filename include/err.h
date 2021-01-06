@@ -12,6 +12,7 @@ enum errors{
 	FILE_WRITE_FAIL = -8,
 	INVALID_TIMESTAMP = -9,
 	HASH_FAIL = -10,
-	ALLOC_FAIL = -11
+	ALLOC_FAIL = -11,
+	UNKNOWN_COMMAND = -12
 };
 #endif

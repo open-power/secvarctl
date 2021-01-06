@@ -2,6 +2,8 @@ import unittest
 import subprocess
 import os
 import filecmp
+import sys
+MEM_ERR = 101
 SECTOOLS="../secvarctl-cov"
 SECVARPATH="/sys/firmware/secvar/vars/"
 goodAuths=[]
@@ -117,19 +119,35 @@ badEnvCommands=[ #[arr command to skew env, output of first command, arr command
 [["echo", "16"], "./testenv/TS/size", ["verify", "-v" , "-p", "./testenv/", "-u", "PK", "./testdata/PK_by_PK.auth"], False],
 ]
 
-def command(args,out=None):#stores last log of function into log file
-		if out:
-			with open(out, "w") as f:
-				f.write("\n\n**********COMMAND RAN: $"+ ' '.join(args) +"\n")
-				result=subprocess.call(args,stdout=f , stderr=f)
-				f.close();
-				return result
+def command(args, out=None):#stores last log of function into log file
+	if out:
+		#if memory tests being done, use valgrind as well	
+		with open(out, "w") as f:
+			f.write("\n\n**********COMMAND RAN: $"+ ' '.join(args) +"\n")
+			result = subprocess.call(args, stdout=f , stderr=f)
+			f.close()
+			return result
+	return subprocess.call(args,stdout=out , stderr=out)
+
+def getCmdResult(args, out, self):
+	if MEMCHECK:
+		mem_cmd = ["valgrind", "-q", "--error-exitcode="+str(MEM_ERR), "--leak-check=full"] + args
+		with open(out, "w") as f:
+			f.write("\n\n**********COMMAND RAN: $"+ ' '.join(mem_cmd) +"\n")
+			result = subprocess.call(mem_cmd, stdout=f , stderr=f)
+			f.close()
+			self.assertNotEqual(result, MEM_ERR)
+	#we run twice because valgrind interprets a -1 return code as a 0, which stinks
+	rc = command(args, out)
+	if rc == 0:
+		return True
+	else:
+		return False
 
 
-		return subprocess.call(args,stdout=out , stderr=out)
 def setupTestEnv():
 	out="log.txt"
-	command(["cp", "-a", "./testdata/goldenKeys/.", "testenv/"],out)
+	command(["cp", "-a", "./testdata/goldenKeys/.", "testenv/"], out)
 def setupArrays():
 	for file in os.listdir("./testdata"):
 		if file.endswith(".auth"):
@@ -172,22 +190,22 @@ def setupArrays():
 			brokenPkcs7s.append("./testdata/brokenFiles/"+file)
 def compareFiles(a,b):
 		if filecmp.cmp(a,b):
-			return 0
-		return 1
+			return True
+		return False
 
 class Test(unittest.TestCase):
 	def test_secvarctl_basic(self):
 		out="secvarctlBasiclog.txt"
 		cmd=[SECTOOLS]
 		for i in secvarctlCommands:
-			self.assertEqual(not not not command(cmd+i[0],out),i[1])
+			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 	def test_ppcSecVarsRead(self):
 		out="ppcSecVarsReadlog.txt"
 		cmd=[SECTOOLS]
 		#if power sysfs exists read current keys
 		if os.path.isdir(SECVARPATH):
 			for i in ppcSecVarsRead:
-				self.assertEqual(not not not command(cmd+i[0],out),i[1])
+				self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 		else:
 			with open(out, "w") as f:
 				f.write("POWER SECVAR LOCATION ( "+ SECVARPATH  + " ) DOES NOT EXIST SO NO TESTS RAN\n")
@@ -198,71 +216,71 @@ class Test(unittest.TestCase):
 		cmd=[SECTOOLS, "verify"]
 		for fileInfo in goodAuths:
 			file="./testdata/"+fileInfo[0]
-			self.assertEqual(not not not command(cmd+[ "-w", "-p", "testenv/","-u",fileInfo[1],file],out), True)#verify all auths are signed by keys in testenv
-			self.assertEqual(not not not compareFiles("testenv/"+fileInfo[1]+"/update", file), True)#assert files wrote correctly
+			self.assertEqual( getCmdResult(cmd+[ "-w", "-p", "testenv/","-u",fileInfo[1],file],out, self), True)#verify all auths are signed by keys in testenv
+			self.assertEqual(compareFiles("testenv/"+fileInfo[1]+"/update", file), True)#assert files wrote correctly
 		for fileInfo in badAuths:
 			file="./testdata/"+fileInfo[0]
-			self.assertEqual(not not not command(cmd+[ "-p", "testenv/","-u",fileInfo[1],file],out), False)#verify all bad auths are not signed correctly
+			self.assertEqual( getCmdResult(cmd+[ "-p", "testenv/","-u",fileInfo[1],file],out, self), False)#verify all bad auths are not signed correctly
 		for i in verifyCommands:
-			self.assertEqual(not not not command(cmd+i[0],out),i[1])
+			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 	def test_validate(self):
 		out="validatelog.txt"
 		cmd=[SECTOOLS, "validate"]
 		for i in validateCommands:
-			self.assertEqual(not not not command(cmd+i[0],out),i[1])
+			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 		for i in goodAuths:		#validate all auths
 			file="./testdata/"+i[0]
 			if i[1] != "dbx":
 				
-				self.assertEqual(not not not command(cmd+[file],out), True)
+				self.assertEqual( getCmdResult(cmd+[file],out, self), True)
 			else:
-				self.assertEqual(not not not command(cmd+[file, "-x"],out), True)
+				self.assertEqual( getCmdResult(cmd+[file, "-x"],out, self), True)
 		for i in goodESLs:
 			file="./testdata/"+i[0]
 			if i[1] != "dbx":
 				file="./testdata/"+i[0]
-				self.assertEqual(not not not command(cmd+["-e",file],out), True)
+				self.assertEqual( getCmdResult(cmd+["-e",file],out, self), True)
 			else:
-				self.assertEqual(not not not command(cmd+["-e", file, "-x"],out), True)
+				self.assertEqual( getCmdResult(cmd+["-e", file, "-x"],out, self), True)
 		for i in goodCRTs:
 			file="./testdata/"+i[0]
-			self.assertEqual(not not not command(cmd+["-v","-c",file],out), True)
+			self.assertEqual( getCmdResult(cmd+["-v","-c",file],out, self), True)
 		for i in brokenAuths:
-			self.assertEqual(not not not command(cmd+["-v", i],out), False)
+			self.assertEqual( getCmdResult(cmd+["-v", i],out, self), False)
 		for i in brokenESLs:
-			self.assertEqual(not not not command(cmd+["-v", "-e", i],out), False)
+			self.assertEqual( getCmdResult(cmd+["-v", "-e", i],out, self), False)
 		for i in brokenCrts:
-			self.assertEqual(not not not command(cmd+["-v", "-c", i],out), False)
+			self.assertEqual( getCmdResult(cmd+["-v", "-c", i],out, self), False)
 		for i in brokenPkcs7s:
-			self.assertEqual(not not not command(cmd+["-v", "-p", i],out), False)
+			self.assertEqual( getCmdResult(cmd+["-v", "-p", i],out, self), False)
 	def test_read(self):
 		out="readlog.txt"
 		cmd=[SECTOOLS, "read"]
-		#self.assertEqual(not not not command(cmd,out), True) #no args
+		#self.assertEqual(not not not command(cmd,out, self), True) #no args
 		for i in readCommands:
-			self.assertEqual(not not not command(cmd+i[0],out),i[1])
+			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 		for i in brokenESLs:
 			#read should read sha and rsa esl's w no problem
 			if i.startswith("./testdata/brokenFiles/sha") or i.startswith("./testdata/brokenFiles/rsa"):
-							self.assertEqual(not not not command(cmd+["-f", i],out), True) 
+							self.assertEqual( getCmdResult(cmd+["-f", i],out, self), True) 
 			else:
-				self.assertEqual(not not not command(cmd+["-f", i],out), False) #all truncated esls should fail to print human readable info
+				self.assertEqual( getCmdResult(cmd+["-f", i],out, self), False) #all truncated esls should fail to print human readable info
 	def test_write(self):
 		out="writelog.txt"
 		cmd=[SECTOOLS,"write"]
 		path="./testenv/"
 		for i in writeCommands:
-			self.assertEqual(not not not command(cmd+i[0],out),i[1])
+			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 		for i in goodAuths:	#try write with good auths, validation included
 			file="./testdata/"+i[0]
 			preUpdate=file#get auth
 			postUpdate=path+i[1]+"/update" #./testenv/<varname>/update
-			self.assertEqual(not not not command(cmd+[ "-p", path,i[1],file],out), True)#assert command runs
-			self.assertEqual(not not not compareFiles(preUpdate,postUpdate), True)# assert auths esl is equal to data written to update file
+			self.assertEqual( getCmdResult(cmd+[ "-p", path,i[1],file],out, self), True)#assert command runs
+			self.assertEqual(compareFiles(preUpdate,postUpdate), True)# assert auths esl is equal to data written to update file
 		for i in brokenAuths:
-			self.assertEqual(not not not command(cmd+["-p", path, "KEK",i],out), False)#broken auths should fail
-			self.assertEqual(not not not command(cmd+["-p", path ,"-f", "KEK",i],out), True)#if forced, they should work
-			self.assertEqual(not not not compareFiles(i,path+"KEK/update"), True)
+			self.assertEqual( getCmdResult(cmd+["-p", path, "KEK",i],out, self), False)#broken auths should fail
+			self.assertEqual( getCmdResult(cmd+["-p", path ,"-f", "KEK",i],out, self), True)#if forced, they should work
+			self.assertEqual(compareFiles(i,path+"KEK/update"), True)
 	def test_authtoesl(self):
 		out="authtoesllog.txt"
 		cmd=[SECTOOLS,"generate", "a:e"]
@@ -274,35 +292,32 @@ class Test(unittest.TestCase):
 				preUpdate=file[:-4]+"esl"#get esl in auth
 			postUpdate="testGenerated.esl" #./testenv/<varname>/update
 			if file.startswith("./testdata/dbx"):
-				self.assertEqual(not not not command(cmd+[ "-n",  "dbx", "-i", file, "-o", postUpdate],out), True)#assert command runs
+				self.assertEqual( getCmdResult(cmd+[ "-n",  "dbx", "-i", file, "-o", postUpdate],out, self), True)#assert command runs
 			else:
-				self.assertEqual(not not not command(cmd+[ "-i", file, "-o", postUpdate],out), True)#assert command runs
-			self.assertEqual(not not not compareFiles(preUpdate,postUpdate), True)
+				self.assertEqual( getCmdResult(cmd+[ "-i", file, "-o", postUpdate],out, self), True)#assert command runs
+			self.assertEqual(compareFiles(preUpdate,postUpdate), True)
 		command(["rm",postUpdate])
 		for i in toeslCommands:
-			self.assertEqual(not not not command(cmd+i[0],out),i[1])
+			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 		for i in brokenAuths:
 			postUpdate="testGenerated.esl" #./testenv/<varname>/update
-			self.assertEqual(not not not command(cmd+["-i", i, "-o", postUpdate],out), False) #all broken auths should fail to have correct esl
-			self.assertEqual(not not not command(["rm",postUpdate],out), False) #removal of output file should fail since it was never made
+			self.assertEqual( getCmdResult(cmd+["-i", i, "-o", postUpdate],out, self), False) #all broken auths should fail to have correct esl
+			self.assertEqual( getCmdResult(["rm",postUpdate],out, self), False) #removal of output file should fail since it was never made
 	def test_badenv(self):
 		out="badEnvLog.txt"
 		for i in badEnvCommands:
 			setupTestEnv()
 			command(i[0],i[1])
-			self.assertEqual(not not not command([SECTOOLS]+i[2],out),i[3])
+			self.assertEqual( getCmdResult([SECTOOLS]+i[2],out, self),i[3])
 			setupTestEnv()
 
-
-
-
-
-
-	
-
-
 if __name__ == '__main__':
-	setupArrays();
-	setupTestEnv();
+	if "MEMCHECK" in sys.argv:
+	 	MEMCHECK = True
+	else: 
+	 	MEMCHECK = False
+	del sys.argv[1:]
+	setupArrays()
+	setupTestEnv()
 	unittest.main()
     

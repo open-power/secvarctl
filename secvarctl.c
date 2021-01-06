@@ -88,16 +88,17 @@ int main(int argc, char *argv[])
 	subcommand = *argv; 
 	argv++;
 	argc--;
+
+	rc = UNKNOWN_COMMAND;
 	for (i = 0; i < backend->countCmds; i++) {
 		if (!strncmp(subcommand, backend->commands[i].name, 32)) {
 			rc = backend->commands[i].func(argc, argv);
 			break;
 		}
-		else if (i == backend->countCmds - 1) {
-			prlog(PR_ERR, "ERROR: unknown command %s\n", subcommand);
-			usage();
-			return ARG_PARSE_FAIL;
-		}
+	}
+	if (rc == UNKNOWN_COMMAND) {
+		prlog(PR_ERR, "ERROR:Unknown command %s\n", subcommand);
+		usage();
 	}
 	
 	return rc;

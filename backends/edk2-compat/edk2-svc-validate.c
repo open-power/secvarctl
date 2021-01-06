@@ -478,6 +478,10 @@ int validateCert(const char *certBuf, size_t buflen, const char *varName)
 	mbedtls_x509_crt *x509;
 	int rc;
 
+	if (buflen == 0) {
+		prlog(PR_ERR, "ERROR: Length %zd is invalid\n", buflen);
+		return CERT_FAIL;
+	}
 	x509 = malloc(sizeof(*x509));
 	if (!x509){
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
@@ -578,16 +582,16 @@ int parseX509(mbedtls_x509_crt *x509, const char *certBuf, size_t buflen)
 	// puts cert data into x509_Crt struct and returns number of failed parses
 	failures = mbedtls_x509_crt_parse(x509, certBuf, buflen); 
 	if (failures) {
-		prlog(PR_INFO, "Failed to parse cert as DER mbedtls err#%d, trying PEM..\n", failures);
+		prlog(PR_INFO, "Failed to parse cert as DER mbedtls err#%d, trying PEM...\n", failures);
 		// if failed, maybe input is PEM and so try converting PEM to DER, if conversion fails then we know it was DER and it failed
 		if (convert_pem_to_der(certBuf, buflen, (unsigned char **) &generatedDER, &generatedDERSize)) {
-			prlog(PR_ERR, "\tParsing x509 from DER format failed mbedtls err#%d \n", failures);
+			prlog(PR_ERR, "Parsing x509 as PEM format failed mbedtls err#%d \n", failures);
 			return CERT_FAIL;
 		}
 		// if success then try to parse into x509 struct again
 		failures = mbedtls_x509_crt_parse(x509, generatedDER, generatedDERSize); 
 		if (failures) {
-			prlog(PR_ERR, "\tParsing x509 from PEM failed with MBEDTLS exit code: %d \n", failures);
+			prlog(PR_ERR, "Parsing x509 from PEM failed with MBEDTLS exit code: %d \n", failures);
 			return CERT_FAIL;
 		}
 	}

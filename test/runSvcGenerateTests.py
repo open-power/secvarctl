@@ -1,4 +1,3 @@
-#NEEDS ASSERTS AND TEST CASES TO BE ADDED!!!
 #These tests will use sectool's validate command to determine wether the file was correctly generated.
 #We can use the validate command because it was previously tested in runTests.py
 import subprocess #for commmands
@@ -8,6 +7,7 @@ import time
 import unittest
 import filecmp
 
+MEM_ERR = 101
 SECTOOLS="../secvarctl-cov"
 GEN = [SECTOOLS, "generate", "-v"]
 OUTDIR = "./generatedTestData/"
@@ -81,6 +81,22 @@ def command(args,out=None):#stores last log of function into log file
 
 
 		return subprocess.call(args,stdout=out , stderr=out)
+
+def getCmdResult(args, out, self):
+	if MEMCHECK:
+		mem_cmd = ["valgrind", "-q", "--error-exitcode="+str(MEM_ERR), "--leak-check=full"] + args
+		with open(out, "w") as f:
+			f.write("\n\n**********COMMAND RAN: $"+ ' '.join(mem_cmd) +"\n")
+			result = subprocess.call(mem_cmd, stdout=f , stderr=f)
+			f.close()
+			self.assertNotEqual(result, MEM_ERR)
+	#we run twice because valgrind interprets a -1 return code as a 0, which stinks
+	rc = command(args, out)
+	if rc == 0:
+		return True
+	else:
+		return False
+
 def setupTestEnv():
 	out="log.txt"
 	command(["cp", "-a", "./testdata/goldenKeys/.", "testenv/"],out)
@@ -93,8 +109,8 @@ def createEnvironment():
 
 def compareFiles(a,b):
 		if filecmp.cmp(a,b):
-			return 0
-		return 1
+			return True
+		return False
 # def generateESL(path="./generatedTestData/",inp="default.crt",out="default.esl"):
 # 	return command(GEN+["c:e", "-i", path+inp, "-o", path+out])
 # def createSizeFile(path):
@@ -111,7 +127,7 @@ class Test(unittest.TestCase):
 		out="secvarctlGenBasiclog.txt"
 		cmd=GEN
 		for i in secvarctlGenCommands:
-			self.assertEqual( not not not command(cmd+i[0],out),i[1])
+			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 	def test_dbxEsl(self):
 		out = "genDbxEslLog.txt"
 		cmd = GEN
@@ -128,14 +144,14 @@ class Test(unittest.TestCase):
 			eslMade = OUTDIR + efiGen + ".esl"
 			eslDesired =  "./testdata/" + efiGen + ".esl"
 			#first do it with file to has to ESL
-			self.assertEqual( not not not command(cmd + ["f:h", "-i", "./testdata/" + efiGen + ".crt", "-o" ,hashMade], out), True) #assert the hashfile can be made
-			self.assertEqual( not not not command(cmd + ["h:e", "-i", hashMade, "-o" , eslMade], out), True) #assert the ESL is valid
-			self.assertEqual( not not not command([SECTOOLS ,"validate", "-e", "-x", eslMade], out), True) #assert the ESL is correctly formated
-			# self.assertEqual( not not not compareFiles(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
+			self.assertEqual( getCmdResult(cmd + ["f:h", "-i", "./testdata/" + efiGen + ".crt", "-o" ,hashMade], out, self), True) #assert the hashfile can be made
+			self.assertEqual( getCmdResult(cmd + ["h:e", "-i", hashMade, "-o" , eslMade], out, self), True) #assert the ESL is valid
+			self.assertEqual( getCmdResult([SECTOOLS ,"validate", "-e", "-x", eslMade], out, self), True) #assert the ESL is correctly formated
+			# self.assertEqual( compareFile(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 			#then do it with the file to ESL (hash generation done internally)
-			self.assertEqual( not not not command(cmd + ["f:e", "-i", "./testdata/" + efiGen + ".crt", "-o" ,eslMade], out), True) #assert the esl can be made from a file
-			self.assertEqual( not not not command([SECTOOLS ,"validate", "-e", "-x", eslMade], out), True) #assert the ESL is correctly formated
-			# self.assertEqual( not not not compareFiles(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
+			self.assertEqual( getCmdResult(cmd + ["f:e", "-i", "./testdata/" + efiGen + ".crt", "-o" ,eslMade], out, self), True) #assert the esl can be made from a file
+			self.assertEqual( getCmdResult([SECTOOLS ,"validate", "-e", "-x", eslMade], out, self), True) #assert the ESL is correctly formated
+			# self.assertEqual( compareFile(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 	def test_genEsl(self):
 			out = "genEslLog.txt"
 			cmd = GEN
@@ -150,11 +166,11 @@ class Test(unittest.TestCase):
 				eslMade = OUTDIR + efiGen + ".esl"
 				eslDesired =  "./testdata/" + efiGen + ".esl"
 				#first do it with file to has to ESL
-				self.assertEqual( not not not command(cmd + ["c:e", "-i", "./testdata/" + efiGen + ".crt", "-o" , eslMade], out), True) #assert the hashfile can be made
-				self.assertEqual( not not not command([SECTOOLS ,"validate", "-e", eslMade], out), True) #assert the ESL is correctly formated
-				self.assertEqual( not not not compareFiles(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
+				self.assertEqual( getCmdResult(cmd + ["c:e", "-i", "./testdata/" + efiGen + ".crt", "-o" , eslMade], out, self), True) #assert the hashfile can be made
+				self.assertEqual( getCmdResult([SECTOOLS ,"validate", "-e", eslMade], out, self), True) #assert the ESL is correctly formated
+				self.assertEqual( compareFiles(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 			for i in badESLcommands:
-				self.assertEqual( not not not command(cmd + i[0], out), i[1]) 
+				self.assertEqual( getCmdResult(cmd + i[0], out, self), i[1]) 
 	def test_genSignedFilesGen(self):
 		out = "genSignedFilesLog.txt"
 		auths = [] #array of[filename, key being updated, key signing]
@@ -187,69 +203,69 @@ class Test(unittest.TestCase):
 			if i[0].startswith("empty"):
 				esl = "./testdata/empty.esl"
 				#should fail if no force flag
-				self.assertEqual( not not not command(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2A ], out), False)
-				self.assertEqual( not not not command(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2A, "-f"], out), True)
+				self.assertEqual( getCmdResult(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2A ], out, self), False)
+				self.assertEqual( getCmdResult(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2A, "-f"], out, self), True)
 				#build PKCS7 as well
-				self.assertEqual( not not not command(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2P ], out), False)
-				self.assertEqual( not not not command(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2P, "-f"], out), True)
+				self.assertEqual( getCmdResult(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2P ], out, self), False)
+				self.assertEqual( getCmdResult(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2P, "-f"], out, self), True)
 			else:
 				esl = "./testdata/"+fileBaseName+".esl"
 				cert = "./testdata/"+fileBaseName+".crt"
-				self.assertEqual( not not not command(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o",  genE2A], out), True)
+				self.assertEqual( getCmdResult(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o",  genE2A], out, self), True)
 				#build pkcs7
-				self.assertEqual( not not not command(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o",  genE2P], out), True)
+				self.assertEqual( getCmdResult(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o",  genE2P], out, self), True)
 				#build auth/pkcs7 from certs
 				if i[1] == "dbx":
-					self.assertEqual( not not not command(cmd + ["f:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2A], out), True)
+					self.assertEqual( getCmdResult(cmd + ["f:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2A], out, self), True)
 					#build pkcs7
-					self.assertEqual( not not not command(cmd + ["f:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2P], out), True)
+					self.assertEqual( getCmdResult(cmd + ["f:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2P], out, self), True)
 				else:
-					self.assertEqual( not not not command(cmd + ["c:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2A], out), True)
+					self.assertEqual( getCmdResult(cmd + ["c:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2A], out, self), True)
 					#build pkcs7
-					self.assertEqual( not not not command(cmd + ["c:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2P], out), True)
+					self.assertEqual( getCmdResult(cmd + ["c:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2P], out, self), True)
 
 			#all files should be valid format, check if dbx though
 			if i[1] =="dbx":
-				self.assertEqual( not not not command([SECTOOLS, "validate", "-x", genE2A], out), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", genE2A], out, self), True)
 				#validate pkcs7
-				self.assertEqual( not not not command([SECTOOLS, "validate", "-x", "-p", genE2P], out), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", "-p", genE2P], out, self), True)
 				#validate auth/pkcs7 from certs
 				if not i[0].startswith("empty"):
-					self.assertEqual( not not not command([SECTOOLS, "validate", "-x", genC2A], out), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", genC2A], out, self), True)
 					#validate pkcs7
-					self.assertEqual( not not not command([SECTOOLS, "validate", "-x", "-p", genC2P], out), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", "-p", genC2P], out, self), True)
 			else:
-				self.assertEqual( not not not command([SECTOOLS, "validate", genE2A], out), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "validate", genE2A], out, self), True)
 				#validate pkcs7
-				self.assertEqual( not not not command([SECTOOLS, "validate", "-p", genE2P], out), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "validate", "-p", genE2P], out, self), True)
 				#validate auth/pkcs7 from certs
 				if not i[0].startswith("empty"):
-					self.assertEqual( not not not command([SECTOOLS, "validate", genC2A], out), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "validate", genC2A], out, self), True)
 					#validate pkcs7
-					self.assertEqual( not not not command([SECTOOLS, "validate", "-p", genC2P], out), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "validate", "-p", genC2P], out, self), True)
 			#all files besides the one that start with bad should be verified, bad means signed incorrectly
 			if i[0].startswith("bad"):
-				self.assertEqual( not not not command([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genE2A],out), False)
+				self.assertEqual( getCmdResult([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genE2A], out, self), False)
 				if not i[0].startswith("empty"):
-					self.assertEqual( not not not command([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genC2A],out), False)
+					self.assertEqual( getCmdResult([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genC2A], out, self), False)
 			else:
-				self.assertEqual( not not not command([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genE2A],out), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genE2A], out, self), True)
 				if not i[0].startswith("empty"):
-					self.assertEqual( not not not command([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genC2A],out), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genC2A], out, self), True)
  
 		#now test custom timestamp works
 		customTSAuth1 = OUTDIR+"db_by_PK_customTS1.auth"
 		customTSAuth2 = OUTDIR+"db_by_PK_customTS2.auth"
-		self.assertEqual( not not not command(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth1, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20", "10:2:8" ], out), True) 
+		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth1, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20", "10:2:8" ], out, self), True) 
 		time.sleep(4)
-		self.assertEqual( not not not command(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth2, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20", "10:2:8" ],out), True) 
-		self.assertEqual( not not not command([SECTOOLS, "validate", customTSAuth1], out), True)
-		self.assertEqual( not not not command([SECTOOLS, "validate", customTSAuth2], out), True)
-		self.assertEqual( not not not compareFiles(customTSAuth1, customTSAuth2), True)
+		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth2, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20", "10:2:8" ], out, self), True) 
+		self.assertEqual( getCmdResult([SECTOOLS, "validate", customTSAuth1], out, self), True)
+		self.assertEqual( getCmdResult([SECTOOLS, "validate", customTSAuth2], out, self), True)
+		self.assertEqual( compareFiles(customTSAuth1, customTSAuth2), True)
 
 		#now test incorrect generate commands
 		for i in badSignedCommands:
-			self.assertEqual( not not not command(cmd + i[0], out), i[1])
+			self.assertEqual( getCmdResult(cmd + i[0], out, self), i[1])
 	def test_genHash(self):
 		out = "genHashLog.txt"
 		inpDir = "./testdata/"
@@ -266,21 +282,21 @@ class Test(unittest.TestCase):
 			 	outFile = OUTDIR+function[0]+"_"+file+".hash"
 			 	if file.endswith(".auth"):
 			 		if file.startswith("dbx"):
-			 			self.assertEqual( not not not command(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), True)
 			 		else:
-			 			self.assertEqual( not not not command(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), True)
 			 		self.assertEqual( os.path.getsize(outFile), function[1])
 			 	elif file.endswith(".esl") and not file.startswith("empty"):
 			 		if file.startswith("dbx"):
-			 			self.assertEqual( not not not command(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), True)
 			 		else:
-			 			self.assertEqual( not not not command(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), True)
 			 		self.assertEqual( os.path.getsize(outFile), function[1])
 			 	elif file.endswith(".crt"):
 			 		if file.startswith("dbx"):
-			 			self.assertEqual( not not not command(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), True)
 			 		else:
-			 			self.assertEqual( not not not command(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), True)
 			 		self.assertEqual(os.path.getsize(outFile), function[1])
 			inpDir = "./testdata/brokenFiles/"
 			#these should all fail unless forced
@@ -288,29 +304,29 @@ class Test(unittest.TestCase):
 				outFile = OUTDIR+function[0]+"_"+file+".hash"
 				if file.endswith(".auth"):
 			 		if file.startswith("dbx"):
-			 			self.assertEqual( not not not command(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-			 			self.assertEqual( not not not command(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), False)
+			 			self.assertEqual( getCmdResult(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out, self), True)
 
 			 		else:
-			 			self.assertEqual( not not not command(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-			 			self.assertEqual( not not not command(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), False)
+			 			self.assertEqual( getCmdResult(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out, self), True)
 			 		self.assertEqual( os.path.getsize(outFile), function[1])
 				elif file.endswith(".esl"):
 					if file.startswith("dbx"):
-						self.assertEqual( not not not command(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-						self.assertEqual( not not not command(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+						self.assertEqual( getCmdResult(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), False)
+						self.assertEqual( getCmdResult(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out, self), True)
 					else:
-			 			self.assertEqual( not not not command(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-			 			self.assertEqual( not not not command(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), False)
+			 			self.assertEqual( getCmdResult(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out, self), True)
 					self.assertEqual( os.path.getsize(outFile), function[1])
 				elif file.endswith(".crt"):
 			 		if file.startswith("dbx"):
-			 			self.assertEqual( not not not command(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-			 			self.assertEqual( not not not command(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), False)
+			 			self.assertEqual( getCmdResult(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out, self), True)
 
 			 		else:
-			 			self.assertEqual( not not not command(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-			 			self.assertEqual( not not not command(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+			 			self.assertEqual( getCmdResult(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), False)
+			 			self.assertEqual( getCmdResult(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out, self), True)
 
 			 		self.assertEqual( os.path.getsize(outFile), function[1])
 
@@ -319,10 +335,16 @@ class Test(unittest.TestCase):
 
 
 
+if __name__ == '__main__':
+	if "MEMCHECK" in sys.argv:
+	 	MEMCHECK = True
+	else: 
+	 	MEMCHECK = False
+	del sys.argv[1:]
+	createEnvironment()
+	setupTestEnv()
+	unittest.main()
 
-createEnvironment()
-setupTestEnv()
-unittest.main()
 
 
 

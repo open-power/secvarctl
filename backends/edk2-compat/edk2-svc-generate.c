@@ -552,7 +552,7 @@ static int generateESL(const char* buff, size_t size, struct Arguments *args, co
 	}
 	//if input file is auth than extract it
 	if (args->inForm[0] == 'a') 
-		authToESL(*inpPtr, inpSize, outBuff, outBuffSize);
+		rc = authToESL(*inpPtr, inpSize, outBuff, outBuffSize);
 	else
 	// now we have either a hash or x509 in der and is ready to be put into an ESL
 		rc = toESL(*inpPtr, inpSize, *eslGUID, outBuff, outBuffSize);
