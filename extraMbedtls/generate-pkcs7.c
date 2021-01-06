@@ -69,16 +69,26 @@ int convert_pem_to_der( const unsigned char *input, size_t ilen,
                         unsigned char **output, size_t *olen )
 {
     int ret;
-    const unsigned char *s1, *s2, *end = input + ilen;
+    const unsigned char *s1, *s2, *end;
     size_t len = 0;
+    unsigned char *inpCpy;
 
-    s1 = (unsigned char *) strstr( (const char *) input, "-----BEGIN" );
-    if( s1 == NULL )
-        return( -1 );
+    //ensure last byte of input is NULL so that strstr knows where to stop 
+    inpCpy = calloc(1, ilen + 1);
+    memcpy(inpCpy, input, ilen);
+    end = inpCpy + ilen;
 
-    s2 = (unsigned char *) strstr( (const char *) input, "-----END" );
-    if( s2 == NULL )
-        return( -1 );
+    s1 = (unsigned char *) strstr( (const char *) inpCpy, "-----BEGIN" );
+    if( s1 == NULL ){
+    	ret = -1;
+    	goto out;
+    }
+
+    s2 = (unsigned char *) strstr( (const char *) inpCpy, "-----END" );
+    if( s2 == NULL ){
+    	ret = -1;
+    	goto out;
+    }
 
     s1 += 10;
     while( s1 < end && *s1 != '-' )
@@ -88,19 +98,23 @@ int convert_pem_to_der( const unsigned char *input, size_t ilen,
     if( *s1 == '\r' ) s1++;
     if( *s1 == '\n' ) s1++;
 
-    if( s2 <= s1 || s2 > end )
-        return( -1 );
+    if( s2 <= s1 || s2 > end ) {
+    	ret = -1;
+    	goto out;
+    }
+        
 
     ret = mbedtls_base64_decode( NULL, 0, &len, (const unsigned char *) s1, s2 - s1 );
     if( ret == MBEDTLS_ERR_BASE64_INVALID_CHARACTER ){
     	prlog(PR_ERR, "ERROR: Failed to parse, found invalid character while converting from PEM into DER, mbedtls error #%d\n", ret);
-        return( ret );
+    	goto out;
     }
     // free this ouside of function
     *output = malloc(len);
     if (!*output) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		return ALLOC_FAIL;
+		ret = ALLOC_FAIL;
+		goto out;
 	}
 	*olen = len;
     
@@ -108,13 +122,14 @@ int convert_pem_to_der( const unsigned char *input, size_t ilen,
                                s2 - s1 ) ) != 0 )
     {
     	prlog(PR_ERR, "ERROR: Failed to parse, finished %zd/%ld bytes from PEM into DER, mbedtls error #%d\n", len, s2-s1, ret);
-        return( ret );
+    	goto out;
 
     }
 
-   
+out:
+	free(inpCpy);
 
-    return( 0 );
+    return( ret );
 }
 
 #ifndef NO_CRYPTO
