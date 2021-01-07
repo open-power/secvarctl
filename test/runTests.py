@@ -290,7 +290,7 @@ class Test(unittest.TestCase):
 				preUpdate = "./testdata/empty.esl"
 			else:
 				preUpdate=file[:-4]+"esl"#get esl in auth
-			postUpdate="testGenerated.esl" #./testenv/<varname>/update
+			postUpdate="testGenerated.esl" 
 			if file.startswith("./testdata/dbx"):
 				self.assertEqual( getCmdResult(cmd+[ "-n",  "dbx", "-i", file, "-o", postUpdate],out, self), True)#assert command runs
 			else:
@@ -300,7 +300,7 @@ class Test(unittest.TestCase):
 		for i in toeslCommands:
 			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 		for i in brokenAuths:
-			postUpdate="testGenerated.esl" #./testenv/<varname>/update
+			postUpdate="testGenerated.esl" 
 			self.assertEqual( getCmdResult(cmd+["-i", i, "-o", postUpdate],out, self), False) #all broken auths should fail to have correct esl
 			self.assertEqual( getCmdResult(["rm",postUpdate],out, self), False) #removal of output file should fail since it was never made
 	def test_badenv(self):

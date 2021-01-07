@@ -54,8 +54,13 @@ static void usage()
 		"\t-t <time>\twhere time is of the format 'y-m-d h:m:s'.\n\t"
 		"\t\tcreates a custom timestamp used when generating an auth or PKCS7 file,\n\t"
 		"\t\tif not given then current time is used\n"
-		"\t-f\t\tforce, does not do prevalidation on the input file, assumes format is correct\n\t"
-		"\t\tuse this flag with e:a (where the ESL is an empty file) to delete a key\n\n"
+		"\t-f\t\tforce, does not do prevalidation on the input file, assumes format is correct\n"
+		"\treset\t\tgenerates a valid variable reset file\n"
+		"\t\t\treplaces <inputFormat>:<outputFormat>\n"
+		"\t\t\tthis file is just an auth file with an empty ESL.\n"
+		"\t\t\trequired arguments are output file, signer crt/key pair and variable name.\n"
+		"\t\t\tno input file required.\n"
+		"\t\t\tuse this flag to delete a variable\n"
 		"Accepted <inputFormat>:"
 		"\n\t[h]ash\tA file containing only hashed data\n\t"
 		"\tuse -h <hashAlg> to specifify the function used (default SHA256)\n"
@@ -96,7 +101,7 @@ static void help()
 		"\tto retrieve the ESL from an auth file:\n"
 		"\t\t'secvarctl generate a:e -i <file> -o <file>'\n"
 		"\tto create a signed auth file for a key reset, the resulting file is a valid key reset file:\n"
-		"\t\t'secvarctl generate e:a -f -k <file> -c <file> -n <keyName> -i <emptyFile> -o <file>'\n");
+		"\t\t'secvarctl generate reset -k <file> -c <file> -n <keyName> -o <file>'\n");
 
 	usage();
 }
@@ -138,9 +143,17 @@ int performGenerateCommand(int argc,char* argv[])
 		rc = ARG_PARSE_FAIL;
 		goto out;
 	}
-	// input file must exist and name for output file must be given
-	if (args.inFile == NULL || args.outFile == NULL || isFile(args.inFile)){
-		prlog(PR_ERR, "ERROR: Input/Output File is invalid, see usage below\n");
+	//output file must be defined
+	if (args.outFile == NULL) {
+		prlog(PR_ERR, "ERROR: No output file given, see usage below...\n");
+		usage();
+		rc = ARG_PARSE_FAIL;
+		goto out;
+	} 
+
+	// input file must exist if not a reset key
+	if (args.inForm[0] != 'r' && (args.inFile == NULL || isFile(args.inFile) )) {
+		prlog(PR_ERR, "ERROR: Input File is invalid, see usage below...\n");
 		usage();
 		rc = ARG_PARSE_FAIL;
 		goto out;
@@ -153,12 +166,17 @@ int performGenerateCommand(int argc,char* argv[])
 	}
 	prlog(PR_INFO, "Input file is %s of type %s , output file is %s of type %s\n", args.inFile, args.inForm, args.outFile, args.outForm);
 	
-	// get data from input file
-	buff = getDataFromFile(args.inFile, &size);
-	if (buff == NULL){
-		prlog(PR_ERR, "ERROR: Could not find data in file %s\n", args.inFile);
-		rc = INVALID_FILE;
-		goto out;
+	//if reset key than don't look for a input file
+	if (args.inForm[0] == 'r') 
+		size = 0;
+	else {
+		// get data from input file
+		buff = getDataFromFile(args.inFile, &size);
+		if (buff == NULL){
+			prlog(PR_ERR, "ERROR: Could not find data in file %s\n", args.inFile);
+			rc = INVALID_FILE;
+			goto out;
+		}
 	}
 	// default alg is sha256
 	if (args.hashAlg == NULL) 
@@ -333,7 +351,13 @@ static int parseArgs( int argc, char *argv[], struct Arguments *args) {
 			}
 				
 		}
-		// else set input and output format tyes
+		//check if reset key is desired
+		else if (!strcmp(argv[i], "reset")) {
+			args->inForm = "reset";
+			args->inFile = "empty";
+			args->outForm = "auth";
+		}
+		// else set input and output formats
 		else {
 				args->inForm = strtok(argv[i], ":");
 				args->outForm = strtok(NULL, ":");
@@ -424,7 +448,9 @@ static int generateAuthOrPKCS7(const char* buff, size_t size, struct Arguments *
 	
 	switch (args->inForm[0]) {
 		case 'f':
-		case 'h':	
+			//intentional flow
+		case 'h':
+			//intentional flow	
 		case 'c': 
 			rc = generateESL(buff, size, args, hashFunct, &intermediateBuff, &intermediateBuffSize);
 			if (rc) {
@@ -444,8 +470,18 @@ static int generateAuthOrPKCS7(const char* buff, size_t size, struct Arguments *
 			}
 			rc = SUCCESS;
 			break;
+		case 'r':
+			//if creating a reset key, ensure input is NULL and size of zero
+			if (inpSize == 0 && *inpPtr == NULL)
+				rc = SUCCESS;
+			else {
+				printf("ERROR: Input data must be empty for generation of reset file\n");
+				rc = INVALID_FILE;
+				break;
+			}
+			break;
 		default:
-			prlog(PR_ERR, "ERROR: Unkown input format %s for generating %s file , see usage below...\n", args->inForm, (args->outForm[0] == 'a' ? "an Auth" : "a PKCS7"));
+			prlog(PR_ERR, "ERROR: Unknown input format %s for generating %s file , see usage below...\n", args->inForm, (args->outForm[0] == 'a' ? "an Auth" : "a PKCS7"));
 			usage();
 			rc = ARG_PARSE_FAIL;
 	}

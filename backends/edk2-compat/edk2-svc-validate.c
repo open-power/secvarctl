@@ -236,7 +236,7 @@ int validateAuth(const char *authBuf, size_t buflen, const char *key)
 	// now validate appended ESL 
 	// if no ESL appended then print warning and continue, could be a delete key update
 	if (authSize == buflen) {
-		prlog(PR_WARNING, "WARNING: appended ESL is empty...\n");
+		prlog(PR_WARNING, "WARNING: appended ESL is empty, (valid key reset file)...\n");
 	}
 	else {
 		rc = validateESL(authBuf + authSize, buflen - authSize, key);
