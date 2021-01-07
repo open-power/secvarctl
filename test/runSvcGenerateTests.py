@@ -266,6 +266,63 @@ class Test(unittest.TestCase):
 		#now test incorrect generate commands
 		for i in badSignedCommands:
 			self.assertEqual( getCmdResult(cmd + i[0], out, self), i[1])
+	def test_genResetFiles(self):
+		#to test generating reset files we will use the 'generate a:e' command, this command was already tested in runTests.py
+		out = 'genResetFilesLog.txt'
+		cmd = GEN + ["reset"]
+		inpDir = "./testdata/goldenKeys/"
+		goodResetKeys = [ #[ key to be reset, signer]
+		["db", "KEK"],
+		["db", "PK"],
+		["KEK", "PK" ],
+		["PK", "PK"],
+		["dbx", "KEK"],
+		["dbx", "PK"]
+		]
+		badResetKeys = [ #these files will be valid but they will be signed with a signer without priviledges 
+		["db", "db"],
+		["KEK", "KEK"], 
+		["KEK", "db"],
+		["PK", "db"],
+		["PK", "KEK"],
+		["PK", "db"],
+		["dbx", "db"]
+		]
+		emptyESLDesired = OUTDIR + "empty.esl"
+		emptyESLActual = OUTDIR + "resultEmpyESL.esl"
+		verifyCommand = [SECTOOLS, "verify", "-p", inpDir, "-u"]
+		command(["touch", emptyESLDesired])
+		toESLCommand = GEN + ["a:e", "-o", emptyESLActual, "-i"]
+		for i in goodResetKeys:
+			outFile = OUTDIR + "reset_" + i[0] + "_by_" + i[1]+".auth"
+			crt = inpDir + i[1]+"/"+i[1]+".crt"
+			key = inpDir + i[1]+"/"+i[1]+".key"
+			#make sure it generates
+			self.assertEqual( getCmdResult(cmd + ["-n", i[0], "-k", key, "-c", crt, "-o", outFile], out, self), True)
+			#make sure it verifies (verify calls validate)
+			self.assertEqual ( getCmdResult(verifyCommand + [i[0], outFile], out, self), True)
+			#make sure its appended ESL is empty
+			self.assertEqual( getCmdResult(toESLCommand + [outFile], out, self), True)
+			self.assertEqual( compareFiles(emptyESLDesired, emptyESLActual), True)
+			#cleanup
+			command(["rm", emptyESLActual])
+		#same process but verifying should fail
+		for i in badResetKeys:
+			outFile = OUTDIR + "bad_reset_" + i[0] + "_by_" + i[1]+".auth"
+			crt = inpDir + i[1]+"/"+i[1]+".crt"
+			key = inpDir + i[1]+"/"+i[1]+".key"
+			#make sure it generates
+			self.assertEqual( getCmdResult(cmd + ["-n", i[0], "-k", key, "-c", crt, "-o", outFile], out, self), True)
+			#make sure it doesn't verify (verify calls validate)
+			self.assertEqual ( getCmdResult(verifyCommand + [i[0], outFile], out, self), False)
+			#make sure its appended ESL is empty
+			self.assertEqual( getCmdResult(toESLCommand + [outFile], out, self), True)
+			self.assertEqual( compareFiles(emptyESLDesired, emptyESLActual), True)
+			#cleanup
+			command(["rm", emptyESLActual])
+		command(["rm", emptyESLDesired])
+
+
 	def test_genHash(self):
 		out = "genHashLog.txt"
 		inpDir = "./testdata/"
@@ -276,6 +333,8 @@ class Test(unittest.TestCase):
 			["SHA384", 48],
 			["SHA512", 64]
 		]
+		#basic test, invalid inForm for generating hash 't'
+		self.assertEqual( getCmdResult(GEN + ["t:h", "-i", inpDir+"db_by_PK.auth", "-o", "foo.bar"], out, self), False)
 		for function in hashes:
 			inpDir = "./testdata/"
 			for file in os.listdir(inpDir):

@@ -41,6 +41,9 @@ Commands are:
 .PP
 .B secvarctl generate
 <inputFormat>:<outputFormat> [OPTIONS] -i <inputFile> -o <outputFile>
+.PP
+.B secvarctl generate reset 
+[OPTIONS] -o <outputFile> -k <key> -c <crt> -n <variable>
 
 .SH DESCRIPTION
 .B secvarctl
@@ -157,7 +160,7 @@ option will give more process information.
 with no spaces between the colon and the format types. 
 The accepted values for <inputFormat> are:
 .RS
-[h]ash , A file containing only hashed data, use -h <hashAlg> to specifify the hash function used (default SHA256) 
+ [h]ash , A file containing only hashed data, use -h <hashAlg> to specifify the hash function used (default SHA256) 
  [c]ert , An x509 certificate (PEM), RSA2048 and SHA256 ONLY
  [e]sl , An EFI Signature List
  [p]kcs7 , a PKCS7 file containing signed data
@@ -166,7 +169,7 @@ The accepted values for <inputFormat> are:
 .RE
 The accepted values for <outputFormat> are:
 .RS
-[h]ash , A file containing only hashed data, use -h <hashAlg> to specifify the hash function used (default SHA256) 
+ [h]ash , A file containing only hashed data, use -h <hashAlg> to specifify the hash function used (default SHA256) 
  [e]sl , An EFI Signature List
  [p]kcs7 , a PKCS7 file containing signed data, must specify public and private keys and digest algorithm (default SHA256) (EXPERIMENTAL!)
  [a]uth , A signed authenticated file containing a PKCS7 and the new data, must specify public and private keys, digest algorithm (default SHA256) and secure variable name (EXPERIMENTAL!)
@@ -191,6 +194,13 @@ dbx) because then the prevalidation will look for an ESL containing a hash rathe
 .B -t 
 <time> , where <time> is in the format "y-m-d h:m:s". If this argument is not used then the current date and time are used.
  When using the input type '[f]ile' it will be assumed to be a text file and if output file is '[e]sl', '[p]kcs7' or '[a]uth' it will be hashed according to <hashAlg> (default SHA256).
+ To make a variable reset file, the user can replace
+.B generate <inputFormat>:<outputFormat> 
+with
+.B generate reset
+This will generate an auth file around an empty ESL. Thus, no input argument 
+.B -i 
+is required when making a reset file. 
   NOTE: GENERATION OF PKCS7 AND AUTH FILES ARE IN EXPERIMENTAL DEVELEPOMENT PHASE. THEY HAVE NOT BEEN THOROUGHLY TESTED YET.
 
 .RE
@@ -362,13 +372,18 @@ OPTIONAL:
 <time> , where time is of the format 'y-m-d h:m:s'. creates a custom timestamp used when generating an auth or PKCS7 file, if not given then current time is used
 .PP
 .B -h 
-<hashAlg> hash function, used when output or input format is hash, current values for <hashAlg> are : {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}
+<hashAlg> , hash function, used when output or input format is hash, current values for <hashAlg> are : {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}
 .PP
 .B -k 
 <privKey> , private key, used when generating pkcs7 or auth file
 .PP
 .B -c 
 <certFile> , x509 certificate (PEM), used when generating pkcs7 or auth file
+.PP
+.B reset 
+, replaces
+.B <inputFormat>:<outputFormat>
+and generates an auth file with an empty ESL (a valid variable reset file), no input file required. Required arguments are output file, signer public and private key and variable name.
 .RE
 .RE
 .SH EXAMPLES
@@ -419,8 +434,7 @@ To create a PKCS7 file from an ESL for a db update with a custom timestamp:
       $secvarctl generate e:p -k signer.key -c signer.crt -n db -t 2020-10-1 13:45:42 -i file.crt -o file.pkcs7 
 .PP
 To create a empty update to reset the db variable:
-      $touch empty.esl
-      $secvarctl generate e:a -k signer.key -c signer.crt -n db -f -i empty.esl -o db.auth 
+      $secvarctl generate reset -k signer.key -c signer.crt -n db -o db.auth 
 
 .SH AUTHOR
 Nick Child nick.child@ibm.com,
