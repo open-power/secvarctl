@@ -40,10 +40,12 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
      - From a hash: `$secvarctl generate h:e -h <hashAlgUsed> -i <inputHash> -o <out.esl>`  
      - From a generic file (hash done internally) : `$secvarctl generate f:e -h <hashAlgToUse> -i <inputFile> -o <out.esl>`   
    + Signed Auth File (EXPERIMENTAL):    
-     - From an ESL: `$secvarctl generate e:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -i <inputESL> -o <out.auth> `   
-     - From an x509 (ESL created internally): `$secvarctl generate c:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -i <inputCert> -o <out.auth> `   
-     - From a hash (ESL created internally): `$secvarctl generate h:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -h <hashAlgUsed> -i <inputHash> -o <out.auth> `   
-     - From a file (hash->ESL created internally): `$secvarctl generate f:a -k <signerPrivate.key> -c <signerPublic.key> -n <varName> -h <hashAlgUsed> -i <inputFile> -o <out.auth> `  
+     - From an ESL: `$secvarctl generate e:a -k <signerPrivate.key> -c <signerPublic.crt> -n <varName> -i <inputESL> -o <out.auth> `   
+     - From an x509 (ESL created internally): `$secvarctl generate c:a -k <signerPrivate.key> -c <signerPublic.crt> -n <varName> -i <inputCert> -o <out.auth> `   
+     - From a hash (ESL created internally): `$secvarctl generate h:a -k <signerPrivate.key> -c <signerPublic.crt> -n <varName> -h <hashAlgUsed> -i <inputHash> -o <out.auth> `   
+     - From a file (hash->ESL created internally): `$secvarctl generate f:a -k <signerPrivate.key> -c <signerPublic.crt> -n <varName> -h <hashAlgUsed> -i <inputFile> -o <out.auth> `  
+     - To create a variable reset file: `$secvarctl generate reset -k <signerPrivate.key> -c <signerPublic.crt> -n <varName> -o <out.auth> `
+
 
 ## USAGE:    
   Secvarctl has 5 main commands   
@@ -167,6 +169,9 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		-h <hashAlg> hash function, used when output or input format is [h]ash, current <hashAlg> are : {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}
 		-k <privKey> , private key, used when generating [p]kcs7 or [a]uth file
 		-c <certFile> , x509 certificate (PEM), used when generating [p]kcs7 or [a]uth file
+		reset , generates a valid variable reset file, replaces <inputFormat>:<outputFormat>. 
+			This file is just an auth file with an empty ESL. Required arguments are output file, signer crt/key pair and variable name. 
+			No input file required.
 
 
 	<inputFormat>:
@@ -191,6 +196,8 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		A PKCS7 and Auth file can be signed with several signers by adding more ' -k <privKey> -c <cert>' pairs. 
 		Additionaly, when generating an Auth file the secure variable name must be given as -n <keyName> because it is included in the  message digest. 
 		When using the input type '[f]ile' it will be assumed to be a text file and if output file is '[e]sl', '[p]kcs7' or '[a]uth' it will be hashed according to <hashAlg> (default SHA256). 
+		To create a variable reset file (one that will remove the current contents of a variable), replace '<inputFormat>:<outputFormat>' with 'reset' and
+		supply a variable name, public and private signer files and an output file with '-n <keyName> -k <privKey> -c <crtFile> -o <outFile>'
 		GENERATION OF PKCS7 AND AUTH FILES ARE IN EXPERIMENTAL DEVELEPOMENT PHASE. THEY HAVE NOT BEEN THOROUGHLY TESTED YET.
 
       
