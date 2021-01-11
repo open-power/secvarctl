@@ -46,8 +46,6 @@ else
 	CRYPTO_OBJ = $(patsubst %,$(SKIBOOTOBJDIR)/%, $(_CRYPTO_OBJ))
 	OBJ += $(CRYPTO_OBJ)
 endif
-# OBJDIR=obj
-# OBJ=$(patsubst %, $(OBJDIR)/%,$(_OBJ))
 
 
 secvarctl: $(OBJ) 
