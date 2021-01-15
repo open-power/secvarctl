@@ -24,7 +24,6 @@ secvarctlCommands=[
 [["foobar"], False]#bad command
 ]
 ppcSecVarsRead=[
-[["-p","6", "read"], True], #print log correct
 [["read"], True],
 [["read", "-v"], True], [["read", "-r"], True], #verbose and raw
 [["read", "badVarname"], False], #bad var name
