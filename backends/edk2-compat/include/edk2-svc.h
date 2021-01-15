@@ -13,7 +13,7 @@
 #define CERT_BUFFER_SIZE        2048
 
 #ifndef SECVARPATH
-#define SECVARPATH "/sys/firmware/secvar/vars"
+#define SECVARPATH "/sys/firmware/secvar/vars/"
 #endif
 
 #define variables  (char* []){ "PK", "KEK", "db", "dbx", "TS" }
