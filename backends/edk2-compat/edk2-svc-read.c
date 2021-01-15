@@ -19,6 +19,7 @@ static int printReadable(const char *c , size_t size, const char * key);
 static int readFileFromSecVar(const char * path, const char *variable, int hrFlag);
 static int readFileFromPath(const char *path, int hrFlag);
 static int getSizeFromSizeFile(size_t *returnSize, const char* path);
+static int readTS(const char *data, size_t size);
 
 
 struct Arguments {
@@ -156,6 +157,7 @@ static int readFiles(const char* var, const char* file, int hrFlag, const char *
 			if (var && strcmp(var, variables[i]) != 0) {	
 				continue;
 			}
+			printf("READING %s :\n", variables[i]);
 			rc = readFileFromSecVar(path, variables[i], hrFlag);
 			if (rc == SUCCESS) successCount++;
 		}
@@ -209,7 +211,7 @@ static int readFileFromSecVar(const char *path, const char *variable, int hrFlag
 			rc = SUCCESS;
 		}
 		else if (strcmp(var->key, "TS") == 0) 
-			rc = validateTS(var->data, var->data_size);
+			rc = readTS(var->data, var->data_size);
 		else
 			rc = printReadable(var->data, var->data_size, var->key);
 
@@ -329,7 +331,7 @@ int getSecVar(struct secvar **var, const char* name, const char *fullPath){
 
 	*var = new_secvar(name, strlen(name) + 1, c, size, 0);
 	if (*var == NULL) {
-		prlog(PR_ERR, " ERROR: Could not convert data to secvar\n");
+		prlog(PR_ERR, "ERROR: Could not convert data to secvar\n");
 		free(c);
 		return INVALID_FILE;
 	}
@@ -377,7 +379,6 @@ static int printReadable(const char *c, size_t size, const char *key)
 	EFI_SIGNATURE_LIST *sigList;
 	mbedtls_x509_crt *x509 = NULL;
 
-	printf("READING %s :\n", key ? key : "ESL");
 	while (eslvarsize > 0) {
 		if (eslvarsize < sizeof(EFI_SIGNATURE_LIST)) { 
 			prlog(PR_ERR, "ERROR: ESL has %zd bytes and is smaller than an ESL (%zd bytes), remaining data not parsed\n", eslvarsize, sizeof(EFI_SIGNATURE_LIST));
@@ -480,7 +481,29 @@ int printCertInfo(mbedtls_x509_crt *x509)
 
 	return SUCCESS;
  }
+/**
+ *prints all 16 byte timestamps into human readable of TS variable
+ *@param data, timestamps of normal variables {pk, db, kek, dbx}
+ *@param size, size of timestamp data, should be 16*4
+ *@return SUCCESS or error depending if ts data is understandable
+ */
+static int readTS(const char *data, size_t size)
+{
+	struct efi_time *tmpStamp;
+	// data length must have a timestamp for every variable besides the TS variable
+	if (size != sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1)) {
+		prlog(PR_ERR,"ERROR: TS variable does not contain data on all the variables, expected %ld bytes of data, found %zd\n", sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1), size);
+		return INVALID_TIMESTAMP;
+	}
 
+	for (tmpStamp = (struct efi_time *)data; size > 0; tmpStamp = (void *)tmpStamp + sizeof(struct efi_time), size -= sizeof(struct efi_time)) {
+		//print variable name
+		printf("\t%s:\t", variables[(ARRAY_SIZE(variables) - 1) - (size / sizeof(struct efi_time))]);
+		printTimestamp(*tmpStamp);
+	}
+
+	return SUCCESS;
+}
 /** 
  *inspired by secvar/backend/edk2-compat-process.c by Nayna Jain
  *@param c  pointer to start of esl file
