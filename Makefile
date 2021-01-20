@@ -27,7 +27,7 @@ OBJ +=$(SKIBOOT_OBJ) $(EXTRAMBEDTLS)
 
 OBJCOV = $(patsubst %.o, %.cov.o,$(OBJ))
 
-
+MANDIR=usr/local/share/
 #use STATIC=1 for static build
 STATIC = 0
 ifeq ($(STATIC),1)
@@ -72,6 +72,6 @@ secvarctl-cov: $(OBJCOV)
 install: secvarctl
 	mkdir -p $(DESTDIR)/usr/bin
 	install -m 0755 secvarctl $(DESTDIR)/usr/bin/secvarctl
-	mkdir -p $(DESTDIR)/usr/local/share/man
-	mkdir -p $(DESTDIR)/usr/local/share/man/man1
-	install -m 0755 secvarctl.1 $(DESTDIR)/usr/local/share/man/man1
+	mkdir -p $(DESTDIR)/$(MANDIR)/man
+	mkdir -p $(DESTDIR)/$(MANDIR)/man/man1
+	install -m 0755 secvarctl.1 $(DESTDIR)/$(MANDIR)/man/man1
