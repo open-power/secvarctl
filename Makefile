@@ -1,6 +1,6 @@
 #_*_MakeFile_*_
 CC = gcc 
-_CFLAGS = -Os -s -g -std=gnu99
+_CFLAGS = -O2 -s -g -std=gnu99
 LFLAGS = -lmbedtls -lmbedx509 -lmbedcrypto -Wall -Werror 
 
 _DEPEN = secvarctl.h prlog.h err.h generic.h 
