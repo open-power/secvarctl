@@ -73,4 +73,4 @@ install: secvarctl
 	mkdir -p $(DESTDIR)/usr/bin
 	install -m 0755 secvarctl $(DESTDIR)/usr/bin/secvarctl
 	mkdir -p $(DESTDIR)/$(MANDIR)/man1
-	install -m 0755 secvarctl.1 $(DESTDIR)/$(MANDIR)/man1
+	install -m 0644 secvarctl.1 $(DESTDIR)/$(MANDIR)/man1
