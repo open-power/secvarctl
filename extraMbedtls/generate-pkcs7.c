@@ -49,13 +49,14 @@ extern int verbose;
 typedef struct PKCS7Info {
 	unsigned char **crts; // signing crt DER
 	size_t *crtSizes;
-	unsigned char **keys; // signing key DER
+	unsigned char **keys; // signing key DER or signatures (depends on alreadySignedFlag)
 	size_t *keySizes;
 	int keyPairs;
 	const unsigned char *newData; 
 	int newDataSize;
 	mbedtls_md_type_t hashFunct;
-	const char * hashFunctOID;  
+	const char * hashFunctOID; 
+	int alreadySignedFlag; //if this is 1 then then PKCS7Info.keys contains signatures, if 0 then contains siging key in DER format 
 
 } PKCS7Info;
 #endif
@@ -303,6 +304,7 @@ static int setSignature(unsigned char **start, size_t *size, unsigned char **ptr
 	char *hash = NULL, *signature = NULL, *sigType = NULL;
 	mbedtls_pk_context *privKey;
 	
+
 	privKey = malloc(sizeof(*privKey));
 	if (!privKey){
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
@@ -349,7 +351,7 @@ static int setSignature(unsigned char **start, size_t *size, unsigned char **ptr
 		printf("Signing digest of %zd bytes with %s into %zd bits \n", hashSize, sigType, sigSizeBits);
 	rc = mbedtls_pk_sign(privKey, pkcs7Info->hashFunct, hash, 0, signature, &sigSize, 0, NULL);
 	if (rc) {
-		prlog(PR_ERR, "Failed to genrate signature, mbedtls err #%d\n", rc);
+		prlog(PR_ERR, "Failed to generate signature, mbedtls err #%d\n", rc);
 		goto out;
 	}
 	rc = setPKCS7Data(start, size, ptr, MBEDTLS_ASN1_OCTET_STRING, signature, sigSize, 0);
@@ -370,7 +372,15 @@ static int setAlgorithmIDs(unsigned char **start, size_t *size, unsigned char **
 	size_t bytesWrittenInStep, currentlyUsedBytes;
 	char *sigType = NULL;
 	
-	rc = setSignature(start, size, ptr, pkcs7Info, pub, priv, privSize);
+	//if the private key already holds signature (see definition of pkcs7Info.keys)
+	//then just write the signature, no generation is needed
+	if (pkcs7Info->alreadySignedFlag) {
+		rc = setPKCS7Data(start, size, ptr, MBEDTLS_ASN1_OCTET_STRING, priv, privSize, 0);
+		if (rc)
+			prlog(PR_ERR, "Failed to add signature to PKCS7\n");
+	}
+	else
+		rc = setSignature(start, size, ptr, pkcs7Info, pub, priv, privSize);
 	if (!rc){
 		// make sure it is rsa encryption, that is all we support right now
 		sigType = (char *) pub->pk.pk_info->name;
@@ -578,66 +588,35 @@ static int setPKCS7OID(unsigned char **start, size_t *size, unsigned char **ptr,
 	return rc;
 }
 
-/*
- *generates a PKCS7
- *@param pkcs7, the resulting PKCS7, newData not appended, NOTE: REMEMBER TO UNALLOC THIS MEMORY
- *@param pkcs7Size, the length of pkcs7
- *@param newData, data to be added to be used in digest
- *@param dataSize , length of newData
- *@param crtFiles, array of file paths to public keys to sign with(PEM)
- *@param keyFiles, array of file paths to private keys to sign with
- *@param keyPairs, array length of key/crtFiles
- *@param hashFunct, hash function to use in digest, see mbedtls_md_type_t for values in mbedtls/md.h
- *@return SUCCESS or err number 
- */
-int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char *newData, size_t newDataSize, const char** crtFiles, const char** keyFiles,  int keyPairs, int hashFunct)
+static int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char** crtFiles,  int keyPairs, int hashFunct, PKCS7Info *info) 
 {
-	char *crtPEM = NULL, *keyPEM = NULL, **crts = NULL, **keys = NULL, *pkcs7Buff = NULL, *hashFunctOID;
+	char *crtPEM = NULL,**crts = NULL,*pkcs7Buff = NULL, *hashFunctOID;
 	unsigned char *ptr;
-	size_t crtSizePEM, keySizePEM,  *crtSizes = NULL, *keySizes = NULL, pkcs7BuffSize, whiteSpace, oidLen; 
+	size_t crtSizePEM,*crtSizes = NULL, pkcs7BuffSize, whiteSpace, oidLen; 
 	int rc, successfulKeyPairs = 0;
-	PKCS7Info info;
-	// if no keys given
-	if (keyPairs == 0) {
-		prlog(PR_ERR, "ERROR: missing private key / certificate... use -k <privateKeyFile> -c <certificateFile>\n");
-		rc = ARG_PARSE_FAIL;
-		goto out;
-	}
+
 	crts = calloc (1, sizeof(char*) * keyPairs);
-	keys = calloc(1, sizeof(char*) * keyPairs);
-	keySizes = calloc(1, sizeof(size_t) * keyPairs);
 	crtSizes = calloc(1, sizeof(size_t) * keyPairs);
-	if (!crts || !keys || !keySizes || !crtSizes) {
+	if (!crts || !crtSizes) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		return ALLOC_FAIL;	
+		return ALLOC_FAIL;
 	}
-
-	for(int i = 0; i < keyPairs; i++) {
-		// get data of private and public keys
+	for (int i = 0; i < keyPairs; i++) {
+		//get data from public keys
 		crtPEM = getDataFromFile(crtFiles[i], &crtSizePEM);
-		keyPEM = getDataFromFile(keyFiles[i], &keySizePEM);
-
-		if (!crtPEM || !keyPEM) {
-			prlog(PR_ERR, "ERROR: failed to get data from priv/pub key files %s and %s\n", keyFiles[i], crtFiles[i]);
+		if (!crtPEM) {
+			prlog(PR_ERR, "ERROR: failed to get data from pub key file %s\n", crtFiles[i]);
 			rc = INVALID_FILE;
 			goto out;
 		}
-		// get der format of those keys
+		// get der format of that crt
 		rc = convert_pem_to_der(crtPEM, crtSizePEM, (unsigned char **) &crts[i], &crtSizes[i]);
 		if (rc) {
 			prlog(PR_ERR, "Conversion for %s from PEM to DER failed\n", crtFiles[i]);
 			goto out;
 		}
-		successfulKeyPairs++; 
-		rc = convert_pem_to_der(keyPEM, keySizePEM, (unsigned char **) &keys[i], &keySizes[i]);
-		if (rc) {
-			prlog(PR_ERR, "Conversion for %s from PEM to DER failed\n", keyFiles[i]);
-			goto out;
-		}
 		if (crtPEM) free(crtPEM);
-		if (keyPEM) free(keyPEM);
 		crtPEM = NULL;
-		keyPEM = NULL;
 	}
 	// get hashFunct OID
 	if (hashFunct < MBEDTLS_MD_NONE || hashFunct > MBEDTLS_MD_RIPEMD160) {
@@ -650,17 +629,12 @@ int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char *newData, size_
 		prlog(PR_ERR, "Message Digest value %d could not be converted to an OID, mbedtls err #%d\n",hashFunct, rc);
 	}
 
-	info.crts = (unsigned char **)crts;
-	info.crtSizes = crtSizes;
-	info.keys = (unsigned char **)keys;
-	info.keySizes = keySizes;
-	info.keyPairs = keyPairs;
-	info.newData = newData;
-	info.newDataSize = newDataSize;
-	info.hashFunct = hashFunct;
-	info.hashFunctOID = hashFunctOID;
-	
-	
+	info->crts = (unsigned char **)crts;
+	info->crtSizes = crtSizes;
+	info->keyPairs = keyPairs;
+	info->hashFunct = hashFunct;
+	info->hashFunctOID = hashFunctOID;
+
 	prlog(PR_INFO, "Generating Pkcs7 with %d pair(s) of signers...\n", keyPairs);
 	
 	// buffer size for pkcs7 will grow exponentially 2^n depending on space needed
@@ -674,7 +648,7 @@ int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char *newData, size_
 	// set ptr to the end of the buffer, mbedtls functions write backwards 
 	ptr = pkcs7Buff + pkcs7BuffSize;	
 	// this will call all other functions
-	rc = setPKCS7OID((unsigned char **) &pkcs7Buff, &pkcs7BuffSize, &ptr, &info);
+	rc = setPKCS7OID((unsigned char **) &pkcs7Buff, &pkcs7BuffSize, &ptr, info);
 	if (rc){
 		prlog(PR_ERR, "Failed to generate PKCS7\n");
 		goto out;
@@ -693,22 +667,157 @@ int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char *newData, size_
 		goto out;
 	}
 	memcpy(*pkcs7, pkcs7Buff + whiteSpace, *pkcs7Size);
+
+out:
+	if (crtPEM) free(crtPEM);
+	for (int i = 0; i < keyPairs; i++) {
+		if (crts[i]) free(crts[i]);
+	}
+	if (crts) free(crts);
+	if (crtSizes) free(crtSizes);
+	if (pkcs7Buff) free(pkcs7Buff);
+
+	return rc;
+}
+
+/*
+ *generates a PKCS7 and create signature with private and public keys
+ *@param pkcs7, the resulting PKCS7, newData not appended, NOTE: REMEMBER TO UNALLOC THIS MEMORY
+ *@param pkcs7Size, the length of pkcs7
+ *@param newData, data to be added to be used in digest
+ *@param dataSize , length of newData
+ *@param crtFiles, array of file paths to public keys to sign with(PEM)
+ *@param keyFiles, array of file paths to private keys to sign with
+ *@param keyPairs, array length of key/crtFiles
+ *@param hashFunct, hash function to use in digest, see mbedtls_md_type_t for values in mbedtls/md.h
+ *@return SUCCESS or err number 
+ */
+int to_pkcs7_generate_signature(unsigned char **pkcs7, size_t *pkcs7Size, const char *newData, size_t newDataSize, 
+	const char** crtFiles, const char** keyFiles,  int keyPairs, int hashFunct)
+{
+	char *keyPEM = NULL, **keys = NULL;
+	size_t keySizePEM,  *keySizes = NULL;
+	int rc;
+	PKCS7Info info;
+	// if no keys given
+	if (keyPairs == 0) {
+		prlog(PR_ERR, "ERROR: missing private key / certificate... use -k <privateKeyFile> -c <certificateFile>\n");
+		rc = ARG_PARSE_FAIL;
+		goto out;
+	}
+	keys = calloc(1, sizeof(char*) * keyPairs);
+	keySizes = calloc(1, sizeof(size_t) * keyPairs);
+	if (!keys || !keySizes) {
+		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+		return ALLOC_FAIL;	
+	}
+
+	for (int i = 0; i < keyPairs; i++) {
+		// get data of private keys
+		keyPEM = getDataFromFile(keyFiles[i], &keySizePEM);
+
+		if (!keyPEM) {
+			prlog(PR_ERR, "ERROR: failed to get data from priv key file %s\n", keyFiles[i]);
+			rc = INVALID_FILE;
+			goto out;
+		}
+		rc = convert_pem_to_der(keyPEM, keySizePEM, (unsigned char **) &keys[i], &keySizes[i]);
+		if (rc) {
+			prlog(PR_ERR, "Conversion for %s from PEM to DER failed\n", keyFiles[i]);
+			goto out;
+		}
+		if (keyPEM) free(keyPEM);
+		keyPEM = NULL;
+	}
+	
+	info.keys = (unsigned char **)keys;
+	info.keySizes = keySizes;
+	info.keyPairs = keyPairs;
+	info.newData = newData;
+	info.newDataSize = newDataSize;
+	info.alreadySignedFlag = 0;
+
+	rc = toPKCS7(pkcs7, pkcs7Size, crtFiles, keyPairs, hashFunct, &info);
+	if (rc)
+		goto out;
+
 	if (verbose){
 		printf( "PKCS7 generation successful...\n");
 	}
 out:
-	if (crtPEM) free(crtPEM);
 	if (keyPEM) free(keyPEM);
 	for (int i = 0; i < keyPairs; i++) {
-		if (crts[i]) free(crts[i]);
 		if (keys[i]) free(keys[i]);
 	}
 	if (keys) free (keys);
-	if (crts) free(crts);
 	if (keySizes) free(keySizes);
-	if (crtSizes) free(crtSizes);
 
-	if (pkcs7Buff) free(pkcs7Buff);
+	return rc;
+}
+
+/*
+ *generates a PKCS7 with given signed data
+ *@param pkcs7, the resulting PKCS7, newData not appended, NOTE: REMEMBER TO UNALLOC THIS MEMORY
+ *@param pkcs7Size, the length of pkcs7
+ *@param newData, data to be added to be used in digest
+ *@param dataSize , length of newData
+ *@param crtFiles, array of file paths to public keys that were used in signing with(PEM)
+ *@param sigFiles, array of file paths to raw signed data files 
+ *@param keyPairs, array length of crt/signatures
+ *@param hashFunct, hash function to use in digest, see mbedtls_md_type_t for values in mbedtls/md.h
+ *@return SUCCESS or err number 
+ */
+int to_pkcs7_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const char *newData, size_t newDataSize, 
+	const char** crtFiles, const char** sigFiles,  int keyPairs, int hashFunct)
+{
+	char **sigs = NULL;
+	size_t  *sig_sizes = NULL;
+	int rc;
+	PKCS7Info info;
+	// if no keys given
+	if (keyPairs == 0) {
+		prlog(PR_ERR, "ERROR: missing signature / certificate pairs... use -s <signedDataFile> -c <certificateFile>\n");
+		rc = ARG_PARSE_FAIL;
+		goto out;
+	}
+	sigs = calloc(1, sizeof(char*) * keyPairs);
+	sig_sizes = calloc(1, sizeof(size_t) * keyPairs);
+	if (!sigs || !sig_sizes) {
+		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+		return ALLOC_FAIL;	
+	}
+
+	for (int i = 0; i < keyPairs; i++) {
+		// get data from signature files
+		sigs[i] = getDataFromFile(sigFiles[i], &sig_sizes[i]);
+
+		if (!sigs[i]) {
+			prlog(PR_ERR, "ERROR: failed to get data from signature file %s\n", sigFiles[i]);
+			rc = INVALID_FILE;
+			goto out;
+		}
+	}
+	
+	info.keys = (unsigned char **)sigs;
+	info.keySizes = sig_sizes;
+	info.keyPairs = keyPairs;
+	info.newData = newData;
+	info.newDataSize = newDataSize;
+	info.alreadySignedFlag = 1;
+
+	rc = toPKCS7(pkcs7, pkcs7Size, crtFiles, keyPairs, hashFunct, &info);
+	if (rc)
+		goto out;
+
+	if (verbose){
+		printf( "PKCS7 generation successful...\n");
+	}
+out:
+	for (int i = 0; i < keyPairs; i++) {
+		if (sigs[i]) free(sigs[i]);
+	}
+	if (sigs) free (sigs);
+	if (sig_sizes) free(sig_sizes);
 	return rc;
 }
 #endif

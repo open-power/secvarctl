@@ -16,7 +16,8 @@
 
 
 struct Arguments {
-	int helpFlag, inpValid, signKeyCount, signCertCount;
+    //the alreadySignedFlag is to determine if signKeys stores a private key file(0) or signed data (1)
+	int helpFlag, inpValid, signKeyCount, signCertCount, alreadySignedFlag;
 	const char *inFile, *outFile, 
 	**signCerts, **signKeys,
 	*inForm, *outForm, *varName, *hashAlg;
@@ -36,6 +37,8 @@ static int generateAuthOrPKCS7(const char* buff, size_t size, struct Arguments *
 static int getTimestamp(struct efi_time *ts);
 static int getOutputData (const char *buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunction, char **outBuff, size_t *outBuffSize);
 static int authToESL(const char *in, size_t inSize, char **out, size_t *outSize);
+static int toHashForSecVarSigning(const char* ESL, size_t ESL_size, struct Arguments *args, char** outBuff, size_t* outBuffSize);
+static int getPreHashForSecVar(char **outData, size_t *outSize, const char *ESL, size_t ESL_size, struct Arguments *args);
 static void usage()
 {
 	printf("USAGE:\n\t"
@@ -121,7 +124,7 @@ int performGenerateCommand(int argc,char* argv[])
 	struct hash_funct *hashFunction;
 	char *buff = NULL, *outBuff = NULL;
 	struct Arguments args = {	
-		.helpFlag = 0, .inpValid = 0, .signKeyCount = 0, .signCertCount = 0,
+		.helpFlag = 0, .inpValid = 0, .signKeyCount = 0, .signCertCount = 0, .alreadySignedFlag = 2,
 		.inFile = NULL, .outFile = NULL,  
 		.signCerts = NULL, .signKeys = NULL, .inForm = NULL, .outForm = NULL, .varName = NULL, 
 		.hashAlg = NULL, .time = NULL
@@ -160,7 +163,10 @@ int performGenerateCommand(int argc,char* argv[])
 	}
 	// if signing each signer needs a certificate
 	if (args.signCertCount != args.signKeyCount) {
-		prlog(PR_ERR, "ERROR: Number of certificates does not equal number of keys, %d != %d\n",args.signCertCount, args.signKeyCount);
+		if (args.alreadySignedFlag == 1)
+            prlog(PR_ERR, "ERROR: Number of certificates does not equal number of signature files, %d != %d\n",args.signCertCount, args.signKeyCount);
+        else
+            prlog(PR_ERR, "ERROR: Number of certificates does not equal number of keys, %d != %d\n",args.signCertCount, args.signKeyCount);
 		rc = ARG_PARSE_FAIL;
 		goto out;
 	}
@@ -247,6 +253,12 @@ static int parseArgs( int argc, char *argv[], struct Arguments *args) {
 				args->inpValid = 1;	
 			// set private key signer	
 			else if (!strcmp(argv[i], "-k")) {
+                 //if already storing signed data, then don't allow for private keys
+                if (args->alreadySignedFlag == 1){
+                    prlog(PR_ERR, "ERROR: Cannot have both signed data files and private keys for signing");
+                    goto out;
+                }
+                args->alreadySignedFlag = 0;
 				if (i + 1 >= argc || argv[i + 1][0] == '-') {
 					prlog(PR_ERR, "ERROR: Incorrect private key flag, see usage...\n");
 					rc = ARG_PARSE_FAIL;
@@ -259,6 +271,26 @@ static int parseArgs( int argc, char *argv[], struct Arguments *args) {
 					args->signKeys[args->signKeyCount - 1] = argv[i];
 				}
 			}
+            // set signed data, alternative to -k   
+            else if (!strcmp(argv[i], "-s")) {
+                //if already storing private keys, then don't allow for signed data
+                if (args->alreadySignedFlag == 0){
+                    prlog(PR_ERR, "ERROR: Cannot have both signed data files and private keys for signing");
+                    goto out;
+                }
+                args->alreadySignedFlag = 1;
+                if (i + 1 >= argc || argv[i + 1][0] == '-') {
+                    prlog(PR_ERR, "ERROR: Incorrect signed data flag, see usage...\n");
+                    rc = ARG_PARSE_FAIL;
+                    goto out;
+                }
+                else {
+                    i++;
+                    args->signKeyCount++;
+                    args->signKeys = realloc(args->signKeys, args->signKeyCount * sizeof(char*));
+                    args->signKeys[args->signKeyCount - 1] = argv[i];
+                }
+            }
 			// set public key signer
 			else if(!strcmp(argv[i], "-c")) {	
 				if (i + 1 >= argc || argv[i + 1][0] == '-') {
@@ -388,7 +420,7 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int getOutputData (const char *buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunction, char **outBuff, size_t *outBuffSize) 
+static int getOutputData(const char *buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunction, char **outBuff, size_t *outBuffSize) 
 {
 	int rc;
 	// once here it is time to plan the course of action depending on the output type desired
@@ -399,6 +431,8 @@ static int getOutputData (const char *buff, size_t size, struct Arguments *args,
 		case 'h':
 			rc = generateHash(buff, size, args, hashFunction, outBuff, outBuffSize);
 			break;
+        case 'x':
+            //intentional flow
 		case 'a':
 			//intentional flow into pkcs7
 		case 'p':
@@ -492,11 +526,13 @@ static int generateAuthOrPKCS7(const char* buff, size_t size, struct Arguments *
 	
 	if (args->outForm[0] == 'a')
 		rc = toAuth(*inpPtr, inpSize, args, hashFunct->mbedtls_funct, outBuff, outBuffSize);
-	else
+	else if (args->outForm[0] == 'x')
+        rc = toHashForSecVarSigning(*inpPtr, inpSize, args, outBuff, outBuffSize);
+    else
 		rc = toPKCS7ForSecVar(*inpPtr, inpSize, args, hashFunct->mbedtls_funct, outBuff, outBuffSize);
 
 	if (rc) {
-		prlog(PR_ERR,"Failed to generate %s file\n", args->outForm[0] == 'a' ? "Auth" : "PKCS7");
+		prlog(PR_ERR,"Failed to generate %s file\n", args->outForm[0] == 'a' ? "Auth" : args->outForm[0] == 'x' ? "pre-signed hash" : "PKCS7");
 		goto out;
 	}
 out: 
@@ -817,6 +853,42 @@ static int getTimestamp(struct efi_time *ts) {
   	return validateTime(ts);	
 }
 
+/*
+ *generates presigned hashed data, this accepts an ESL and all metadata, it performs a SHA hash
+ *@param ESL, ESL data buffer
+ *@param ESL_size , length of ESL
+ *@param args, struct containing command line info and lots of other important information
+ *@param outBuff, the resulting hashed data, NOTE: REMEMBER TO UNALLOC THIS MEMORY
+ *@param outBuffSize, the length of hashed data (should be 32 bytes)
+ *@return SUCCESS or err number 
+ */
+static int toHashForSecVarSigning(const char* ESL, size_t ESL_size, struct Arguments *args, char** outBuff, size_t* outBuffSize)
+{
+    int rc;
+    char *preHash = NULL;
+    size_t preHash_size;
+
+    rc = getPreHashForSecVar(&preHash, &preHash_size, ESL, ESL_size, args);
+    if (rc) {
+        prlog(PR_ERR, "Failed to generate pre-hash data\n");
+        goto out;
+    }
+    rc = toHash(preHash, preHash_size, MBEDTLS_MD_SHA256, outBuff, outBuffSize);
+    if (rc) {
+        prlog(PR_ERR, "Failed to generate hash\n");
+        goto out;
+    }
+    if (*outBuffSize != 32) {
+        prlog(PR_ERR, "ERROR: size of SHA256 is not 32 bytes, found %zd bytes\n", *outBuffSize);
+        rc = HASH_FAIL;
+    }
+
+out:
+    if (preHash)
+        free(preHash);
+
+    return rc;
+}
 /* 
  *Expand char to wide character size , for edk2 since ESL's use double wides
  *@param key ,key name
@@ -840,6 +912,75 @@ static char *char_to_wchar(const char *key, const size_t keylen)
 	return str;
 }
 
+/*
+ *generates data that is ready to be hashed and eventually signed for secure variables
+ *more specifically this accepts an ESL and preprends metadata 
+ *@param outData, the outputted data with prepended data / REMEMBER TO UNALLOC 
+ *@param outSize, length of output data
+ *@param ESL, the new ESL data 
+ *@param ESL_size, length of ESL buffer
+ *@param args, struct containing imprtant metadata info
+ *@return, success or error number
+ */
+static int getPreHashForSecVar(char **outData, size_t *outSize, const char *ESL, size_t ESL_size, struct Arguments *args)
+{
+    int rc = SUCCESS;
+    char *ptr = NULL, *wkey = NULL;
+    size_t varlen;
+    le32 attr = cpu_to_le32(SECVAR_ATTRIBUTES);
+    uuid_t guid;
+
+    if (!args->varName) {
+        prlog(PR_ERR, "ERROR: No secure variable name given... use -n <keyName> option\n");
+        rc = ARG_PARSE_FAIL;
+        goto out;
+    }
+
+    if (verbose >= PR_INFO) {
+        prlog(PR_INFO, "Timestamp is : ");
+        printTimestamp(*args->time);
+    }
+    
+    // some parts taken from edk2-compat-process.c
+    if (key_equals(args->varName, "PK")
+        || key_equals(args->varName, "KEK"))
+        guid = EFI_GLOBAL_VARIABLE_GUID;
+    else if (key_equals(args->varName, "db")
+        || key_equals(args->varName, "dbx"))
+        guid = EFI_IMAGE_SECURITY_DATABASE_GUID;
+    else {
+        prlog(PR_ERR, "ERROR: unknown update variable %s\n", args->varName);
+        rc = ARG_PARSE_FAIL;
+        goto out;
+    }
+
+    /* Expand char name to wide character width */
+    varlen = strlen(args->varName) * 2;
+    wkey = char_to_wchar(args->varName, strlen(args->varName));
+    // with timestamp and all this funky bussiniss, we can  make the correct data to be hashed
+    *outSize = varlen + sizeof(guid) + sizeof(attr) + sizeof(struct efi_time) + ESL_size;
+    *outData = malloc(*outSize);
+    if (!*outData){
+        prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+        rc = ALLOC_FAIL;
+        goto out;
+    }
+    ptr = *outData;
+    memcpy(ptr, wkey, varlen);
+    ptr += varlen;
+    memcpy(ptr, &guid, sizeof(guid));
+    ptr += sizeof(guid);
+    memcpy(ptr, &attr, sizeof(attr));
+    ptr += sizeof(attr);
+    memcpy(ptr , args->time, sizeof(struct efi_time));
+    ptr += sizeof(*args->time);
+    memcpy(ptr, ESL, ESL_size);
+
+out:
+    if (wkey) 
+        free(wkey);
+    return rc;
+}
 
 /*
  *generates a PKCS7 that is compatable with Secure variables AKA the data to be hashed will be keyname + timestamp +attr etc. etc ... + newData 
@@ -854,61 +995,21 @@ static char *char_to_wchar(const char *key, const size_t keylen)
 static int toPKCS7ForSecVar(const char* newData, size_t dataSize, struct Arguments *args, int hashFunct, char** outBuff, size_t* outBuffSize)
 {
 	int rc;
-	size_t totalSize, varlen; 
-	char *actualData = NULL, *ptr = NULL;
-	le32 attr = cpu_to_le32(SECVAR_ATTRIBUTES);
-	char *wkey = NULL;
-	uuid_t guid;
+	size_t totalSize; 
+	char *actualData = NULL;
 
-	if (!args->varName) {
-		prlog(PR_ERR, "ERROR: No key given... use -n <keyName> option\n");
-		rc = ARG_PARSE_FAIL;
-		goto out;
-	}
-
-	if (verbose >= PR_INFO) {
-		prlog(PR_INFO, "Timestamp is : ");
-		printTimestamp(*args->time);
-	}
-	
-	// some parts taken from edk2-compat-process.c
-	if (key_equals(args->varName, "PK")
-	    || key_equals(args->varName, "KEK"))
-		guid = EFI_GLOBAL_VARIABLE_GUID;
-	else if (key_equals(args->varName, "db")
-	    || key_equals(args->varName, "dbx"))
-		guid = EFI_IMAGE_SECURITY_DATABASE_GUID;
-	else {
-		prlog(PR_ERR, "ERROR: unknown update variable %s\n", args->varName);
-		rc = ARG_PARSE_FAIL;
-		goto out;
-	}
-
-	/* Expand char name to wide character width */
-	varlen = strlen(args->varName) * 2;
-	wkey = char_to_wchar(args->varName, strlen(args->varName));
-	// with timestamp and all this funky bussiniss, we can  make the correct data to be hashed
-	totalSize = varlen + sizeof(guid) + sizeof(attr) + sizeof(struct efi_time) + dataSize;
-	actualData = malloc(totalSize);
-	if (!actualData){
-		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		rc = ALLOC_FAIL;
-		goto out;
-	}
-	ptr = actualData;
-	memcpy(ptr, wkey, varlen);
-	ptr += varlen;
-	memcpy(ptr, &guid, sizeof(guid));
-	ptr += sizeof(guid);
-	memcpy(ptr, &attr, sizeof(attr));
-	ptr += sizeof(attr);
-	memcpy(ptr , args->time, sizeof(struct efi_time));
-	ptr += sizeof(*args->time);
-	memcpy(ptr, newData, dataSize);
-
-
-	// get pkcs7 and size
-	rc = toPKCS7((unsigned char **)outBuff, outBuffSize, actualData, totalSize, args->signCerts, args->signKeys, args->signKeyCount, MBEDTLS_MD_SHA256 );
+    rc = getPreHashForSecVar(&actualData, &totalSize, newData, dataSize, args);
+    if (rc) {
+        prlog(PR_ERR, "Failed to generate pre-hash data for PKCS7\n");
+        goto out;
+    }
+	// get pkcs7 and size, if we are already given ths signatures then call appropriate funciton
+	if (args->alreadySignedFlag){
+        prlog(PR_INFO, "Generating PKCS7 with already signed data\n");
+        rc = to_pkcs7_already_signed_data((unsigned char **)outBuff, outBuffSize, actualData, totalSize, args->signCerts, args->signKeys, args->signKeyCount, MBEDTLS_MD_SHA256);
+    }
+    else
+      rc = to_pkcs7_generate_signature((unsigned char **)outBuff, outBuffSize, actualData, totalSize, args->signCerts, args->signKeys, args->signKeyCount, MBEDTLS_MD_SHA256 );
 	if (rc) {
 		prlog(PR_ERR,"ERROR: making PKCS7 failed\n");
 		rc = PKCS7_FAIL;
@@ -916,8 +1017,6 @@ static int toPKCS7ForSecVar(const char* newData, size_t dataSize, struct Argumen
 	}
 
 out:
-	if (wkey) 
-		free(wkey);
 	if (actualData) 
 		free(actualData);
 
