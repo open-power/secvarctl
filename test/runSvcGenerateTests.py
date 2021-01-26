@@ -71,10 +71,11 @@ badSignedCommands = [
 
 ]
 
-def command(args,out=None):#stores last log of function into log file
+def command(args,out=None, addCMDRan=True):#stores last log of function into log file
 		if out:
 			with open(out, "w") as f:
-				f.write("\n\n**********COMMAND RAN: $"+ ' '.join(args) +"\n")
+				if addCMDRan:
+					f.write("\n\n**********COMMAND RAN: $"+ ' '.join(args) +"\n")
 				result=subprocess.call(args,stdout=f , stderr=f)
 				f.close();
 				return result
@@ -322,7 +323,36 @@ class Test(unittest.TestCase):
 			command(["rm", emptyESLActual])
 		command(["rm", emptyESLDesired])
 
-
+	def test_genExternalSig(self):
+		out = "genExternalSigLog.txt"
+		timestamp = ["-t", "2020-1-1","1:1:1"]
+		inpCrt = "./testdata/db_by_KEK.crt"
+		sigCrt = "./testdata/goldenKeys/KEK/KEK.crt"
+		sigKey = "./testdata/goldenKeys/KEK/KEK.key"
+		outDigest = OUTDIR + "digest_db_by_KEK.hash"
+		digestHeaderTxt = OUTDIR + "digest_Header.txt"
+		digestHeader = OUTDIR +"digest_Header.bin"
+		expectedOutput = OUTDIR + "exp_db_by_KEK.auth"
+		actualOutput = OUTDIR + "ext_sig_db_by_KEK.auth"
+		digestWHeader = OUTDIR + "digestWHeader_db_by_KEK.bin"
+		genSig = OUTDIR + "ext_sig_db_by_KEK.sig"
+		#generate expected file
+		self.assertEqual(getCmdResult(GEN + ["c:a", "-n", "db", "-k", sigKey, "-c", sigCrt, "-i", inpCrt, "-o", expectedOutput] + timestamp, out, self), True)
+		#generate digest
+		self.assertEqual(getCmdResult(GEN + ["c:x", "-n", "db", "-i", inpCrt, "-o", outDigest ] + timestamp, out, self), True)
+		#add SHA256 oid to file
+		command(['echo' , '"3031300D060960864801650304020105000420"' ], digestHeaderTxt, False)
+		#convert ascii to binry
+		command(["xxd", "-ps", "-r", digestHeaderTxt,digestHeader])
+		#combine two files
+		command(["cat", digestHeader, outDigest], digestWHeader, False)
+		#do external signing
+		command(["openssl", "rsautl", "-in", digestWHeader, "-sign", "-inkey", sigKey, "-pkcs", "-out", genSig,])
+		#use external signature to make authfile
+		self.assertEqual(getCmdResult(GEN + ["c:a", "-n", "db", "-s", genSig, "-c", sigCrt, "-i", inpCrt, "-o", actualOutput] + timestamp, out, self), True)
+		#two files should be eqaul
+		self.assertEqual(compareFiles(expectedOutput, actualOutput), True)
+		
 	def test_genHash(self):
 		out = "genHashLog.txt"
 		inpDir = "./testdata/"
