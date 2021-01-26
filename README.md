@@ -163,7 +163,7 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		--usage
 		--help
 		-v , verbose, gives process info
-		-n <keyName> , name of secure boot variable, used when generating an auth file, PKCS7, or when the input file contains hashed data rather than x509 (use '-n dbx'), current <keyName> are: {'PK','KEK','db','dbx'}
+		-n <varName> , name of secure boot variable, used when generating an auth file, PKCS7, or when the input file contains hashed data rather than x509 (use '-n dbx'), current <varName> are: {'PK','KEK','db','dbx'}
 		-f force generation, skips validation of input file, assumes format to be correct
 		-t <time> , where time is of the format 'y-m-d h:m:s'. creates a custom timestamp used when generating an auth or PKCS7 file, if not given then current time is used
 		-h <hashAlg> hash function, used when output or input format is [h]ash, current <hashAlg> are : {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}
@@ -172,6 +172,8 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		reset , generates a valid variable reset file, replaces <inputFormat>:<outputFormat>. 
 			This file is just an auth file with an empty ESL. Required arguments are output file, signer crt/key pair and variable name. 
 			No input file required.
+        -s <sigFile> raw signature file, replaces -k <privKey> argument when user does not 
+            have direct access to private key. User can use their signing framework to generate the signature externally. The file to be signed should be the output of 'secvarctl generate c:x ...' both commands should use the same -n <varName> and -t <timestamp> arguments
 
 
 	<inputFormat>:
@@ -184,8 +186,9 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 	<outputFormat>:
 		[h]ash , A file containing only hashed data, use -h <hashAlg> to specifify the hash function used (default SHA256) 
 		[e]sl , An EFI Signature List
-		[p]kcs7 , a PKCS7 file containing signed data, must specify secure variable name, public and private keys(EXPERIMENTAL!)
-		[a]uth , A signed authenticated file containing a PKCS7 and the new data, must specify public and private keys secure variable name (EXPERIMENTAL!)
+		[p]kcs7 , a PKCS7 file containing signed data, must specify secure variable name, public and private keys
+		[a]uth , A signed authenticated file containing a PKCS7 and the new data, must specify public and private keys secure variable name
+        [x] , A presigned digest file containing only the hash of the new data in ESL format with extra metadata. This format need only be used when the user does not have access to private keys for signing and must send the digest to be signed through an external framework.  
 
 		The generate command is used to generate all the types of files that will be used in the secure variable management process.
 		The file formats that can be generated from a certificate is a hash, ESL, PKCS7 and auth file with commands 'c:h', "c:e", "c:p" and "c:a" respectively. 
@@ -194,10 +197,10 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		The "-h <hashAlg>" will not effect the digest algorithm used when generating signed data for a PKCS7 (always SHA256). 
 		When generating a signed file (PKCS7 or auth), a public and private key will be needed for signing. 
 		A PKCS7 and Auth file can be signed with several signers by adding more ' -k <privKey> -c <cert>' pairs. 
-		Additionaly, when generating an Auth file the secure variable name must be given as -n <keyName> because it is included in the  message digest. 
+		Additionaly, when generating an Auth file the secure variable name must be given as -n <varName> because it is included in the  message digest. 
 		When using the input type '[f]ile' it will be assumed to be a text file and if output file is '[e]sl', '[p]kcs7' or '[a]uth' it will be hashed according to <hashAlg> (default SHA256). 
 		To create a variable reset file (one that will remove the current contents of a variable), replace '<inputFormat>:<outputFormat>' with 'reset' and
-		supply a variable name, public and private signer files and an output file with '-n <keyName> -k <privKey> -c <crtFile> -o <outFile>'
+		supply a variable name, public and private signer files and an output file with '-n <varName> -k <privKey> -c <crtFile> -o <outFile>'
 		GENERATION OF PKCS7 AND AUTH FILES ARE IN EXPERIMENTAL DEVELEPOMENT PHASE. THEY HAVE NOT BEEN THOROUGHLY TESTED YET.
 
       

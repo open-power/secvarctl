@@ -44,15 +44,21 @@ static void usage()
 	printf("USAGE:\n\t"
 		"$ secvarctl generate <inputFormat>:<outputFormat> [OPTIONS] -i <inputFile> -o <outputFile>\n"
 		"OPTIONS:\n\t-v\t\tverbose, give process progress\n"
-		"\t-n <keyName>\tname of secure boot variable, used when generating an Auth file\n\t" 
+		"\t-n <varName>\tname of secure boot variable, used when generating an Auth file\n\t" 
 		"\t\talso when an ESL or Auth file contains hashed data use '-n dbx'\n\t"
-		"\t\tcurrently accepted for <keyName>: {'PK','KEK','db','dbx'}\n"
+		"\t\tcurrently accepted for <varName>: {'PK','KEK','db','dbx'}\n"
 		"\t-h <hashAlg>\thash function, use when '[h]ash' is input/output format\n\t"
 		"\t\tcurrently accepted for <hashAlg>:\n\t"
 		"\t\t\t{'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}\n"
 		"\t-k <keyFile>\tprivate RSA key (PEM), used when signing data for PKCS7/Auth files\n"
-		"\t\t\tmust have a corresponding 'c <crtFile>'\n\t"
+		"\t\t\tmust have a corresponding '-c <crtFile>'\n\t"
 		"\t\tyou can also use multiple signers by declaring several '-k <> -c <>' pairs\n"
+        "\t-s <sigFile>\traw signed data, alternative to using private keys when generating\n" 
+        "\t\t\tPKCS7/Auth files, must have a corresponding '-c <crtFile>'\n\t"
+        "\t\tyou can also use multiple signers by declaring several '-s <> -c <>' pairs\n"
+        "\t\t\tfor valid secure variable auth files, this data should be generated with\n"
+        "\t\t\t`secvarctl generate c:x ...` and then signed, remember to use the \n"
+        "\t\t\tsame '-t <timestamp>' argument for both commands\n"
 		"\t-c <crtFile>\tx509 cetificate (PEM), used when signing data for PKCS7/Auth files\n"
 		"\t-t <time>\twhere time is of the format 'y-m-d h:m:s'.\n\t"
 		"\t\tcreates a custom timestamp used when generating an auth or PKCS7 file,\n\t"
@@ -81,6 +87,10 @@ static void usage()
 		"\tmust specify secure variable name and public and private key to use for signing\n"
 		"\t[a]uth\tA signed authenticated file containing a PKCS7 and the new data,\n\t"
 		"\tmust specify the key name and public and private key to use for signing\n"
+        "\t[x]\tA valid secure variable presigned digest. This should be used when the user\n"
+        "\t\tdoes not have access to private keys. The user can send this outputted hash file to\n"
+        "\t\tbe signed by whatever signing framework they are using. The raw signature can then be\n"
+        "\t\tused during auth/PKCS7 generation with '-s <sigFile> -c <crtFile'\n\n"
 		"\n\n");
 }
 
@@ -96,15 +106,19 @@ static void help()
 		"\tto create an ESL from an x509 certificate:\n"
 		"\t\t'secvarctl generate c:e -i <file> -o <file>'\n"
 		"\tto create a signed auth file from an ESL, the resulting file is a valid key update file:\n"
-		"\t\t'secvarctl generate e:a -k <file> -c <file> -n <keyName> -i <file> -o <file>'\n"
+		"\t\t'secvarctl generate e:a -k <file> -c <file> -n <varName> -i <file> -o <file>'\n"
 		"\tto create a signed auth file from an x509, the resulting file is a valid key update file:\n"
-		"\t\t'secvarctl generate c:a -k <file> -c <file> -n <keyName> -i <file> -o <file>'\n"
+		"\t\t'secvarctl generate c:a -k <file> -c <file> -n <varName> -i <file> -o <file>'\n"
 		"\tto create a valid dbx update (auth) file from a binary file:\n"
 		"\t\t'secvarctl generate f:a -h <hashAlg> -k <file> -c <file> -n dbx -i <file> -o <file>'\n"
 		"\tto retrieve the ESL from an auth file:\n"
 		"\t\t'secvarctl generate a:e -i <file> -o <file>'\n"
 		"\tto create a signed auth file for a key reset, the resulting file is a valid key reset file:\n"
-		"\t\t'secvarctl generate reset -k <file> -c <file> -n <keyName> -o <file>'\n");
+		"\t\t'secvarctl generate reset -k <file> -c <file> -n <varName> -o <file>'\n"
+        "\tto create an auth file, using an external signing framework:\n"
+        "\t\t'secvarctl generate c:x -n <varName> -t <y-m-d h:m:s> -i <file> -o <file>'\n"
+        "\t\tthen user gets the output file signed into raw signature in <sigFile>\n"
+        "\t\t'secvarctl c:a -n <sameName> -t <sameTimestamp> -s <sigFile> -c <crtfile> -i <file> -o <file>\n");
 
 	usage();
 }
@@ -931,7 +945,7 @@ static int getPreHashForSecVar(char **outData, size_t *outSize, const char *ESL,
     uuid_t guid;
 
     if (!args->varName) {
-        prlog(PR_ERR, "ERROR: No secure variable name given... use -n <keyName> option\n");
+        prlog(PR_ERR, "ERROR: No secure variable name given... use -n <varName> option\n");
         rc = ARG_PARSE_FAIL;
         goto out;
     }
