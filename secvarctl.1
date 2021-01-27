@@ -171,8 +171,9 @@ The accepted values for <outputFormat> are:
 .RS
  [h]ash , A file containing only hashed data, use -h <hashAlg> to specifify the hash function used (default SHA256) 
  [e]sl , An EFI Signature List
- [p]kcs7 , a PKCS7 file containing signed data, must specify public and private keys and digest algorithm (default SHA256) (EXPERIMENTAL!)
- [a]uth , A signed authenticated file containing a PKCS7 and the new data, must specify public and private keys, digest algorithm (default SHA256) and secure variable name (EXPERIMENTAL!)
+ [p]kcs7 , a PKCS7 file containing signed data, must specify public and private keys and digest algorithm (default SHA256) 
+ [a]uth , A signed authenticated file containing a PKCS7 and the new data, must specify public and private keys, digest algorithm (default SHA256) and secure variable name
+ [x] A presigned digest file containing only the hash of the new data in ESL format with extra metadata. This format need only be used when the user does not have access to private keys for signing and must send the digest to be signed through an external framework. 
 .RE
 All input formats besides [f]ile will be prevalidated. To skip prevalidation of the input file, use
 .B -f 
@@ -184,10 +185,14 @@ to force to generation.  If [h]ash is input or output type be sure to specify th
 .B -c 
 <cert>
 .B -k
-<privKey> to sign the input file with.
- When generating an [a]uth file, it is required the user give the secure variable name that the auth file is for as 
+<privKey> to sign the input file with. However, if the user does not have access to their private keys and are only able to interact with a signing framework, they can use
+.B -s 
+<sigFile> in replacement of the private key argument. <sigFile> would contain only the raw signed data of a digest generated with `secvarctl generate c:x`, it is important that both these commands use the same custom timestamp argument 
+.B -t
+<y-m-d h:m:s>.
+ When generating an [a]uth file, it is required the user give the secure variable name that the auth file is for,
 .B -n
-<keyName> , where <keyName> is one of {"PK","KEK", "db", "dbx"}. This argument is also useful when the input file is an ESL for the dbx (use 
+<varName> , where <varName> is one of {"PK","KEK", "db", "dbx"}. This argument is also useful when the input file is an ESL for the dbx (use 
 .B -n 
 dbx) because then the prevalidation will look for an ESL containing a hash rather than an x509.
  Also, when the output type is a [p]kcs7 or [a]uth file, the user can use a custom timestamp with 
@@ -345,7 +350,7 @@ For
 REQUIRED:
 .RS
 .B <inputFormat>:<outputFormat>
-, {'[c]ert', '[h]ash', '[e]sl', '[p]kcs7', '[a]uth', '[f]ile'}:{ '[h]ash', '[e]sl', '[p]kcs7', '[a]uth'} SEE DESCRIPTION FOR HELP
+, {'[c]ert', '[h]ash', '[e]sl', '[p]kcs7', '[a]uth', '[f]ile'}:{ '[h]ash', '[e]sl', '[p]kcs7', '[a]uth', '[x] presigned digest'} SEE DESCRIPTION FOR HELP
 .PP
 .B -i
 <inputFile> , input file that has the format specified by <inputFormat>
@@ -366,7 +371,7 @@ OPTIONAL:
 , force generation, skips validation of input file and assumes it to be formatted according to <inputFormat>
 .PP
 .B -n 
-<keyName> , name of secure boot variable, used when generating an auth file, PKCS7, or when the input file contains hashed data rather than x509 (use '-n dbx'), current <keyName> are: {'PK','KEK','db','dbx'}
+<varName> , name of secure boot variable, used when generating an auth file, PKCS7, or when the input file contains hashed data rather than x509 (use '-n dbx'), current <varName> are: {'PK','KEK','db','dbx'}
 .PP
 .B -t 
 <time> , where time is of the format 'y-m-d h:m:s'. creates a custom timestamp used when generating an auth or PKCS7 file, if not given then current time is used
@@ -376,6 +381,9 @@ OPTIONAL:
 .PP
 .B -k 
 <privKey> , private key, used when generating pkcs7 or auth file
+.PP
+.B -s 
+<sigFile> , signed data file, alternative to internal signing, replacement of private key argument
 .PP
 .B -c 
 <certFile> , x509 certificate (PEM), used when generating pkcs7 or auth file
@@ -427,14 +435,19 @@ To create ESL from a hash:
 To create an auth file from the esl containg a hash for a dbx update: 
       $secvarctl generate e:a -k signer.key -c signer.crt -n dbx -i file.esl -o file.auth
 .PP
-To create an Auth file from a certificate for a KEK update (this will create an ESL from the certificate and use the ESL for the Auth File):
+To create an auth file from a certificate for a KEK update (this will create an ESL from the certificate and use the ESL for the Auth File):
       $secvarctl generate c:a -k signer.key -c signer.crt -n KEK -i file.crt -o file.auth 
 .PP
 To create a PKCS7 file from an ESL for a db update with a custom timestamp:
       $secvarctl generate e:p -k signer.key -c signer.crt -n db -t 2020-10-1 13:45:42 -i file.crt -o file.pkcs7 
 .PP
-To create a empty update to reset the db variable:
+To create an empty update to reset the db variable:
       $secvarctl generate reset -k signer.key -c signer.crt -n db -o db.auth 
+.PP
+To create an auth file using an external signing framework for db update:
+      $secvarctl generate c:x -n db -t 2021-1-1 1:1:1 -i file.crt -o file.hash
+      <user sends file.hash to be signed by external entity, signature is now in file.sig>
+      $secvarctl generate c:a -n db -t 2021-1-1 1:1:1 -c signer.crt -s file.sig -i file.crt -o file.auth 
 
 .SH AUTHOR
 Nick Child nick.child@ibm.com,
