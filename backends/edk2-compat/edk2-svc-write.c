@@ -220,7 +220,7 @@ int updateVar(const char *path, const char *var, const char *buff, size_t size)
 		return ALLOC_FAIL;
 	}
 
-	strncpy(fullPathWithCommand, path, strlen(path) + 1);
+	strcpy(fullPathWithCommand, path);
 	strcat(fullPathWithCommand, var);
 	strcat(fullPathWithCommand, "/update");
 

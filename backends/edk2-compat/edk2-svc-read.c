@@ -194,8 +194,8 @@ static int readFileFromSecVar(const char *path, const char *variable, int hrFlag
 		return ALLOC_FAIL;
 	}
 
-	strncpy(fullPath, path, strlen(path) + 1);
-	strncat(fullPath, variable, strlen(variable));
+	strcpy(fullPath, path);
+	strcat(fullPath, variable);
 	strcat(fullPath, "/data");
 
 	rc = getSecVar(&var, variable, fullPath);
@@ -276,16 +276,16 @@ int getSecVar(struct secvar **var, const char* name, const char *fullPath){
 	if (rc) {
 		return rc;
 	}
-	sizePath = malloc(strlen(fullPath) + 1);
+	sizePath = malloc( strlen(fullPath) + 1);
 	if (!sizePath) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 		return ALLOC_FAIL;
 	}
 	// since we are reading from a secvar, it can be assumed it has a <var>/size file for more accurate size
 	// fullPath currently holds <path>/<var>/data we are going to take off data and add size to get the desired file
-	strncpy(sizePath, fullPath, strlen(fullPath) - strlen("data"));
+	strcpy(sizePath, fullPath);
 	//add null terminator so strncat works
-	sizePath[strlen(fullPath) - strlen("data")] = '\0';
+	sizePath[strlen(sizePath) - strlen("data")] = '\0';
 	strncat(sizePath, "size", strlen("size") + 1); 
 	rc = getSizeFromSizeFile(&size, sizePath);
 	if (rc < 0) {
