@@ -480,7 +480,7 @@ static int getCurrentVars(char *newCurr[], int *size, const char* path)
 			prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 			return ALLOC_FAIL;
 		}
-		strncpy(fullPath, path, strlen(path));
+		strcpy(fullPath, path);
 		offset += strlen(path);
 		strncpy(fullPath + offset, variables[i], strlen(variables[i]));
 		offset += strlen(variables[i]);
@@ -501,7 +501,7 @@ static int getCurrentVars(char *newCurr[], int *size, const char* path)
 				return ALLOC_FAIL;
 			}
 
-			strncpy(newCurr[lenCtr++],fullPath, strlen(fullPath)+1);
+			strcpy(newCurr[lenCtr++],fullPath);
 		}
 		offset = 0;
 		free(fullPath);
