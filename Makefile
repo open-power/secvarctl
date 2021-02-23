@@ -1,14 +1,15 @@
 #_*_MakeFile_*_
 CC = gcc 
-_CFLAGS = -O2 -s -g -std=gnu99
+_CFLAGS = -s -O2 -std=gnu99
 LFLAGS = -lmbedtls -lmbedx509 -lmbedcrypto -Wall -Werror 
 
 _DEPEN = secvarctl.h prlog.h err.h generic.h 
 DEPDIR = include
 DEPEN = $(patsubst %,$(DEPDIR)/%, $(_DEPEN))
-_SKIBOOT_DEPEN =list.h config.h container_of.h check_type.h secvar.h opal-api.h endian.h short_types.h edk2.h edk2-svc.h generate-pkcs7.h pkcs7.h
+_SKIBOOT_DEPEN =list.h config.h container_of.h check_type.h secvar.h opal-api.h endian.h short_types.h edk2.h edk2-svc.h 
 SKIBOOTDEPDIR = backends/edk2-compat/include
 SKIBOOTDEPEN = $(patsubst %,$(SKIBOOTDEPDIR)/%, $(_SKIBOOT_DEPEN))
+DEPEN += $(SKIBOOTDEPEN)
 
 _EXTRAMBEDTLS_DEPEN = pkcs7.h generate-pkcs7.h 
 EXTRAMBEDTLSDEPDIR = extraMbedtls/include
@@ -16,7 +17,7 @@ EXTRAMBEDTLSDEPEN = $(patsubst %,$(EXTRAMBEDTLSDEPDIR)/%, $(_EXTRAMBEDTLS_DEPEN)
 DEPEN += $(EXTRAMBEDTLSDEPEN)
 
 SKIBOOTOBJDIR = backends/edk2-compat
-_SKIBOOT_OBJ = secvar_util.o edk2-svc-read.o edk2-svc-write.o edk2-svc-validate.o edk2-compat.o edk2-compat-process.o   edk2-svc-verify.o
+_SKIBOOT_OBJ = secvar_util.o edk2-svc-read.o edk2-svc-write.o edk2-svc-validate.o edk2-compat.o edk2-compat-process.o   edk2-svc-verify.o edk2-svc-generate.o
 SKIBOOT_OBJ = $(patsubst %,$(SKIBOOTOBJDIR)/%, $(_SKIBOOT_OBJ))
 
 EXTRAMBEDTLSDIR = extraMbedtls

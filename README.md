@@ -26,10 +26,16 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 	
 
 ## BUILDING:  
-  `$ git clone https://github.com/nick-child-ibm/secvarctl.git `   
-  `$ make `  
-  OR For Static Build:
-  `$ make STATIC=1`  
+ |               | Make      | CMake |
+ ---             | ----------- | ----------- |
+ | Build  | `make [build options]`      | `mdkir build && cd build && cmake [build options] ../ . && cmake --build .`      |
+ | Static Build | `STATIC=1` | `-DSTATIC=1`|
+ | Reduced Size Build | default | `-DSTRIP=1` |
+ | Build Without Crypto Functions | `NO_CRYPTO=1` | `-DNO_CRYPTO=1` |
+ | Build W Specific Mbedtls Library | `CFLAGS="-L<path>/library -I<path>/include"` | `-DCUSTOM_MBEDTLS=<path>` |
+ | Build for Coverage Tests | `make [options] secvarctl-cov` | `-DCMAKE_BUILD_TYPE=Coverage` |
+ | Install    | `make install`        | `cmake --install .`|
+ 
 
   
 ## FILE/KEY GENERATION:   
