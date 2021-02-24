@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+/* Copyright 2021 IBM Corp.*/
 #ifndef PRLOG_H
 #define PRLOG_H
 #include <stdio.h>

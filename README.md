@@ -210,3 +210,5 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		GENERATION OF PKCS7 AND AUTH FILES ARE IN EXPERIMENTAL DEVELEPOMENT PHASE. THEY HAVE NOT BEEN THOROUGHLY TESTED YET.
 
       
+## License   
+The files located in the `external` directory are borrowed files from other packages. They retain their licenses from their respective license headers. All other files are protected under Apache 2.0, as specified in the `LICENSE` file. 
