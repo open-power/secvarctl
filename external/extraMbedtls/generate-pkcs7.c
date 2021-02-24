@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <mbedtls/base64.h> // for pem 2 der functions
 #include "include/generate-pkcs7.h"
-#include "../include/err.h"
-#include "../include/prlog.h"
+#include "../../include/err.h"
+#include "../../include/prlog.h"
 #ifndef NO_CRYPTO
 
 #include <stdio.h>
@@ -14,9 +14,9 @@
 #include <mbedtls/platform.h> //  mbedtls functions
 #include <mbedtls/pk_internal.h>
 #include <mbedtls/x509_crt.h>
-#include "../include/generic.h"
+#include "../../include/generic.h"
 
-#include "../backends/edk2-compat/include/edk2-compat-process.h" //  work on factoring this out
+#include "../skiboot/include/edk2-compat-process.h" //  work on factoring this out
 
 extern int verbose;
 /* STRUCTURE OF PKCS7 AND CORRESPONDING FUNCTIONS THAT HANDLE THEM:

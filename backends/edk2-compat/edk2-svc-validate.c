@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>// for exit
 #include <mbedtls/pk_internal.h> // for validating cert pk data
-#include "../../extraMbedtls/include/pkcs7.h"
+#include "../../external/extraMbedtls/include/pkcs7.h"
 #include "include/edk2-svc.h"// import last!!
 
 struct Arguments {

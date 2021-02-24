@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include "include/secvar.h" // for secvar struct
+#include "../../external/skiboot/include/secvar.h" // for secvar struct
 #include "include/edk2-svc.h"// include last, pragma pack(1) issue
 
 

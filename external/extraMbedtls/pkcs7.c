@@ -58,7 +58,7 @@
 #include <fcntl.h> //O_WRONLY
 /* Prototypes */
 //ADDED BY NICK
-#include "../include/prlog.h"
+#include "../../include/prlog.h"
 static void pkcs7_free_signer_info( mbedtls_pkcs7_signer_info *si );
 
 
