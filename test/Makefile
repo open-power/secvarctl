@@ -17,7 +17,7 @@ all: $(data) ../secvarctl-cov
 	$(py) runSvcGenerateTests.py $(MEMARGS)
 	
 
-$(data): generateTestData.py
+generate: $(data)
 	$(py) generateTestData.py $(efitools)
 
 ../secvarctl-cov:
