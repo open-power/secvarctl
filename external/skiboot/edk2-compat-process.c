@@ -19,7 +19,7 @@
 #include "include/edk2-compat-process.h"
 
 //nick stuff added 
-#include "../../extraMbedtls/include/pkcs7.h"
+#include "../extraMbedtls/include/pkcs7.h"
 #include <stdlib.h>
 #include "include/edk2.h"
 #include "../../include/prlog.h"

@@ -25,7 +25,7 @@
 //added by nick child
 #include "short_types.h"
 #include "opal-api.h"
-#include "../../../extraMbedtls/include/pkcs7.h"
+#include "../../extraMbedtls/include/pkcs7.h"
 #include "secvar.h"
 #include "edk2.h"
 #include "endian.h"

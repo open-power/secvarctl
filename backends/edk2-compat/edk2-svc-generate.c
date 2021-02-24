@@ -6,10 +6,10 @@
 #include <ctype.h> // for isspace
 #include <mbedtls/md.h>     /* generic interface */
 #include <mbedtls/platform.h> /*mbedtls functions*/
-#include "../../extraMbedtls/include/pkcs7.h" // for PKCS7 OID
-#include "include/endian.h"
+#include "../../external/extraMbedtls/include/pkcs7.h" // for PKCS7 OID
+#include "../../external/skiboot/include/endian.h"
 #include "include/edk2-svc.h"
-#include "include/edk2-compat-process.h" // work on factoring this out
+#include "../../external/skiboot/include/edk2-compat-process.h" // work on factoring this out
 
 
 

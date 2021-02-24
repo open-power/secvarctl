@@ -4,8 +4,8 @@
 #include <stdlib.h>// for exit
 #include <fcntl.h> // O_RDONLY
 #include <unistd.h> // has read/open funcitons
-#include "include/opal-api.h"
-#include "include/secvar.h"
+#include "../../external/skiboot/include/opal-api.h"
+#include "../../external/skiboot/include/secvar.h"
 #include "include/edk2-svc.h"
 
 
