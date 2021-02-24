@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+/* Copyright 2021 IBM Corp.*/
 #include <string.h>
 #include <stdlib.h>
 #include <mbedtls/base64.h> // for pem 2 der functions

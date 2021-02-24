@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+/* Copyright 2021 IBM Corp.*/
 #include <sys/stat.h> // needed for stat struct for file info
 #include <sys/types.h>
 #include <stdio.h>

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 IBM Corp.
 #_*_MakeFile_*_
 CC = gcc 
 _CFLAGS = -s -O2 -std=gnu99

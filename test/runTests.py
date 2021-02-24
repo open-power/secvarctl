@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 IBM Corp.
 import unittest
 import subprocess
 import os

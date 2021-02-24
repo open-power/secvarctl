@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+/* Copyright 2021 IBM Corp.*/
 #ifndef EDK2_SVC_SKIBOOT_H
 #define EDK2_SVC_SKIBOOT_H
 #include <stdint.h> //for uint_16 stuff like that

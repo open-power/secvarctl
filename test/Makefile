@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 IBM Corp.
 py = python3
 #add location of efitools here. if in PATH, leave bleank
 # efitools = ../../efitools/

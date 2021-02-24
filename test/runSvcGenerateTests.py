@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 IBM Corp.
 #These tests will use sectool's validate command to determine wether the file was correctly generated.
 #We can use the validate command because it was previously tested in runTests.py
 import subprocess #for commmands

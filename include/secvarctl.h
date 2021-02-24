@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+/* Copyright 2021 IBM Corp.*/
 #ifndef SECVARCTL_H
 #define SECVARCTL_H
 #include <stdint.h> //for uint_16 stuff like that

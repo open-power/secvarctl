@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 IBM Corp.
 import subprocess #for commmands
 import os #for getting size of file
 import sys
