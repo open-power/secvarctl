@@ -8,8 +8,8 @@
 #include <unistd.h> // has read/open funcitons
 #include <sys/stat.h> // needed for stat struct for file info
 #include <sys/types.h>
-#include "include/err.h"
-#include "include/prlog.h"
+#include "err.h"
+#include "prlog.h"
 
 /**
  *determines if given file currently exists

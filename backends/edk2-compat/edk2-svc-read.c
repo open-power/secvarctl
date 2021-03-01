@@ -10,8 +10,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <argp.h>
-#include "../../external/skiboot/include/secvar.h" // for secvar struct
-#include "include/edk2-svc.h"// include last, pragma pack(1) issue
+#include "external/skiboot/include/secvar.h" // for secvar struct
+#include "backends/edk2-compat/include/edk2-svc.h"// include last, pragma pack(1) issue
+
 
 
 

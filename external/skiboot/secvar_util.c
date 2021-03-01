@@ -9,9 +9,9 @@
 #include <string.h>
 /*#include <skiboot.h>*/
 /*#include <opal.h>*/
-#include "include/secvar.h"
+#include "external/skiboot/include/secvar.h"
 //ADDED BY NICK
-#include "include/opal-api.h"
+#include "external/skiboot/include/opal-api.h"
 #define zalloc(...) calloc(1,__VA_ARGS__)
 
 void clear_bank_list(struct list_head *bank)

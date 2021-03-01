@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "include/pkcs7.h"
+#include "external/extraMbedtls/include/pkcs7.h"
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include <mbedtls/config.h>
 #else
@@ -58,7 +58,7 @@
 #include <fcntl.h> //O_WRONLY
 /* Prototypes */
 //ADDED BY NICK
-#include "../../include/prlog.h"
+#include "prlog.h"
 static void pkcs7_free_signer_info( mbedtls_pkcs7_signer_info *si );
 
 
