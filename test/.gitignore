@@ -1,0 +1,4 @@
+# test inputs, env and results
+*.txt
+testenv
+generatedTestData
