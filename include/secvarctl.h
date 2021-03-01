@@ -5,7 +5,7 @@
 #include <stdint.h> // for uint_16 stuff like that
 #include "err.h"
 #include "prlog.h"
-#include "../backends/edk2-compat/include/edk2-svc.h"
+#include "backends/edk2-compat/include/edk2-svc.h"
 
 
 enum backends {

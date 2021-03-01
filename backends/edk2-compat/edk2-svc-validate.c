@@ -5,8 +5,8 @@
 #include <stdlib.h>// for exit
 #include <argp.h>
 #include <mbedtls/pk_internal.h> // for validating cert pk data
-#include "../../external/extraMbedtls/include/pkcs7.h"
-#include "include/edk2-svc.h"// import last!!
+#include "external/extraMbedtls/include/pkcs7.h"
+#include "backends/edk2-compat/include/edk2-svc.h"// import last!!
 
 struct Arguments {
 	int helpFlag;

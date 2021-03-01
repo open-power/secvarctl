@@ -25,6 +25,11 @@ set ( EXTRAMBEDTLSSRCDIR  external/extraMbedtls/ )
 list( TRANSFORM EXTRAMBEDTLSSRC PREPEND ${EXTRAMBEDTLSSRCDIR} )
 list( APPEND SRC ${EXTRAMBEDTLSSRC} )
 
+# include paths:
+#  - include/
+#  - the root directory so that we can e.g. #include "{external,backends}/..."
+include_directories(include ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_executable( secvarctl ${SRC} )
 
 

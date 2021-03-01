@@ -10,10 +10,10 @@
 #include <argp.h>
 #include <mbedtls/md.h>     /* generic interface */
 #include <mbedtls/platform.h> /*mbedtls functions*/
-#include "../../external/extraMbedtls/include/pkcs7.h" // for PKCS7 OID
-#include "../../external/skiboot/include/endian.h"
-#include "include/edk2-svc.h"
-#include "../../external/skiboot/include/edk2-compat-process.h" // work on factoring this out
+#include "external/extraMbedtls/include/pkcs7.h" // for PKCS7 OID
+#include "external/skiboot/include/endian.h"
+#include "backends/edk2-compat/include/edk2-svc.h"
+#include "external/skiboot/include/edk2-compat-process.h" // work on factoring this out
 
 
 enum pkcs7_generation_method {

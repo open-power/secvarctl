@@ -2,7 +2,7 @@
 # Copyright 2021 IBM Corp.
 #_*_MakeFile_*_
 CC = gcc 
-_CFLAGS = -MMD -O2 -std=gnu99 -Wall -Werror
+_CFLAGS = -MMD -O2 -std=gnu99 -I./ -Iinclude/ -Wall -Werror
 _LDFLAGS = -lmbedtls -lmbedx509 -lmbedcrypto
 
 DEBUG ?= 0

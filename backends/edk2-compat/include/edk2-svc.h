@@ -4,12 +4,12 @@
 #define EDK2_SVC_SKIBOOT_H
 #include <stdint.h> // for uint_16 stuff like that
 #include <mbedtls/x509_crt.h> // for printCertInfo
-#include "../../../external/skiboot/include/secvar.h" // for secvar struct
-#include "../../../include/err.h"
-#include "../../../include/prlog.h"
-#include "../../../include/generic.h"
-#include "../../../external/extraMbedtls/include/generate-pkcs7.h"
-#include "../../../external/skiboot/include/edk2.h" // include last or else problems from pragma pack(1)
+#include "external/skiboot/include/secvar.h" // for secvar struct
+#include "err.h"
+#include "prlog.h"
+#include "generic.h"
+#include "external/extraMbedtls/include/generate-pkcs7.h"
+#include "external/skiboot/include/edk2.h" // include last or else problems from pragma pack(1)
 
 // all argp options must have a single character option 
 // so we set --usage to have a single character option that is out of range

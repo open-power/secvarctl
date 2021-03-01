@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "include/prlog.h"
-#include "include/secvarctl.h"
+#include "prlog.h"
+#include "secvarctl.h"
 
 int verbose = PR_WARNING;
 static struct backend *getBackend();
