@@ -272,6 +272,7 @@ static int readFileFromPath(const char *file, int hrFlag)
 int getSecVar(struct secvar **var, const char* name, const char *fullPath){
 	int rc, fptr;
 	size_t size;
+	ssize_t read_size;
 	char *sizePath = NULL, *c = NULL;
 	struct stat fileInfo;
 	rc = isFile(fullPath);
@@ -324,7 +325,13 @@ int getSecVar(struct secvar **var, const char* name, const char *fullPath){
 		return ALLOC_FAIL;	
 	}
 
-	read(fptr, c, size);
+	read_size = read(fptr, c, size);
+	if (read_size != size) {
+		prlog(PR_ERR, "ERROR: did not read all data of %s in one go\n", fullPath);
+		free(c);
+		close(fptr);
+		return INVALID_FILE;
+	}
 	close(fptr);
 	if (!c) {
 		prlog(PR_ERR, "ERROR: no data in file");
@@ -377,7 +384,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 	ssize_t eslvarsize = size, cert_size;
 	size_t  eslsize = 0;
 	int count = 0, offset = 0, rc;
-	char *cert = NULL;
+	unsigned char *cert = NULL;
 	EFI_SIGNATURE_LIST *sigList;
 	mbedtls_x509_crt *x509 = NULL;
 
@@ -404,7 +411,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 		eslsize = sigList->SignatureListSize;
 		printESLInfo(sigList);
 		// puts sig data in cert
-		cert_size = get_esl_cert(c + offset, sigList, &cert); 
+		cert_size = get_esl_cert(c + offset, sigList, (char **)&cert); 
 		if (cert_size <= 0) {
 			prlog(PR_ERR, "\tERROR: Signature Size was too small, no data \n");
 			break;
@@ -589,7 +596,7 @@ EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen)
 static int getSizeFromSizeFile(size_t *returnSize, const char* path)
 {
 	int fptr, rc;
-	ssize_t maxdigits = 8; 
+	ssize_t maxdigits = 8, read_size; 
 	char *c = NULL;
 
 	struct stat fileInfo;
@@ -612,7 +619,14 @@ static int getSizeFromSizeFile(size_t *returnSize, const char* path)
 		return ALLOC_FAIL;
 	}
 	prlog(PR_NOTICE, "----opening %s is success: reading %zd of %zd bytes----\n", path, maxdigits, fileInfo.st_size);
-	read(fptr, c, maxdigits);
+	read_size = read(fptr, c, maxdigits);
+	if (read_size <= 0) {
+		prlog(PR_ERR, "ERROR: error reading %s\n", path);
+		free(c);
+		close(fptr);
+		return INVALID_FILE;
+	}
+
 	close(fptr);
 	// turn string into base 10 int
 	*returnSize = strtol(c, NULL, 0); 
@@ -628,5 +642,12 @@ static int getSizeFromSizeFile(size_t *returnSize, const char* path)
 }
 
 
-
-
+struct command edk2_compat_command_table[] = {
+	{ .name = "read", .func = performReadCommand },
+	{ .name = "write", .func = performWriteCommand },
+	{ .name = "validate", .func = performValidation },
+	{ .name = "verify", .func = performVerificationCommand },
+#ifndef NO_CRYPTO
+	{ .name = "generate", .func = performGenerateCommand }
+#endif
+};

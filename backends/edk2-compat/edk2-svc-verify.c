@@ -308,7 +308,7 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 {
 	int defaultVarsFlag = 0;
 	size_t len;
-	struct secvar *var, *tmp = NULL;
+	struct secvar *tmp = NULL;
 	char * c;
 	// check that update string given
 	if (!updateVars || updateCount <= 1) {
@@ -389,7 +389,7 @@ static int validateBanks(struct list_head *update_bank, struct list_head *variab
 			prlog(PR_ERR, "ERROR: Invalid variable %s, cannot update Timestamp variable\n", var->key);
 			return rc;
 		}
-		rc = validateAuth(var->data, var->data_size, var->key);
+		rc = validateAuth((unsigned char *)var->data, var->data_size, var->key);
 		if (rc) {
 			prlog(PR_ERR, "ERROR: failed to validate Auth file for %s, returned %d\n",var->key,rc);
 			return rc;
@@ -401,9 +401,9 @@ static int validateBanks(struct list_head *update_bank, struct list_head *variab
 		list_for_each(variable_bank, var, link) {
 			prlog(PR_INFO, "----VALIDATING CURRENT VAR: %s----\n", var->key);
 			if (strcmp(var->key, "TS") == 0) 
-				rc = validateTS(var->data, var->data_size);
+				rc = validateTS((unsigned char *)var->data, var->data_size);
 			else
-				rc = validateESL(var->data, var->data_size, var->key);
+				rc = validateESL((unsigned char *)var->data, var->data_size, var->key);
 			if (rc) {
 				prlog(PR_ERR, "ERROR: failed to validate data file for %s,returned %d\n", var->key, rc);
 				return rc;
@@ -544,7 +544,7 @@ static int commitUpdateBank(struct list_head *update_bank, const char *path)
 	struct secvar *var;
 	list_for_each(update_bank, var, link) {
 		prlog(PR_INFO, "Writing new %s with %zd bytes of data to %s%s/update\n",var->key, var->data_size, path, var->key);
-		rc = updateVar(path, var->key, var->data, var->data_size);
+		rc = updateVar(path, var->key, (unsigned char *)var->data, var->data_size);
 		if (rc) {
 			prlog(PR_ERR, "ERROR: issue writing to file #%d\n", rc); // consider continuing
 			return rc;

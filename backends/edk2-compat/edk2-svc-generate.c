@@ -28,19 +28,19 @@ struct Arguments {
 }; 
 static int parseArgs(int argc, char *argv[], struct Arguments *args);
 
-static int generateHash(const char* data, size_t size, struct Arguments *args, const struct hash_funct *alg, char** outHash, size_t* outHashSize);
+static int generateHash(const unsigned char* data, size_t size, struct Arguments *args, const struct hash_funct *alg, unsigned char** outHash, size_t* outHashSize);
 static int validateHashAndAlg(size_t size, const struct hash_funct *alg);
-static int toESL(const char* data, size_t size, const uuid_t guid, char** outESL, size_t* outESLSize);
+static int toESL(const unsigned char* data, size_t size, const uuid_t guid, unsigned char** outESL, size_t* outESLSize);
 static int getHashFunction(const char* name, struct hash_funct **returnFunct);
-static int toPKCS7ForSecVar(const char* newData, size_t dataSize, struct Arguments *args, int hashFunct, char** outBuff, size_t* outBuffSize);
-static int toAuth(const char* newESL, size_t eslSize, struct Arguments *args, int hashFunct, char** outBuff, size_t* outBuffSize);
-static int generateESL(const char* buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunct, char** outBuff, size_t* outBuffSize);
-static int generateAuthOrPKCS7(const char* buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunct, char** outBuff, size_t* outBuffSize);
+static int toPKCS7ForSecVar(const unsigned char* newData, size_t dataSize, struct Arguments *args, int hashFunct, unsigned char** outBuff, size_t* outBuffSize);
+static int toAuth(const unsigned char* newESL, size_t eslSize, struct Arguments *args, int hashFunct, unsigned char** outBuff, size_t* outBuffSize);
+static int generateESL(const unsigned char* buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunct, unsigned char** outBuff, size_t* outBuffSize);
+static int generateAuthOrPKCS7(const unsigned char* buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunct, unsigned char** outBuff, size_t* outBuffSize);
 static int getTimestamp(struct efi_time *ts);
-static int getOutputData (const char *buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunction, char **outBuff, size_t *outBuffSize);
-static int authToESL(const char *in, size_t inSize, char **out, size_t *outSize);
-static int toHashForSecVarSigning(const char* ESL, size_t ESL_size, struct Arguments *args, char** outBuff, size_t* outBuffSize);
-static int getPreHashForSecVar(char **outData, size_t *outSize, const char *ESL, size_t ESL_size, struct Arguments *args);
+static int getOutputData (const unsigned char *buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunction, unsigned char **outBuff, size_t *outBuffSize);
+static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out, size_t *outSize);
+static int toHashForSecVarSigning(const unsigned char* ESL, size_t ESL_size, struct Arguments *args, unsigned char** outBuff, size_t* outBuffSize);
+static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const unsigned char *ESL, size_t ESL_size, struct Arguments *args);
 static void usage()
 {
 	printf("USAGE:\n\t"
@@ -138,7 +138,7 @@ int performGenerateCommand(int argc,char* argv[])
 	int rc;
 	size_t outBuffSize, size;
 	struct hash_funct *hashFunction;
-	char *buff = NULL, *outBuff = NULL;
+	unsigned char *buff = NULL, *outBuff = NULL;
 	struct Arguments args = {	
 		.helpFlag = 0, .inpValid = 0, .signKeyCount = 0, .signCertCount = 0, .alreadySignedFlag = 2,
 		.inFile = NULL, .outFile = NULL,  
@@ -193,7 +193,7 @@ int performGenerateCommand(int argc,char* argv[])
 		size = 0;
 	else {
 		// get data from input file
-		buff = getDataFromFile(args.inFile, &size);
+		buff = (unsigned char *)getDataFromFile(args.inFile, &size);
 		if (buff == NULL){
 			prlog(PR_ERR, "ERROR: Could not find data in file %s\n", args.inFile);
 			rc = INVALID_FILE;
@@ -216,7 +216,7 @@ int performGenerateCommand(int argc,char* argv[])
 
 	prlog(PR_INFO, "Writing %zd bytes to %s\n", outBuffSize, args.outFile);
 	// write data to new file
-	rc = createFile(args.outFile, outBuff, outBuffSize);
+	rc = createFile(args.outFile, (char *)outBuff, outBuffSize);
 	if (rc) {
 		prlog(PR_ERR, "ERROR: Could not write new data to output file %s\n", args.outFile);
 	}
@@ -436,7 +436,7 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int getOutputData(const char *buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunction, char **outBuff, size_t *outBuffSize) 
+static int getOutputData(const unsigned char *buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunction, unsigned char **outBuff, size_t *outBuffSize) 
 {
 	int rc;
 	// once here it is time to plan the course of action depending on the output type desired
@@ -489,12 +489,12 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int generateAuthOrPKCS7(const char* buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunct, char** outBuff, size_t* outBuffSize)
+static int generateAuthOrPKCS7(const unsigned char* buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunct, unsigned char** outBuff, size_t* outBuffSize)
 {
 	int rc;
 	size_t intermediateBuffSize, inpSize = size; 
-	char *intermediateBuff = NULL, **inpPtr;
-	inpPtr = (char **) &buff;
+	unsigned char *intermediateBuff = NULL, **inpPtr;
+	inpPtr = (unsigned char **)&buff;
 	
 	switch (args->inForm[0]) {
 		case 'f':
@@ -567,13 +567,13 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int generateESL(const char* buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunct, char** outBuff, size_t* outBuffSize)
+static int generateESL(const unsigned char* buff, size_t size, struct Arguments *args, const struct hash_funct *hashFunct, unsigned char** outBuff, size_t* outBuffSize)
 {
 	int rc;
 	size_t intermediateBuffSize, inpSize = size; 
-	char *intermediateBuff = NULL , **inpPtr;
+	unsigned char *intermediateBuff = NULL , **inpPtr;
 	uuid_t const* eslGUID = &EFI_CERT_X509_GUID;
-	inpPtr = (char **) &buff;
+	inpPtr = (unsigned char **) &buff;
 
 	switch (args->inForm[0]) {
 		case 'f':
@@ -664,7 +664,7 @@ out:
  *@param outHashSize, the length of outHash
  *@return SUCCESS or err number 
  */
-static int generateHash(const char* data, size_t size, struct Arguments *args, const struct hash_funct *alg, char** outHash, size_t* outHashSize)
+static int generateHash(const unsigned char* data, size_t size, struct Arguments *args, const struct hash_funct *alg, unsigned char** outHash, size_t* outHashSize)
 {
 	int rc;
 	//  if the input is not declared valid then we validate it is the same as inForm format
@@ -729,7 +729,7 @@ static int validateHashAndAlg(size_t size, const struct hash_funct *alg)
  *@param outESLSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int toESL(const char* data, size_t size, const uuid_t guid, char** outESL, size_t* outESLSize)
+static int toESL(const unsigned char* data, size_t size, const uuid_t guid, unsigned char** outESL, size_t* outESLSize)
 {
 	EFI_SIGNATURE_LIST esl;
 	size_t offset = 0;
@@ -781,8 +781,7 @@ static int toESL(const char* data, size_t size, const uuid_t guid, char** outESL
  *NOTE: This allocates memory for output buffer, FREE LATER
  *@return SUCCESS or error number
  */
-static int authToESL(const char *in, size_t inSize, char **out, size_t *outSize) { 
-	int rc;
+static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out, size_t *outSize) { 
 	size_t length, auth_buffer_size, offset = 0, pkcs7_size;
 	const struct efi_variable_authentication_2 *auth;
 
@@ -878,10 +877,10 @@ static int getTimestamp(struct efi_time *ts) {
  *@param outBuffSize, the length of hashed data (should be 32 bytes)
  *@return SUCCESS or err number 
  */
-static int toHashForSecVarSigning(const char* ESL, size_t ESL_size, struct Arguments *args, char** outBuff, size_t* outBuffSize)
+static int toHashForSecVarSigning(const unsigned char* ESL, size_t ESL_size, struct Arguments *args, unsigned char** outBuff, size_t* outBuffSize)
 {
     int rc;
-    char *preHash = NULL;
+    unsigned char *preHash = NULL;
     size_t preHash_size;
 
     rc = getPreHashForSecVar(&preHash, &preHash_size, ESL, ESL_size, args);
@@ -938,10 +937,11 @@ static char *char_to_wchar(const char *key, const size_t keylen)
  *@param args, struct containing imprtant metadata info
  *@return, success or error number
  */
-static int getPreHashForSecVar(char **outData, size_t *outSize, const char *ESL, size_t ESL_size, struct Arguments *args)
+static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const unsigned char *ESL, size_t ESL_size, struct Arguments *args)
 {
     int rc = SUCCESS;
-    char *ptr = NULL, *wkey = NULL;
+    unsigned char *ptr = NULL;
+    char *wkey = NULL;
     size_t varlen;
     le32 attr = cpu_to_le32(SECVAR_ATTRIBUTES);
     uuid_t guid;
@@ -1008,11 +1008,11 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int toPKCS7ForSecVar(const char* newData, size_t dataSize, struct Arguments *args, int hashFunct, char** outBuff, size_t* outBuffSize)
+static int toPKCS7ForSecVar(const unsigned char* newData, size_t dataSize, struct Arguments *args, int hashFunct, unsigned char** outBuff, size_t* outBuffSize)
 {
 	int rc;
 	size_t totalSize; 
-	char *actualData = NULL;
+	unsigned char *actualData = NULL;
 
     rc = getPreHashForSecVar(&actualData, &totalSize, newData, dataSize, args);
     if (rc) {
@@ -1049,11 +1049,11 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int toAuth(const char* newESL, size_t eslSize, struct Arguments *args, int hashFunct, char** outBuff, size_t* outBuffSize) 
+static int toAuth(const unsigned char* newESL, size_t eslSize, struct Arguments *args, int hashFunct, unsigned char** outBuff, size_t* outBuffSize) 
 {
 	int rc;
 	size_t pkcs7Size, offset = 0;
-	char *pkcs7 = NULL; 
+	unsigned char *pkcs7 = NULL; 
 	struct efi_variable_authentication_2 authHeader;
 
 	// generate PKCS7

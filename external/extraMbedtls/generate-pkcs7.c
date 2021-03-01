@@ -145,7 +145,7 @@ out:
  *@param outBuffSize, should be alg->size
  *@return SUCCESS or err number 
  */
-int toHash(const char* data, size_t size, int hashFunct, char** outHash, size_t* outHashSize)
+int toHash(const unsigned char* data, size_t size, int hashFunct, unsigned char** outHash, size_t* outHashSize)
 {	
 	const mbedtls_md_info_t *md_info;
 	mbedtls_md_context_t ctx;
@@ -191,7 +191,7 @@ int toHash(const char* data, size_t size, int hashFunct, char** outHash, size_t*
 	*outHashSize = md_info->size;
 	if (verbose){ 
 		printf("Hash generation successful, %s: ", md_info->name);
-		printHex((unsigned char *)*outHash, *outHashSize);
+		printHex(*outHash, *outHashSize);
 	}
 	rc = SUCCESS;
 
@@ -253,10 +253,10 @@ static int setPKCS7Data(unsigned char **start, size_t *size, unsigned char **ptr
 		}
 		// for OID + constructed|sequence + len
 		else if (tag == (MBEDTLS_ASN1_OID | MBEDTLS_ASN1_CONTEXT_SPECIFIC))
-			rc = mbedtls_asn1_write_algorithm_identifier(ptr, *start, (const char *) value, valueSize, param);
+			rc = mbedtls_asn1_write_algorithm_identifier(ptr, *start, value, valueSize, param);
 		// for just oid 
 		else if (tag == MBEDTLS_ASN1_OID) {
-			rc = mbedtls_asn1_write_oid(ptr, *start, (const char *)value, valueSize);
+			rc = mbedtls_asn1_write_oid(ptr, *start, value, valueSize);
 			if (rc >= 0) {
 				rc = mbedtls_asn1_write_len(ptr, *start, ptrTmp - *ptr); 
 				if (rc >= 0 ) {
@@ -270,10 +270,10 @@ static int setPKCS7Data(unsigned char **start, size_t *size, unsigned char **ptr
 		}
 		// for raw data, idk kinda makes sense bit string = raw data you know maybe...
 		else if (tag == MBEDTLS_ASN1_BIT_STRING)
-			rc = mbedtls_asn1_write_raw_buffer(ptr, *start, (const char *) value, valueSize);
+			rc = mbedtls_asn1_write_raw_buffer(ptr, *start, value, valueSize);
 		// for long integers of any length, ex:serial #, I am getting creative with these combos!
 		else if (tag == (MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_INTEGER))
-			rc = mbedtls_asn1_write_tagged_string(ptr, *start, MBEDTLS_ASN1_INTEGER, (const char *) value, valueSize);
+			rc = mbedtls_asn1_write_tagged_string(ptr, *start, MBEDTLS_ASN1_INTEGER, value, valueSize);
 		// if setting data failed, allocate more data
 		if (rc == MBEDTLS_ERR_ASN1_BUF_TOO_SMALL) {
 			*ptr = ptrTmp; // set ptr back to old one, could have changed when funciton failed
@@ -300,10 +300,12 @@ static int setPKCS7Data(unsigned char **start, size_t *size, unsigned char **ptr
 
 
 
-static int setSignature(unsigned char **start, size_t *size, unsigned char **ptr, PKCS7Info *pkcs7Info, mbedtls_x509_crt *pub, unsigned char *priv, size_t privSize) {
+static int setSignature(unsigned char **start, size_t *size, unsigned char **ptr, PKCS7Info *pkcs7Info, 
+			mbedtls_x509_crt *pub, unsigned char *priv, size_t privSize) {
 	int rc;
 	size_t sigSize, hashSize, sigSizeBits;
-	char *hash = NULL, *signature = NULL, *sigType = NULL;
+	unsigned char *hash = NULL, *signature = NULL;
+	char *sigType = NULL;
 	mbedtls_pk_context *privKey;
 	
 
@@ -371,7 +373,6 @@ out:
 
 static int setAlgorithmIDs(unsigned char **start, size_t *size, unsigned char **ptr, PKCS7Info *pkcs7Info, mbedtls_x509_crt *pub, unsigned char *priv, size_t privSize) {
 	int rc;
-	size_t bytesWrittenInStep, currentlyUsedBytes;
 	char *sigType = NULL;
 	
 	//if the private key already holds signature (see definition of pkcs7Info.keys)
@@ -590,12 +591,14 @@ static int setPKCS7OID(unsigned char **start, size_t *size, unsigned char **ptr,
 	return rc;
 }
 
-static int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char** crtFiles,  int keyPairs, int hashFunct, PKCS7Info *info) 
+static int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char** crtFiles,
+		   int keyPairs, int hashFunct, PKCS7Info *info) 
 {
-	char *crtPEM = NULL,**crts = NULL,*pkcs7Buff = NULL, *hashFunctOID;
+	unsigned char *crtPEM = NULL,**crts = NULL,*pkcs7Buff = NULL;
 	unsigned char *ptr;
+	const char *hashFunctOID;
 	size_t crtSizePEM,*crtSizes = NULL, pkcs7BuffSize, whiteSpace, oidLen; 
-	int rc, successfulKeyPairs = 0;
+	int rc;
 
 	crts = calloc (1, sizeof(char*) * keyPairs);
 	crtSizes = calloc(1, sizeof(size_t) * keyPairs);
@@ -605,7 +608,7 @@ static int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char** crtFil
 	}
 	for (int i = 0; i < keyPairs; i++) {
 		//get data from public keys
-		crtPEM = getDataFromFile(crtFiles[i], &crtSizePEM);
+		crtPEM = (unsigned char *)getDataFromFile(crtFiles[i], &crtSizePEM);
 		if (!crtPEM) {
 			prlog(PR_ERR, "ERROR: failed to get data from pub key file %s\n", crtFiles[i]);
 			rc = INVALID_FILE;
@@ -694,10 +697,10 @@ out:
  *@param hashFunct, hash function to use in digest, see mbedtls_md_type_t for values in mbedtls/md.h
  *@return SUCCESS or err number 
  */
-int to_pkcs7_generate_signature(unsigned char **pkcs7, size_t *pkcs7Size, const char *newData, size_t newDataSize, 
+int to_pkcs7_generate_signature(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
 	const char** crtFiles, const char** keyFiles,  int keyPairs, int hashFunct)
 {
-	char *keyPEM = NULL, **keys = NULL;
+	unsigned char *keyPEM = NULL, **keys = NULL;
 	size_t keySizePEM,  *keySizes = NULL;
 	int rc;
 	PKCS7Info info;
@@ -716,7 +719,7 @@ int to_pkcs7_generate_signature(unsigned char **pkcs7, size_t *pkcs7Size, const 
 
 	for (int i = 0; i < keyPairs; i++) {
 		// get data of private keys
-		keyPEM = getDataFromFile(keyFiles[i], &keySizePEM);
+		keyPEM = (unsigned char *)getDataFromFile(keyFiles[i], &keySizePEM);
 
 		if (!keyPEM) {
 			prlog(PR_ERR, "ERROR: failed to get data from priv key file %s\n", keyFiles[i]);
@@ -769,7 +772,7 @@ out:
  *@param hashFunct, hash function to use in digest, see mbedtls_md_type_t for values in mbedtls/md.h
  *@return SUCCESS or err number 
  */
-int to_pkcs7_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const char *newData, size_t newDataSize, 
+int to_pkcs7_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
 	const char** crtFiles, const char** sigFiles,  int keyPairs, int hashFunct)
 {
 	char **sigs = NULL;

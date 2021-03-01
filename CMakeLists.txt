@@ -93,8 +93,7 @@ set( CMAKE_C_FLAGS_DEBUG       "-O0 -g3" )
 set( CMAKE_C_FLAGS_COVERAGE    "-O0 -g3 -fprofile-arcs -ftest-coverage" )
 
 
-#add linker flags ( -lmbedtls -lmbedcrypto -lmbedx509 not needed since linked above )
-target_link_options( secvarctl PUBLIC -Wall -Werror )
+target_compile_options( secvarctl PRIVATE -Wall -Werror )
 
 
 

@@ -164,7 +164,7 @@ int isVariable(const char * var)
 static int updateSecVar(const char *varName, const char *authFile, const char *path, int force)
 {	
 	int rc;
-	char *buff = NULL;
+	unsigned char *buff = NULL;
 	size_t size;
 
 	if (isVariable(varName)) {
@@ -183,7 +183,7 @@ static int updateSecVar(const char *varName, const char *authFile, const char *p
 	} 
 
 	// get data to write, if force flag then validate the data is an auth file
-	buff = getDataFromFile(authFile, &size); 
+	buff = (unsigned char *)getDataFromFile(authFile, &size); 
 	// if we are validating and validating fails, quit
 	if (!force) { 
 		rc = validateAuth(buff, size, varName);
@@ -210,7 +210,7 @@ static int updateSecVar(const char *varName, const char *authFile, const char *p
  *@param size , size of buff
  *@return whatever returned by writeData, SUCCESS or errno
  */
-int updateVar(const char *path, const char *var, const char *buff, size_t size)
+int updateVar(const char *path, const char *var, const unsigned char *buff, size_t size)
 {	
 	int commandLength, rc; 
 	char *fullPathWithCommand = NULL;
@@ -226,7 +226,7 @@ int updateVar(const char *path, const char *var, const char *buff, size_t size)
 	strcat(fullPathWithCommand, var);
 	strcat(fullPathWithCommand, "/update");
 
-	rc = writeData(fullPathWithCommand, buff, size);
+	rc = writeData(fullPathWithCommand, (const char *)buff, size);
 	free(fullPathWithCommand);
 
 	return rc;

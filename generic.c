@@ -71,6 +71,7 @@ char* getDataFromFile(const char* fullPath, size_t *size)
 	int fptr;
 	char *c = NULL;
 	struct stat fileInfo;
+	ssize_t read_size;
 	fptr = open(fullPath, O_RDONLY);			
 	if (fptr < 0) {
 		prlog(PR_WARNING,"----opening %s failed : %s----\n", fullPath, strerror(errno));
@@ -88,7 +89,13 @@ char* getDataFromFile(const char* fullPath, size_t *size)
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 		goto out;
 	}
-	read(fptr, c, fileInfo.st_size );
+	read_size = read(fptr, c, fileInfo.st_size);
+	if (read_size != fileInfo.st_size) {
+		prlog(PR_ERR, "ERROR: failed to read whole contents of %s in one go\n", fullPath);
+		free(c);
+		c = NULL;
+		goto out;
+	}
 	*size = fileInfo.st_size;
 out:	
 	close(fptr);

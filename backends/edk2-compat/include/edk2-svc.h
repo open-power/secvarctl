@@ -50,27 +50,19 @@ void printGuidSig(const void *sig);
 EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen);
 ssize_t get_esl_cert( const char *c,EFI_SIGNATURE_LIST *list ,char **cert);
 size_t get_pkcs7_len(const struct efi_variable_authentication_2 *auth);
-int parseX509(mbedtls_x509_crt *x509, const char *certBuf, size_t buflen);
+int parseX509(mbedtls_x509_crt *x509, const unsigned char *certBuf, size_t buflen);
 const char* getSigType(const uuid_t);
 
 int getSecVar(struct secvar **var, const char* name, const char *fullPath);
-int updateVar(const char* path, const char* var, const char* buff, size_t size);
+int updateVar(const char* path, const char* var, const unsigned char* buff, size_t size);
 int isVariable(const char *var);
 
-int validateAuth(const char *authBuf, size_t buflen, const char *key);
-int validateESL(const char *eslBuf, size_t buflen, const char *key);
-int validateCert(const char *authBuf, size_t buflen, const char *varName);
-int validatePKCS7(const char *cert_data, size_t len);
-int validateTS(const char *data, size_t size);
+int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key);
+int validateESL(const unsigned char *eslBuf, size_t buflen, const char *key);
+int validateCert(const unsigned char *authBuf, size_t buflen, const char *varName);
+int validatePKCS7(const unsigned char *cert_data, size_t len);
+int validateTS(const unsigned char *data, size_t size);
 int validateTime(struct efi_time *time);
 
-static struct command edk2_compat_command_table[] = {
-	{ .name = "read", .func = performReadCommand },
-	{ .name = "write", .func = performWriteCommand },
-	{ .name = "validate", .func = performValidation },
-	{ .name = "verify", .func = performVerificationCommand },
-#ifndef NO_CRYPTO
-	{ .name = "generate", .func = performGenerateCommand }
-#endif
-};
+extern struct command edk2_compat_command_table[5];
 #endif

@@ -2,8 +2,8 @@
 # Copyright 2021 IBM Corp.
 #_*_MakeFile_*_
 CC = gcc 
-_CFLAGS = -s -O2 -std=gnu99
-LFLAGS = -lmbedtls -lmbedx509 -lmbedcrypto -Wall -Werror 
+_CFLAGS = -s -O2 -std=gnu99 -Wall -Werror
+LFLAGS = -lmbedtls -lmbedx509 -lmbedcrypto
 
 _DEPEN = secvarctl.h prlog.h err.h generic.h 
 DEPDIR = include
