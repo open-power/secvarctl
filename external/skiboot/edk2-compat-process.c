@@ -219,7 +219,7 @@ static bool validate_cert(char *signing_cert, int signing_cert_size)
 	int rc;
 
 	mbedtls_x509_crt_init(&x509);
-	rc = mbedtls_x509_crt_parse(&x509, signing_cert, signing_cert_size);
+	rc = mbedtls_x509_crt_parse(&x509, (unsigned char *)signing_cert, signing_cert_size);
 
 	/* If failure in parsing the certificate, exit */
 	if(rc) {
@@ -519,7 +519,7 @@ static int verify_signature(const struct efi_variable_authentication_2 *auth,
 
 		mbedtls_x509_crt_init(&x509);
 		rc = mbedtls_x509_crt_parse(&x509,
-					    signing_cert,
+					    (unsigned char *)signing_cert,
 					    signing_cert_size);
 
 		/* This should not happen, unless something corrupted in PNOR */
@@ -546,7 +546,7 @@ static int verify_signature(const struct efi_variable_authentication_2 *auth,
 		free(x509_buf);
 		x509_buf = NULL;
 
-		rc = mbedtls_pkcs7_signed_hash_verify(pkcs7, &x509, newcert, new_data_size);
+		rc = mbedtls_pkcs7_signed_hash_verify(pkcs7, &x509, (unsigned char *)newcert, new_data_size);
 
 		/* If you find a signing certificate, you are done */
 		if (rc == 0) {
@@ -622,7 +622,7 @@ static char *get_hash_to_verify(const char *key, const char *new_data,
 	/* Expand char name to wide character width */
 	varlen = strlen(key) * 2;
 	wkey = char_to_wchar(key, strlen(key));
-	rc = mbedtls_md_update(&ctx, wkey, varlen);
+	rc = mbedtls_md_update(&ctx, (const unsigned char *)wkey, varlen);
 	free(wkey);
 	if (rc) 
 		goto out;
@@ -640,7 +640,7 @@ static char *get_hash_to_verify(const char *key, const char *new_data,
 	if (rc)
 		goto out;
 
-	rc = mbedtls_md_update(&ctx, new_data, new_data_size);
+	rc = mbedtls_md_update(&ctx, (const unsigned char *)new_data, new_data_size);
 	if (rc)
 		goto out;
 
@@ -655,7 +655,7 @@ static char *get_hash_to_verify(const char *key, const char *new_data,
 
 out:
 	mbedtls_md_free(&ctx);
-	return hash;
+	return (char *)hash;
 }
 
 bool is_pkcs7_sig_format(const void *data)

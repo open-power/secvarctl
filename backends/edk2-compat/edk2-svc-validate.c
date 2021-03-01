@@ -17,7 +17,7 @@ static void usage();
 static void help();
 static bool validate_hash(uuid_t type, size_t size);
 static int parseArgs(int argc, char *argv[], struct Arguments *args);
-static int validateSingularESL(size_t* bytesRead, const char* esl, size_t eslvarsize, const char *varName);
+static int validateSingularESL(size_t* bytesRead, const unsigned char* esl, size_t eslvarsize, const char *varName);
 
 
 
@@ -37,7 +37,7 @@ enum fileTypes{
  */
 int performValidation(int argc, char* argv[])
 {
-	char *buff = NULL;
+	unsigned char *buff = NULL;
 	size_t size;
 	int rc; 
 	struct Arguments args = {	
@@ -56,7 +56,7 @@ int performValidation(int argc, char* argv[])
 		goto out;
 	}
 
-	buff = getDataFromFile(args.inFile, &size);
+	buff = (unsigned char *)getDataFromFile(args.inFile, &size);
 	if (!buff) {
 		prlog(PR_ERR,"ERROR: failed to get data from %s\n", args.inFile);
 		rc = INVALID_FILE;
@@ -179,7 +179,7 @@ out:
  *@return PKCS7_FAIL if validate validatePKCS7 returns PKCS7_FAIL
  *@return whatever is returned from validateESl
  */
-int validateAuth(const char *authBuf, size_t buflen, const char *key) 
+int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key) 
 {
 	int rc;
 	size_t authSize, pkcs7_size;
@@ -277,7 +277,7 @@ int validateAuth(const char *authBuf, size_t buflen, const char *key)
  *@param auth, pointer to auth struct data containing the pkcs7 in auth->auth_info.hdr.cert_data
  *@return PKCS7_FAIL if something goes wrong, SUCCESS if everything is correct
  */
-int validatePKCS7(const char *cert_data, size_t len) 
+int validatePKCS7(const unsigned char *cert_data, size_t len) 
 {
 	mbedtls_x509_crt *pkcs7cert = NULL;
 	mbedtls_pkcs7 *pkcs7 = NULL;
@@ -335,7 +335,7 @@ out:
  *@return CERT_FAIL if validateCertificate fails
  *@return SUCCESS if at least one ESL validates
  */ 
-int validateESL(const char *eslBuf, size_t buflen, const char *key) 
+int validateESL(const unsigned char *eslBuf, size_t buflen, const char *key) 
 {
 	ssize_t eslvarsize = buflen;
 	size_t  eslsize = 0;
@@ -373,12 +373,12 @@ int validateESL(const char *eslBuf, size_t buflen, const char *key)
  *@param varName, variable name {"db","dbx","KEK", "PK"} b/c dbx is a different format
  *@return SUCCESS if cetificate and header info is valid, errno otherwise
  */
-static int validateSingularESL(size_t* bytesRead, const char* esl, size_t eslvarsize, const char *varName) 
+static int validateSingularESL(size_t* bytesRead, const unsigned char* esl, size_t eslvarsize, const char *varName) 
 {
 	ssize_t cert_size;
 	int rc;
 	size_t eslsize;
-	char *cert = NULL;
+	unsigned char *cert = NULL;
 	EFI_SIGNATURE_LIST *sigList;
 	
 	*bytesRead = 0;
@@ -388,7 +388,7 @@ static int validateSingularESL(size_t* bytesRead, const char* esl, size_t eslvar
 		return ESL_FAIL;
 	}
 	// Get sig list
-	sigList = get_esl_signature_list(esl, eslvarsize);
+	sigList = get_esl_signature_list((const char *)esl, eslvarsize);
 	// check size info is logical 
 	if (sigList->SignatureListSize > 0) {
 		if ((sigList->SignatureSize <= 0 && sigList->SignatureHeaderSize <= 0) 
@@ -427,7 +427,7 @@ static int validateSingularESL(size_t* bytesRead, const char* esl, size_t eslvar
 		return ESL_FAIL;
 	}
 	// get certificate
-	cert_size = get_esl_cert(esl, sigList, &cert); // puts sig data in cert
+	cert_size = get_esl_cert((const char *)esl, sigList, (char **)&cert); // puts sig data in cert
 	if (cert_size <= 0) {
 		prlog(PR_ERR, "\tERROR: Signature Size was too small, no data \n");
 		return ESL_FAIL;
@@ -474,7 +474,7 @@ static bool validate_hash(uuid_t type, size_t size)
  *@return CERT_FAIL if certificate had incorrect data
  *@return SUCCESS if certificate is valid
  */
-int validateCert(const char *certBuf, size_t buflen, const char *varName) 
+int validateCert(const unsigned char *certBuf, size_t buflen, const char *varName) 
 {
 	char *x509_info = NULL;
 	mbedtls_x509_crt *x509;
@@ -529,7 +529,7 @@ int validateCert(const char *certBuf, size_t buflen, const char *varName)
 	//this addresses OS's that release certificates with non RSA-2048 (ex: RHEL)
 	if (varName == NULL || strncmp(varName, "db", strlen(varName))) {
 		if ( x509->sig_md != MBEDTLS_MD_SHA256 
-		|| strncmp(x509->sig_oid.p, MBEDTLS_OID_PKCS1_SHA256, x509->sig_oid.len) 
+		|| strncmp((const char *)x509->sig_oid.p, MBEDTLS_OID_PKCS1_SHA256, x509->sig_oid.len) 
 		|| (int) mbedtls_pk_get_bitlen( &x509->pk ) != 2048 
 		|| x509->sig.len != 256) { 
 			x509_info = malloc(CERT_BUFFER_SIZE);
@@ -571,10 +571,10 @@ out:
  *@return CERT_FAIL if certificate cant be parsed
  *@return SUCCESS if certificate is valid
  */
-int parseX509(mbedtls_x509_crt *x509, const char *certBuf, size_t buflen) 
+int parseX509(mbedtls_x509_crt *x509, const unsigned char *certBuf, size_t buflen) 
 {
 	int failures;
-	char *generatedDER = NULL;
+	unsigned char *generatedDER = NULL;
 	size_t generatedDERSize;
 	if ((ssize_t)buflen <= 0) {
 		prlog(PR_ERR, "ERROR: Certificate has invalid length %zd, cannot validate\n", buflen);
@@ -586,7 +586,7 @@ int parseX509(mbedtls_x509_crt *x509, const char *certBuf, size_t buflen)
 	if (failures) {
 		prlog(PR_INFO, "Failed to parse cert as DER mbedtls err#%d, trying PEM...\n", failures);
 		// if failed, maybe input is PEM and so try converting PEM to DER, if conversion fails then we know it was DER and it failed
-		if (convert_pem_to_der(certBuf, buflen, (unsigned char **) &generatedDER, &generatedDERSize)) {
+		if (convert_pem_to_der(certBuf, buflen, &generatedDER, &generatedDERSize)) {
 			prlog(PR_ERR, "Parsing x509 as PEM format failed mbedtls err#%d \n", failures);
 			return CERT_FAIL;
 		}
@@ -609,7 +609,7 @@ int parseX509(mbedtls_x509_crt *x509, const char *certBuf, size_t buflen)
  *@param size, size of timestamp data, should be 16*4
  *@return SUCCESS or error depending if ts data is understandable
  */
-int validateTS(const char *data, size_t size)
+int validateTS(const unsigned char *data, size_t size)
 {
 	int rc;
 	char *pointer;

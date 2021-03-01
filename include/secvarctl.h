@@ -13,12 +13,10 @@ enum backends {
 	EDK2_COMPAT
 };
 
-static struct backend {
+struct backend {
 	char name[32];
 	size_t countCmds;
 	struct command *commands;
-} backends [] = {
-	{ .name = "ibm,edk2-compat-v1", .countCmds = sizeof(edk2_compat_command_table) / sizeof(struct command), .commands = edk2_compat_command_table },
 };
 
 extern int verbose;

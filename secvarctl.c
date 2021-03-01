@@ -9,8 +9,9 @@
 int verbose = PR_WARNING;
 static struct backend *getBackend();
 
-
-
+static struct backend backends [] = {
+	{ .name = "ibm,edk2-compat-v1", .countCmds = sizeof(edk2_compat_command_table) / sizeof(struct command), .commands = edk2_compat_command_table },
+};
 
 void usage() 
 {
