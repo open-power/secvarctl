@@ -82,18 +82,16 @@ endif (  )
 target_link_libraries( secvarctl ${MBEDTLS} ${MBEDX509} ${MBEDCRYPTO} ${PTHREAD} ) 
 
 #set default build type to release
-set( DEFAULT_BUILD_TYPE "Release" )
+set( DEFAULT_BUILD_TYPE "Debug" )
 if ( NOT CMAKE_BUILD_TYPE )
   set( CMAKE_BUILD_TYPE ${DEFAULT_BUILD_TYPE} )
     message( "Setting build type to default: " ${CMAKE_BUILD_TYPE} )
 endif(  )
 #allow for different optimizations here
 set( CMAKE_C_FLAGS_RELEASE     "-O2 -g" )
-set( CMAKE_C_FLAGS_DEBUG       "-O0 -g3" )
-set( CMAKE_C_FLAGS_COVERAGE    "-O0 -g3 -fprofile-arcs -ftest-coverage" )
+set( CMAKE_C_FLAGS_DEBUG       "-O0 -g3 -Wall -Werror" )
+set( CMAKE_C_FLAGS_COVERAGE    "-O0 -g3 -fprofile-arcs -ftest-coverage -Wall -Werror" )
 
-
-target_compile_options( secvarctl PRIVATE -Wall -Werror )
 
 
 
