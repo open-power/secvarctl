@@ -96,7 +96,7 @@ static void usage() {
 		"\n\t\t-v\t\tverbose, print process info"
 		"\n\t\t-x\t\tfile is for the dbx, allows data to be a hash not an x509,\n\t"
 		"\t\t\tNOTE: user still needs to specify file type"
-		"\n\t\t-p\t\tfile is a PKCS7\n\t\t-e\t\tfile is an ESL\n\t\t-a\t\tfile is an auth"
+		"\n\t\t-p\t\tfile is a PKCS7\n\t\t-e\t\tfile is an ESL"
 		"\n\t\t-c\t\tfile is a x509 cert (DER or PEM format)"
 		"\n\t\t-a\t\tfile is a signed authenticated file containg a PKCS7 and appended ESL\n\t"
 		"\t\t\tDEFAULT\n");
