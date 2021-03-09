@@ -89,8 +89,6 @@ int main(int argc, char *argv[])
 
 	// next command should be one of main subcommands
 	subcommand = *argv; 
-	argv++;
-	argc--;
 
 	rc = UNKNOWN_COMMAND;
 	for (i = 0; i < backend->countCmds; i++) {
