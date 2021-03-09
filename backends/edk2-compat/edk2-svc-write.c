@@ -6,19 +6,17 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>// for exit
+#include <argp.h>
 #include "../../include/secvarctl.h"
 #include "include/edk2-svc.h"// import last!!
 
-
-static void usage();
-static void help();
 static int updateSecVar(const char *var, const char *authFile, const char *path, int force);
 
 struct Arguments {
 	int helpFlag, inpValid;
 	const char *pathToSecVars, *varName, *inFile;
 }; 
-static int parseArgs(int argc, char *argv[], struct Arguments *args);
+static int parse_opt(int key, char *arg, struct argp_state *state);
 
 
 /*
@@ -35,105 +33,104 @@ int performWriteCommand(int argc, char* argv[])
 		.helpFlag = 0, .inpValid = 0, 
 		.pathToSecVars = NULL, .inFile = NULL, .varName = NULL
 	};
+	// combine command and subcommand for usage/help messages
+	argv[0] = "secvarctl write";
 
-	rc = parseArgs(argc, argv, &args);
+	struct argp_option options[] = 
+	{
+		{"verbose", 'v', 0, 0, "print more verbose process information"},
+		{"force", 'f', 0, 0, "force update, skips validation of file"},
+		{"path", 'p', "PATH" ,0, "looks for .../<var>/update file in PATH, default is " SECVARPATH},
+		{0}
+	};
+
+	struct argp argp = {
+		options, parse_opt, "<VARIABLE> <AUTH_FILE>", 
+		"This command updates a given secure variable with a new key contained in an auth file"
+		" It is recommended that 'secvarctl verify' is tried on the update file before submitting."
+		" This will ensure that the submission will be successful upon reboot."
+		"\vvalues for <VARIABLE> = type one of {'PK','KEK','db','dbx'}\n"
+		"<AUTH_FILE> must be a properly generated authenticated variable file"
+	};
+
+	rc = argp_parse( &argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER, 0, &args);
 	if (rc || args.helpFlag)
 		goto out;
 
-	if (!args.inFile || !args.varName ) {
-		usage();
-		rc = ARG_PARSE_FAIL;
-		goto out;
-	}
 
 	rc = updateSecVar(args.varName, args.inFile, args.pathToSecVars, args.inpValid);	
 out:
-	if (rc) 
-		printf("RESULT: FAILURE\n");
-	else 
-		printf("RESULT: SUCCESS\n");
+	if (!args.helpFlag) 
+		printf("RESULT: %s\n", rc ? "FAILURE" : "SUCCESS");
 
 	return rc;	
 }
 
-static void usage()
-{
-	printf("USAGE:\n\t' $ secvarctl write [OPTIONS] <variable> <authFile>'"
-		"\n\tOPTIONS:\n"
-		"\t\t--help/--usage\n"
-		"\t\t-v\t\tverbose, print process info"
-		"\n\t\t-f\t\tforce update, skips validation of file\n\t\t"
-		"-p <path>\tlooks for .../<var>/update file in <path>,\n"
-		"\t\t\t\tshould contain expected var subdirectories {'PK','KEK','db','dbx'},\n"
-		"\t\t\t\tdefault is " SECVARPATH "\n"
-		"\tVariable:\n\t\tone of the following {PK, KEK, db, dbx}\n\n");
-}
-
-static void help()
-{
-	printf("HELP:\n\tThis function updates a given secure variable with a new key contained in an auth file\n"
-		"It is recommended that 'secvarctl verify' is tried on the update file before submitting.\n"
-		"\tThis will ensure that the submission will be successful upon reboot.\n");
-	usage();
-}
 
 /**
- *@param argv , array of command line arguments
- *@param argc, length of argv
- *@param args, struct that will be filled with data from argv
+ *@param key , every option that is parsed has a value to identify it
+ *@param arg, if key is an option than arg will hold its value ex: -<key> <arg>
+ *@param state,  argp_state struct that contains useful information about the current parsing state 
  *@return success or errno
  */
-static int parseArgs( int argc, char *argv[], struct Arguments *args) 
+static int parse_opt(int key, char *arg, struct argp_state *state) 
 {
+	struct Arguments *args = state->input;
 	int rc = SUCCESS;
-	for (int i = 0; i < argc; i++) {
-		if (argv[i][0] == '-') {
-			if (!strcmp(argv[i], "--usage")) {
-				usage();
+	//this checks to see if help/usage is requested
+	//argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
+	//this becomes extra sticky since --usage/--help never actually get passed to this function
+	if (args->helpFlag == 0) {
+		if (state->next == 0 && state->next + 1 < state->argc) {
+			if (strncmp("--u", state->argv[state->next + 1], strlen("--u")) == 0 
+				|| strncmp("--h", state->argv[state->next + 1], strlen("--h")) == 0
+				|| strncmp("-?", state->argv[state->next + 1], strlen("-?")) == 0)
 				args->helpFlag = 1;
-				goto out;
-			}
-			else if (!strcmp(argv[i], "--help")) {
-				help();
+		}
+		else if (state->next < state->argc)
+			if (strncmp("--u", state->argv[state->next], strlen("--u")) == 0 
+				|| strncmp("--h", state->argv[state->next], strlen("--h")) == 0
+				|| strncmp("-?", state->argv[state->next], strlen("-?")) == 0)
 				args->helpFlag = 1;
-				goto out;
-			}
-			// set verbose flag
-			else if (!strcmp(argv[i], "-v")) {
-				verbose = PR_DEBUG; 
-			}
-			// set path
-			else if (!strcmp(argv[i], "-p")) {
-				if (i + 1 >= argc || argv[i + 1][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect value for '-p', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->pathToSecVars= argv[i];
-				}
-			}
-			// set force flag
-			else if (!strcmp(argv[i], "-f"))
-				args->inpValid = 1;	
-		}
-		else {
-			if (i + 1 >= argc || argv[i + 1][0] == '-') {		
-				prlog(PR_ERR, "ERROR: Incorrect '<var> <authFile>', see usage\n");
-				rc = ARG_PARSE_FAIL;
-				goto out;
-			}
-			args-> varName = argv[i++];			
-			args-> inFile = argv[i];
-		}
 	}
-		
-out:
-	if (rc) {
+
+	switch (key) {
+		case 'p':
+			args->pathToSecVars = arg;
+			break;
+		case 'f':
+			args->inpValid = 1;
+			break;
+		case 'v':
+			verbose = PR_DEBUG;
+			break;
+		case ARGP_KEY_ARG:
+			if (args->varName == NULL)
+				args->varName = arg;
+			else if (args->inFile == NULL)
+				args->inFile = arg;
+			break;
+		case ARGP_KEY_SUCCESS:
+			//check that all essential args are given and valid
+			if (args->helpFlag)
+				break;
+			if(!args->varName) 
+				prlog(PR_ERR, "ERROR: missing variable, see usage...\n");
+			else if (!args->inFile) 
+				prlog(PR_ERR, "ERROR: missing input file, see usage...\n");
+			else if (isVariable(args->varName)) 
+				prlog(PR_ERR, "ERROR: Unrecognized variable name %s, see usage...\n", args->varName);
+			else if (strcmp(args->varName, "TS") == 0) 
+				prlog(PR_ERR, "ERROR: Cannot update TimeStamp (TS) variable, see usage...\n");
+			else 
+				break;
+			argp_usage(state);
+			rc = args->inFile ? INVALID_VAR_NAME : ARG_PARSE_FAIL;
+			break;
+	}
+
+	if (rc) 
 		prlog(PR_ERR, "Failed during argument parsing\n");
-		usage();
-	}
 
 	return rc;
 }
@@ -159,24 +156,13 @@ int isVariable(const char * var)
  *@param authfile string of auth file name
  *@param path string of path to directory containing <varName>/update file
  *@param force 1 for no validation of auth, 0 for validate
- *@return error if variable given is unkown, or issue validating or writing
+ *@return error if variable given is unknown, or issue validating or writing
  */
 static int updateSecVar(const char *varName, const char *authFile, const char *path, int force)
 {	
 	int rc;
 	unsigned char *buff = NULL;
 	size_t size;
-
-	if (isVariable(varName)) {
-		prlog(PR_ERR, "ERROR: Unrecognized variable name %s\n", varName);
-		usage();
-		return INVALID_VAR_NAME;
-	}
-	if (strcmp(varName, "TS") == 0) {
-		prlog(PR_ERR, "ERROR: Cannot update TimeStamp (TS) variable\n");
-		usage();
-		return INVALID_VAR_NAME;
-	}
 		
 	if (!path) {
 		path = SECVARPATH;

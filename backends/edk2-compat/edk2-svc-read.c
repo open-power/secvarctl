@@ -9,14 +9,13 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <argp.h>
 #include "../../external/skiboot/include/secvar.h" // for secvar struct
 #include "include/edk2-svc.h"// include last, pragma pack(1) issue
 
 
 
 static int readFiles(const char* var, const char* file, int hrFlag, const  char* path);
-static void usage();
-static void help();
 static int printReadable(const char *c , size_t size, const char * key);
 static int readFileFromSecVar(const char * path, const char *variable, int hrFlag);
 static int readFileFromPath(const char *path, int hrFlag);
@@ -28,7 +27,7 @@ struct Arguments {
 	int helpFlag, printRaw;
 	const char *pathToSecVars, *varName, *inFile;
 }; 
-static int parseArgs(int argc, char *argv[], struct Arguments *args);
+static int parse_opt(int key, char *arg, struct argp_state *state);
 
 
 /*
@@ -45,88 +44,87 @@ int performReadCommand(int argc, char* argv[])
 		.helpFlag = 0, .printRaw = 0, 
 		.pathToSecVars = NULL, .inFile = NULL, .varName = NULL
 	};
+	// combine command and subcommand for usage/help messages
+    argv[0] = "secvarctl read";
 
-	rc = parseArgs(argc, argv, &args);
+	struct argp_option options[] = 
+	{
+		{"raw", 'r', 0, 0, "prints raw data, default is human readable information"},
+		{"verbose", 'v', 0, 0, "print more verbose process information"},
+		{"file", 'f', "FILE", 0, "navigates to ESL file from working directiory"},
+		{"path", 'p', "PATH" ,0, "looks for key directories {'PK','KEK','db','dbx', 'TS'} in PATH, default is " SECVARPATH},
+		{0}
+	};
+
+	struct argp argp = {
+		options, parse_opt, "[VARIABLE]", 
+		"This program command is created to easily view secure variables. The current variables" 
+		" that are able to be observed are the PK, KEK, db, dbx, TS. If no options are" 
+		" given, then the information for the keys in the default path will be printed."
+		" If the user would like to print the information for another ESL file,"
+		" then the '-f' command would be appropriate."
+		"\vvalues for [VARIABLES] = {'PK','KEK','db','dbx', 'TS'} type one of the following to get info on that key, default is all. NOTE does not work when -f option is present"
+	};
+	rc = argp_parse( &argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER, 0, &args);
 	if (rc || args.helpFlag)
-		return rc;
+		goto out;
 
 	rc = readFiles(args.varName, args.inFile, !args.printRaw, args.pathToSecVars);
 
+out:
 	return rc;	
 }
 
 /**
- *@param argv , array of command line arguments
- *@param argc, length of argv
- *@param args, struct that will be filled with data from argv
+ *@param key , every option that is parsed has a value to identify it
+ *@param arg, if key is an option than arg will hold its value ex: -<key> <arg>
+ *@param state,  argp_state struct that contains useful information about the current parsing state 
  *@return success or errno
  */
-static int parseArgs( int argc, char *argv[], struct Arguments *args) {
+static int parse_opt(int key, char *arg, struct argp_state *state) 
+{
+	struct Arguments *args = state->input;
 	int rc = SUCCESS;
-	for (int i = 0; i < argc; i++) {
-		if (argv[i][0] != '-') {
-			args->varName = argv[i];
+	//this checks to see if help/usage is requested
+	//argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
+	//this becomes extra sticky since --usage/--help never actually get passed to this function
+	if (args->helpFlag == 0) {
+		if (state->next == 0 && state->next + 1 < state->argc) {
+			if (strncmp("--u", state->argv[state->next + 1], strlen("--u")) == 0 
+				|| strncmp("--h", state->argv[state->next + 1], strlen("--h")) == 0
+				|| strncmp("-?", state->argv[state->next + 1], strlen("-?")) == 0)
+				args->helpFlag = 1;
+		}
+		else if (state->next < state->argc)
+			if (strncmp("--u", state->argv[state->next], strlen("--u")) == 0 
+				|| strncmp("--h", state->argv[state->next], strlen("--h")) == 0
+				|| strncmp("-?", state->argv[state->next], strlen("-?")) == 0)
+				args->helpFlag = 1;
+	}
+
+	switch (key) {
+		case 'r':
+			args->printRaw = 1;
+			break;
+		case 'p':
+			args->pathToSecVars = arg;
+			break;
+		case 'f':
+			args->inFile = arg;
+			break;
+		case 'v':
+			verbose = PR_DEBUG;
+			break;
+		case ARGP_KEY_ARG:
+			args->varName = arg;
 			rc = isVariable(args->varName);
-			if (rc) {
+			if (rc) 
 				prlog(PR_ERR, "ERROR: Invalid variable name %s\n", args->varName);
-				goto out;
-			}
-			continue;
-		}
-		if (!strcmp(argv[i], "--usage")) {
-			usage();
-			args->helpFlag = 1;
-			goto out;
-		}
-		else if (!strcmp(argv[i], "--help")) {
-			help();
-			args->helpFlag = 1;
-			goto out;
-		}
-		switch (argv[i][1]) {
-			case 'v':
-				verbose = PR_DEBUG;
-				break;
-			//set path
-			case 'p':
-				if (i + 1 >= argc || argv[i + 1][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect value for '-p', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->pathToSecVars= argv[i];
-				}
-				break;
-			//set file path
-			case 'f':
-				if (i + 1 >= argc || argv[i + 1][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect value for file flag, use '-f <file>', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->inFile = argv[i];
-				}	
-				break;
-			case 'r':
-				args->printRaw = 1;
-				break;
-			default:
-				prlog(PR_ERR, "ERROR: Unknown argument: %s\n", argv[i]);
-				rc = ARG_PARSE_FAIL;
-				goto out;
-		}
-		
+			break;
 	}
-		
-out:
-	if (rc) {
+
+	if (rc) 
 		prlog(PR_ERR, "Failed during argument parsing\n");
-		usage();
-	}
 
 	return rc;
 }
@@ -347,29 +345,6 @@ int getSecVar(struct secvar **var, const char* name, const char *fullPath){
 	free(c);
 
 	return SUCCESS;
-}
-
-void help() 
-{
-	printf("HELP:\n\t"
-		"This program command is created to easily view secure variables. The current variables\n" 
-		"\tthat are able to be observed are the PK, KEK, db, db, dbx, TS. If no options are\n" 
-		"\tgiven, then the information for the keys in the default path will be printed."
-		"\n\tIf the user would like to print the information for another ESL file,\n"
-		"\tthen the '-f' command would be appropriate.\n");
-	usage();
-}
-
-void usage() 
-{
-	printf("USAGE:\n\t' $ secvarctl read [OPTIONS] [VARIABLES] '\nOPTIONS:"
-		"\n\t--usage/--help"
-		"\n\t-r\t\t\tprints raw data, default is human readable information"
-		"\n\t-f <filename>\t\tnavigates to ESL file from working directiory"
-		"\n\t-p <path to vars>\tlooks for key directories {'PK','KEK','db','dbx', 'TS'} in <path>,\n"
-		"\t\t\t\tdefault is " SECVARPATH "\n"
-		"VARIABLES:\n\t{'PK','KEK','db','dbx', 'TS'}\ttype one of the following to get info on that key,\n"
-		"\t\t\t\t\tNOTE does not work when -f option is present\n\n");
 }
 
 /*
