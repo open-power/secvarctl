@@ -58,7 +58,7 @@ typedef struct PKCS7Info {
 	int newDataSize;
 	mbedtls_md_type_t hashFunct;
 	const char * hashFunctOID; 
-	int alreadySignedFlag; //if this is 1 then then PKCS7Info.keys contains signatures, if 0 then contains siging key in DER format 
+	int alreadySignedFlag; // if this is 1 then then PKCS7Info.keys contains signatures, if 0 then contains siging key in DER format 
 
 } PKCS7Info;
 #endif
@@ -76,7 +76,7 @@ int convert_pem_to_der( const unsigned char *input, size_t ilen,
     size_t len = 0;
     unsigned char *inpCpy;
 
-    //ensure last byte of input is NULL so that strstr knows where to stop 
+    // ensure last byte of input is NULL so that strstr knows where to stop 
     inpCpy = calloc(1, ilen + 1);
     memcpy(inpCpy, input, ilen);
     end = inpCpy + ilen;
@@ -375,8 +375,8 @@ static int setAlgorithmIDs(unsigned char **start, size_t *size, unsigned char **
 	int rc;
 	char *sigType = NULL;
 	
-	//if the private key already holds signature (see definition of pkcs7Info.keys)
-	//then just write the signature, no generation is needed
+	// if the private key already holds signature (see definition of pkcs7Info.keys)
+	// then just write the signature, no generation is needed
 	if (pkcs7Info->alreadySignedFlag) {
 		rc = setPKCS7Data(start, size, ptr, MBEDTLS_ASN1_OCTET_STRING, priv, privSize, 0);
 		if (rc)
@@ -607,7 +607,7 @@ static int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char** crtFil
 		return ALLOC_FAIL;
 	}
 	for (int i = 0; i < keyPairs; i++) {
-		//get data from public keys
+		// get data from public keys
 		crtPEM = (unsigned char *)getDataFromFile(crtFiles[i], &crtSizePEM);
 		if (!crtPEM) {
 			prlog(PR_ERR, "ERROR: failed to get data from pub key file %s\n", crtFiles[i]);

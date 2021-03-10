@@ -2,7 +2,7 @@
 /* Copyright 2021 IBM Corp.*/
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>	//strerror
+#include <errno.h>	// strerror
 #include <stdlib.h>
 #include <fcntl.h> // O_WRONLY
 #include <unistd.h> // has read/open funcitons

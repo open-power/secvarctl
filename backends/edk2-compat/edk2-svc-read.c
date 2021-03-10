@@ -85,9 +85,9 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 {
 	struct Arguments *args = state->input;
 	int rc = SUCCESS;
-	//this checks to see if help/usage is requested
-	//argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
-	//this becomes extra sticky since --usage/--help never actually get passed to this function
+	// this checks to see if help/usage is requested
+	// argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
+	// this becomes extra sticky since --usage/--help never actually get passed to this function
 	if (args->helpFlag == 0) {
 		if (state->next == 0 && state->next + 1 < state->argc) {
 			if (strncmp("--u", state->argv[state->next + 1], strlen("--u")) == 0 
@@ -285,7 +285,7 @@ int getSecVar(struct secvar **var, const char* name, const char *fullPath){
 	// since we are reading from a secvar, it can be assumed it has a <var>/size file for more accurate size
 	// fullPath currently holds <path>/<var>/data we are going to take off data and add size to get the desired file
 	strcpy(sizePath, fullPath);
-	//add null terminator so strncat works
+	// add null terminator so strncat works
 	sizePath[strlen(sizePath) - strlen("data")] = '\0';
 	strncat(sizePath, "size", strlen("size") + 1); 
 	rc = getSizeFromSizeFile(&size, sizePath);
@@ -434,7 +434,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 	return SUCCESS;
 }
 
-//prints info on ESL, nothing on ESL data
+// prints info on ESL, nothing on ESL data
 void printESLInfo(EFI_SIGNATURE_LIST *sigList) 
 {
 	printf("\tESL SIG LIST SIZE: %d\n", sigList->SignatureListSize);
@@ -443,7 +443,7 @@ void printESLInfo(EFI_SIGNATURE_LIST *sigList)
 	printf("\tSignature type is: %s\n", getSigType(sigList->SignatureType));
 }
 
-//prints info on x509
+// prints info on x509
 int printCertInfo(mbedtls_x509_crt *x509)
 {
 	char *x509_info;
@@ -481,7 +481,7 @@ static int readTS(const char *data, size_t size)
 	}
 
 	for (tmpStamp = (struct efi_time *)data; size > 0; tmpStamp = (void *)tmpStamp + sizeof(struct efi_time), size -= sizeof(struct efi_time)) {
-		//print variable name
+		// print variable name
 		printf("\t%s:\t", variables[(ARRAY_SIZE(variables) - 1) - (size / sizeof(struct efi_time))]);
 		printTimestamp(*tmpStamp);
 	}
@@ -518,12 +518,12 @@ ssize_t get_esl_cert(const char *c, EFI_SIGNATURE_LIST *list , char **cert)
  */
 const char* getSigType(const uuid_t type) 
 {
-	//loop through all known hashes
+	// loop through all known hashes
 	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct); i++) {
 		if (uuid_equals(&type, hash_functions[i].guid)) 
 			return hash_functions[i].name;	
 	}
-	//try other known guids
+	// try other known guids
 	if (uuid_equals(&type, &EFI_CERT_X509_GUID)) return "X509";
 	else if (uuid_equals(&type, &EFI_CERT_RSA2048_GUID)) return "RSA2048";
 	else if (uuid_equals(&type, &EFI_CERT_TYPE_PKCS7_GUID))return "PKCS7";
@@ -605,8 +605,8 @@ static int getSizeFromSizeFile(size_t *returnSize, const char* path)
 	close(fptr);
 	// turn string into base 10 int
 	*returnSize = strtol(c, NULL, 0); 
-	//strol likes to return zero if there is no conversion from string to int
-	//so we need to differentiate an error from a file that actually contains 0
+	// strol likes to return zero if there is no conversion from string to int
+	// so we need to differentiate an error from a file that actually contains 0
 	if (*returnSize == 0 && c[0] != '0')
 		rc = INVALID_FILE;
 	else

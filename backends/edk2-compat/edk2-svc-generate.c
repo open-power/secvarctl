@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h> // for timestamp
 #include <ctype.h> // for isspace
+#include <argp.h>
 #include <mbedtls/md.h>     /* generic interface */
 #include <mbedtls/platform.h> /*mbedtls functions*/
 #include "../../external/extraMbedtls/include/pkcs7.h" // for PKCS7 OID
@@ -14,11 +15,8 @@
 #include "../../external/skiboot/include/edk2-compat-process.h" // work on factoring this out
 
 
-
-
-
 struct Arguments {
-    //the alreadySignedFlag is to determine if signKeys stores a private key file(0) or signed data (1)
+    // the alreadySignedFlag is to determine if signKeys stores a private key file(0) or signed data (1)
 	int helpFlag, inpValid, signKeyCount, signCertCount, alreadySignedFlag;
 	const char *inFile, *outFile, 
 	**signCerts, **signKeys,
@@ -26,8 +24,8 @@ struct Arguments {
 	char **currentVars;
 	struct efi_time *time;
 }; 
-static int parseArgs(int argc, char *argv[], struct Arguments *args);
 
+static int parse_opt(int key, char *arg, struct argp_state *state);
 static int generateHash(const unsigned char* data, size_t size, struct Arguments *args, const struct hash_funct *alg, unsigned char** outHash, size_t* outHashSize);
 static int validateHashAndAlg(size_t size, const struct hash_funct *alg);
 static int toESL(const unsigned char* data, size_t size, const uuid_t guid, unsigned char** outESL, size_t* outESLSize);
@@ -41,90 +39,6 @@ static int getOutputData (const unsigned char *buff, size_t size, struct Argumen
 static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out, size_t *outSize);
 static int toHashForSecVarSigning(const unsigned char* ESL, size_t ESL_size, struct Arguments *args, unsigned char** outBuff, size_t* outBuffSize);
 static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const unsigned char *ESL, size_t ESL_size, struct Arguments *args);
-static void usage()
-{
-	printf("USAGE:\n\t"
-		"$ secvarctl generate <inputFormat>:<outputFormat> [OPTIONS] -i <inputFile> -o <outputFile>\n"
-		"OPTIONS:\n\t-v\t\tverbose, give process progress\n"
-		"\t-n <varName>\tname of secure boot variable, used when generating an Auth file\n\t" 
-		"\t\talso when an ESL or Auth file contains hashed data use '-n dbx'\n\t"
-		"\t\tcurrently accepted for <varName>: {'PK','KEK','db','dbx'}\n"
-		"\t-h <hashAlg>\thash function, use when '[h]ash' is input/output format\n\t"
-		"\t\tcurrently accepted for <hashAlg>:\n\t"
-		"\t\t\t{'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}\n"
-		"\t-k <keyFile>\tprivate RSA key (PEM), used when signing data for PKCS7/Auth files\n"
-		"\t\t\tmust have a corresponding '-c <crtFile>'\n\t"
-		"\t\tyou can also use multiple signers by declaring several '-k <> -c <>' pairs\n"
-        "\t-s <sigFile>\traw signed data, alternative to using private keys when generating\n" 
-        "\t\t\tPKCS7/Auth files, must have a corresponding '-c <crtFile>'\n\t"
-        "\t\tyou can also use multiple signers by declaring several '-s <> -c <>' pairs\n"
-        "\t\t\tfor valid secure variable auth files, this data should be generated with\n"
-        "\t\t\t`secvarctl generate c:x ...` and then signed, remember to use the \n"
-        "\t\t\tsame '-t <timestamp>' argument for both commands\n"
-		"\t-c <crtFile>\tx509 cetificate (PEM), used when signing data for PKCS7/Auth files\n"
-		"\t-t <time>\twhere time is of the format 'y-m-d h:m:s'.\n\t"
-		"\t\tcreates a custom timestamp used when generating an auth or PKCS7 file,\n\t"
-		"\t\tif not given then current time is used\n"
-		"\t-f\t\tforce, does not do prevalidation on the input file, assumes format is correct\n"
-		"\treset\t\tgenerates a valid variable reset file\n"
-		"\t\t\treplaces <inputFormat>:<outputFormat>\n"
-		"\t\t\tthis file is just an auth file with an empty ESL.\n"
-		"\t\t\trequired arguments are output file, signer crt/key pair and variable name.\n"
-		"\t\t\tno input file required.\n"
-		"\t\t\tuse this flag to delete a variable\n"
-		"Accepted <inputFormat>:"
-		"\n\t[h]ash\tA file containing only hashed data\n\t"
-		"\tuse -h <hashAlg> to specifify the function used (default SHA256)\n"
-		"\t[c]ert\tAn x509 certificate (PEM format)\n"
-		"\t[e]sl\tAn EFI Signature List, must specify if dbx update w '-n dbx'\n"
-		"\t[p]kcs7\tA PKCS7 file containing signed data only used as input type when generating a hash\n"
-		"\t[a]uth\tA signed authenticated file containing a PKCS7 and the new data\n"
-		"\t\tused as input type when output type is hash or esl'\n"
-		"\t[f]ile\tAny file type, Warning: no format validation will be done\n\n"
-		"Accepted <outputFormat>:\n"
-		"\t[h]ash\tA file containing only hashed data\n\t"
-		"\tuse -h <hashAlg> to specifify the function to use (default SHA256)\n"
-		"\t[e]sl\tAn EFI Signature List\n"
-		"\t[p]kcs7\tA PKCS7 file containing signed data,\n\t"
-		"\tmust specify secure variable name and public and private key to use for signing\n"
-		"\t[a]uth\tA signed authenticated file containing a PKCS7 and the new data,\n\t"
-		"\tmust specify the key name and public and private key to use for signing\n"
-        "\t[x]\tA valid secure variable presigned digest. This should be used when the user\n"
-        "\t\tdoes not have access to private keys. The user can send this outputted hash file to\n"
-        "\t\tbe signed by whatever signing framework they are using. The raw signature can then be\n"
-        "\t\tused during auth/PKCS7 generation with '-s <sigFile> -c <crtFile'\n\n"
-		"\n\n");
-}
-
-
-static void help()
-{
-	printf( "HELP:\n\t"
-		"The purpose of this command is to generate various files related to updating\n\t" 
-		"secure boot variables.\n"
-		"Typical commands:\n"
-		"\tto create an ESL from a binary file, use SHA512 on the file and store it in an ESL:\n"
-		"\t\t'secvarctl generate f:e -i <file> -o <file> -h SHA512'\n" 
-		"\tto create an ESL from an x509 certificate:\n"
-		"\t\t'secvarctl generate c:e -i <file> -o <file>'\n"
-		"\tto create a signed auth file from an ESL, the resulting file is a valid key update file:\n"
-		"\t\t'secvarctl generate e:a -k <file> -c <file> -n <varName> -i <file> -o <file>'\n"
-		"\tto create a signed auth file from an x509, the resulting file is a valid key update file:\n"
-		"\t\t'secvarctl generate c:a -k <file> -c <file> -n <varName> -i <file> -o <file>'\n"
-		"\tto create a valid dbx update (auth) file from a binary file:\n"
-		"\t\t'secvarctl generate f:a -h <hashAlg> -k <file> -c <file> -n dbx -i <file> -o <file>'\n"
-		"\tto retrieve the ESL from an auth file:\n"
-		"\t\t'secvarctl generate a:e -i <file> -o <file>'\n"
-		"\tto create a signed auth file for a key reset, the resulting file is a valid key reset file:\n"
-		"\t\t'secvarctl generate reset -k <file> -c <file> -n <varName> -o <file>'\n"
-        "\tto create an auth file, using an external signing framework:\n"
-        "\t\t'secvarctl generate c:x -n <varName> -t <y-m-d h:m:s> -i <file> -o <file>'\n"
-        "\t\tthen user gets the output file signed into raw signature in <sigFile>\n"
-        "\t\t'secvarctl c:a -n <sameName> -t <sameTimestamp> -s <sigFile> -c <crtfile> -i <file> -o <file>\n");
-
-	usage();
-}
-
 
 /*
  *called from main()
@@ -145,38 +59,82 @@ int performGenerateCommand(int argc,char* argv[])
 		.signCerts = NULL, .signKeys = NULL, .inForm = NULL, .outForm = NULL, .varName = NULL, 
 		.hashAlg = NULL, .time = NULL
 	};
+    // combine command and subcommand for usage/help messages
+    argv[0] = "secvarctl generate";
 
-	rc = parseArgs(argc, argv, &args);
+	struct argp_option options[] = 
+	{
+		{"var", 'n', "VAR_NAME", 0 , "name of a secure boot variable, used when generating an PKCS7/Auth file."
+										" Also, when an ESL or Auth file contains hashed data use '-n dbx'."
+										" currently accepted values: {'PK','KEK','db','dbx'}"},
+		{"alg", 'h', "HASH_ALG", 0, "hash function, use when '[h]ash' is input/output format."
+										" currently accepted values: {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}, Default is 'SHA256'"},
+		{"verbose", 'v', 0, 0, "print more verbose process information"},
+		{"key", 'k', "FILE" , 0, "private RSA key (PEM), used when signing data for PKCS7/Auth files"
+								" must have a corresponding '-c FILE' ."
+								" you can also use multiple signers by declaring several '-k <> -c <>' pairs"},
+		{"signature", 's', "FILE", 0, "raw signed data, alternative to using private keys when generating PKCS7/Auth"
+										" files, must have a corresponding '-c <crtFile>' ."
+        								" you can also use multiple signers by declaring several '-s <> -c <>' pairs."
+        								" for valid secure variable auth files, this data should be generated with"
+        								" `secvarctl generate c:x ...` and then signed externally into FILE, remember to use the"
+        								" same '-t <timestamp>' argument for both commands"},
+		{"cert", 'c', "FILE", 0, "x509 cetificate (PEM), used when signing data for PKCS7/Auth files"},
+		{"time", 't', "'y-m-d h:m:s'", 0, "set custom timestamp when generating PKCS7/Auth/presigned digest, default is currrent time"},
+		{"force", 'f', 0 ,0, "does not do prevalidation on the input file, assumes format is correct"},
+		// these are hidden because they are mandatory and are described in the help message instead of in the options
+		{0, 'i', "FILE", OPTION_HIDDEN, "input file"},
+		{0, 'o', "FILE", OPTION_HIDDEN, "output file"},
+		{0}
+	};
+
+	struct argp argp = {
+		options, parse_opt, "<inputFormat>:<outputFormat> -i <inputFile> -o <outputFile>\nreset -i <inputFile> -o <outputFile>", 
+		"This command generates various files related to updating secure boot variables"
+		" It requires an input file that is formatted according to <inputFormat> (see below)"
+		" and produces an output file that is formatted according to <outputFormat> (see below).\v"
+		"Accepted <inputFormat>:"
+		"\n\t[h]ash\tA file containing only hashed data\n"
+		"\t[c]ert\tAn x509 certificate (PEM format)\n"
+		"\t[e]sl\tAn EFI Signature List, if dbx must specify '-n dbx'\n"
+		"\t[p]kcs7\tA PKCS7 file\n"
+		"\t[a]uth\ta properly generated authenticated variable fileI\n"
+		"\t[f]ile\tAny file type, Warning: no format validation will be done\n\n"
+		"Accepted <outputFormat>:\n"
+		"\t[h]ash\tA file containing only hashed data\n"
+		"\t[e]sl\tAn EFI Signature List\n"
+		"\t[p]kcs7\tA PKCS7 file containing signed data\n"
+		"\t[a]uth\ta properly generated authenticated variable file\n"
+        "\t[x]\tA valid secure variable presigned digest.\n\n"
+        "Using with `reset` instead of `<inputFormat>:<outputFormat>' generates a valid variable reset file."
+		" this file is just an auth file with an empty ESL. `reset` requires arguments: output file, signer"
+		" crt/key pair and variable name, no input file is required. use this flag to delete a variable.\n\n"
+        "Typical commands:\n"
+		"  -create valid dbx ESL from binary file with SHA512:\n"
+		"\t'... f:e -i <file> -o <file> -h SHA512'\n" 
+		"  -create an ESL from an x509 certificate:\n"
+		"\t'... c:e -i <file> -o <file>'\n"
+		"  -create an auth file from an ESL:\n"
+		"\t'... e:a -k <file> -c <file> -n <varName> -i <file> -o <file>'\n"
+		"  -create an auth file from an x509:\n"
+		"\t'... c:a -k <file> -c <file> -n <varName> -i <file> -o <file>'\n"
+		"  -create a valid dbx update (auth) file from a binary file:\n"
+		"\t'... f:a -h <hashAlg> -k <file> -c <file> -n dbx -i <file> -o <file>'\n"
+		"  -retrieve the ESL from an auth file:\n"
+		"\t'... a:e -i <file> -o <file>'\n"
+		"  -create an auth file for a key reset:\n"
+		"\t'... reset -k <file> -c <file> -n <varName> -o <file>'\n"
+        "  -create an auth file using an external signing framework:\n"
+        "\t'... c:x -n <varName> -t <y-m-d h:m:s> -i <file> -o <file>'\n"
+        "\tthen user gets output signed through server (<sigFile>):\n"
+        "\t'... c:a -n <> -t <sameTime!> -s <sigFile> -c <crtfile> -i <file> -o <file>\n"
+
+	};
+
+	rc = argp_parse( &argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER, 0, &args);
 	if (rc || args.helpFlag)
 		goto out;
-	
-	if (args.varName && isVariable(args.varName)) {
-		prlog(PR_ERR, "ERROR: %s is not a valid variable name\n", args.varName);
-		rc = ARG_PARSE_FAIL;
-		goto out;
-	}		
-	// if in:out did not parse right then quit
-	if (args.inForm == NULL || args.outForm == NULL) {
-		prlog(PR_ERR, "ERROR: Operation is invalid, see usage below...\n");
-		usage();
-		rc = ARG_PARSE_FAIL;
-		goto out;
-	}
-	//output file must be defined
-	if (args.outFile == NULL) {
-		prlog(PR_ERR, "ERROR: No output file given, see usage below...\n");
-		usage();
-		rc = ARG_PARSE_FAIL;
-		goto out;
-	} 
 
-	// input file must exist if not a reset key
-	if (args.inForm[0] != 'r' && (args.inFile == NULL || isFile(args.inFile) )) {
-		prlog(PR_ERR, "ERROR: Input File is invalid, see usage below...\n");
-		usage();
-		rc = ARG_PARSE_FAIL;
-		goto out;
-	}
 	// if signing each signer needs a certificate
 	if (args.signCertCount != args.signKeyCount) {
 		if (args.alreadySignedFlag == 1)
@@ -188,7 +146,7 @@ int performGenerateCommand(int argc,char* argv[])
 	}
 	prlog(PR_INFO, "Input file is %s of type %s , output file is %s of type %s\n", args.inFile, args.inForm, args.outFile, args.outForm);
 	
-	//if reset key than don't look for a input file
+	// if reset key than don't look for an input file
 	if (args.inForm[0] == 'r') 
 		size = 0;
 	else {
@@ -232,199 +190,147 @@ out:
 		free(args.signCerts);
 	if (args.time) 
 		free(args.time);
-	if (rc) 
-		printf("RESULT: FAILURE\n");
-	else 
-		printf("RESULT: SUCCESS\n");
+	if (!args.helpFlag) 
+		printf("RESULT: %s\n", rc ? "FAILURE" : "SUCCESS");
 	
 	return rc;
 }
 
 /**
- *@param argv , array of command line arguments
- *@param argc, length of argv
- *@param args, struct that will be filled with data from argv
+ *@param key , every option that is parsed has a value to identify it
+ *@param arg, if key is an option than arg will hold its value ex: -<key> <arg>
+ *@param state,  argp_state struct that contains useful information about the current parsing state 
  *@return success or errno
  */
-static int parseArgs( int argc, char *argv[], struct Arguments *args) {
+static int parse_opt(int key, char *arg, struct argp_state *state) 
+{
+	struct Arguments *args = state->input;
 	int rc = SUCCESS;
-	for (int i = 0; i < argc; i++) {
-		if (argv[i][0] == '-') {
-			if (!strcmp(argv[i], "--usage")) {
-				usage();
+	// this checks to see if help/usage is requested
+	// argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
+	// this becomes extra sticky since --usage/--help never actually get passed to this function
+	if (args->helpFlag == 0) {
+		if (state->next == 0 && state->next + 1 < state->argc) {
+			if (strncmp("--u", state->argv[state->next + 1], strlen("--u")) == 0 
+				|| strncmp("--h", state->argv[state->next + 1], strlen("--h")) == 0
+				|| strncmp("-?", state->argv[state->next + 1], strlen("-?")) == 0)
 				args->helpFlag = 1;
-				goto out;
-			}
-			else if (!strcmp(argv[i], "--help")) {
-				help();
+		}
+		else if (state->next < state->argc)
+			if (strncmp("--u", state->argv[state->next], strlen("--u")) == 0 
+				|| strncmp("--h", state->argv[state->next], strlen("--h")) == 0
+				|| strncmp("-?", state->argv[state->next], strlen("-?")) == 0)
 				args->helpFlag = 1;
-				goto out;
-			}
-			// set verbose flag
-			else if (!strcmp(argv[i], "-v")) {
-				verbose = PR_DEBUG; 
-			}
-			//  set input is valid flag
-			else if (!strcmp(argv[i], "-f"))
-				args->inpValid = 1;	
-			// set private key signer	
-			else if (!strcmp(argv[i], "-k")) {
-                 //if already storing signed data, then don't allow for private keys
-                if (args->alreadySignedFlag == 1){
-                    prlog(PR_ERR, "ERROR: Cannot have both signed data files and private keys for signing");
-                    goto out;
-                }
-                args->alreadySignedFlag = 0;
-				if (i + 1 >= argc || argv[i + 1][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect private key flag, see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->signKeyCount++;
-					args->signKeys = realloc(args->signKeys, args->signKeyCount * sizeof(char*));
-					args->signKeys[args->signKeyCount - 1] = argv[i];
-				}
-			}
-            // set signed data, alternative to -k   
-            else if (!strcmp(argv[i], "-s")) {
-                //if already storing private keys, then don't allow for signed data
-                if (args->alreadySignedFlag == 0){
-                    prlog(PR_ERR, "ERROR: Cannot have both signed data files and private keys for signing");
-                    goto out;
-                }
-                args->alreadySignedFlag = 1;
-                if (i + 1 >= argc || argv[i + 1][0] == '-') {
-                    prlog(PR_ERR, "ERROR: Incorrect signed data flag, see usage...\n");
-                    rc = ARG_PARSE_FAIL;
-                    goto out;
-                }
-                else {
-                    i++;
-                    args->signKeyCount++;
-                    args->signKeys = realloc(args->signKeys, args->signKeyCount * sizeof(char*));
-                    args->signKeys[args->signKeyCount - 1] = argv[i];
-                }
+	}
+
+	switch (key) {
+		case 'k':
+			 // if already storing signed data, then don't allow for private keys
+            if (args->alreadySignedFlag == 1){
+                prlog(PR_ERR, "ERROR: Cannot have both signed data files and private keys for signing\n");
+                rc = ARG_PARSE_FAIL;
+                break;
             }
-			// set public key signer
-			else if(!strcmp(argv[i], "-c")) {	
-				if (i + 1 >= argc || argv[i + 1][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect value for public key flag, use 'c <cert>', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->signCertCount++;
-					args->signCerts = realloc(args->signCerts, args->signCertCount * sizeof(char*));
-					args->signCerts[args->signCertCount - 1] = argv[i];
-				}
+            args->alreadySignedFlag = 0;
+			args->signKeyCount++;
+			args->signKeys = realloc(args->signKeys, args->signKeyCount * sizeof(char*));
+			args->signKeys[args->signKeyCount - 1] = arg;
+			break;
+		case 'c':
+			args->signCertCount++;
+			args->signCerts = realloc(args->signCerts, args->signCertCount * sizeof(char*));
+			args->signCerts[args->signCertCount - 1] = arg;
+			break;
+		case 'f':
+			args->inpValid = 1;
+			break;
+		case 'v':
+			verbose = PR_DEBUG;
+			break;
+		case 's':
+			// if already storing private keys, then don't allow for signed data
+            if (args->alreadySignedFlag == 0){
+                prlog(PR_ERR, "ERROR: Cannot have both signed data files and private keys for signing");
+                rc = ARG_PARSE_FAIL;
+                break;
+            }
+            args->alreadySignedFlag = 1;
+            args->signKeyCount++;
+            args->signKeys = realloc(args->signKeys, args->signKeyCount * sizeof(char*));
+            args->signKeys[args->signKeyCount - 1] = arg;
+			break;
+		case 'i':
+			args->inFile = arg;
+			break;
+		case 'o':
+			args->outFile = arg;
+			break;
+		case 'h':
+			args->hashAlg = arg;
+			break;
+		case 'n':
+			args->varName = arg;
+			break;
+		case 't':
+			args->time = calloc(1, sizeof(*args->time));
+			if (!args->time) {
+				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+				rc = ALLOC_FAIL;
+				break;
 			}
-			// set input file
-			else if (!strcmp(argv[i], "-i")) {
-				if (i + 1 >= argc || argv[i + 1][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect flag '-i', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->inFile = argv[i];
-				}
+			// make sure -t flag has two strings <date> <time>
+			if (state->next >= state->argc || state->argv[state->next][0] == '-') {
+				prlog(PR_ERR, "ERROR: Incorrect flag '-t', see usage...\n");
+				argp_usage(state);
+				rc = ARG_PARSE_FAIL;
+				break;
 			}
-			// set output file 
-			else if (!strcmp(argv[i], "-o")) {
-				if (i + 1 >= argc || argv[i + 1][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect flag '-o', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->outFile = argv[i];
-				}
+			// make sure timestamp is correct format
+			if (sscanf(arg,"%hd-%hhd-%hhd", &args->time->year, &args->time->month, &args->time->day) != 3
+				|| sscanf(state->argv[state->next], "%hhd:%hhd:%hhd", &args->time->hour, &args->time->minute, &args->time->second) != 3) {
+				prlog(PR_ERR, "ERROR: Could not parse given timestamp, make sure it is in format 'y-m-d h:m:s'\n");
+				rc = ARG_PARSE_FAIL;
 			}
-			// set variable name
-			else if (!strcmp(argv[i], "-n")) {
-				if (i + 1 >= argc || argv[i + 1][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect flag '-n', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->varName = argv[i];
-				}
+			state->next++;
+			break;
+		case ARGP_KEY_ARG:
+			// check if reset key is desired
+			if (!strcmp(arg, "reset")) {
+				args->inForm = "reset";
+				args->inFile = "empty";
+				args->outForm = "auth";
+				break;
 			}
-			// set hash alg
-			else if (!strcmp(argv[i], "-h")) {
-				if (i + 1 >= argc || argv[i + 1][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect flag '-h', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->hashAlg = argv[i];
-				}
-			}
-			// set custom timestamp
-			else if (!strcmp(argv[i], "-t")) {
-				if (i + 1 >= argc || argv[i + 1][0] == '-' || i+2 >=argc || argv[i+2][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect flag '-t', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->time = calloc(1, sizeof(*args->time));
-					if (!args->time){
-						prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-						rc = ALLOC_FAIL;
-						goto out;
-					}
-					// make sure timestamp is correct format
-					if (sscanf(argv[i++],"%hd-%hhd-%hhd", &args->time->year, &args->time->month, &args->time->day) != 3
-						|| sscanf(argv[i], "%hhd:%hhd:%hhd", &args->time->hour, &args->time->minute, &args->time->second) != 3) {
-						prlog(PR_ERR, "ERROR: Could not parse given timestamp, make sure it is in format 'y-m-d h:m:s'\n ");
-						rc = ARG_PARSE_FAIL;
-						goto out;
-					}		
-					else {
-						rc = validateTime(args->time);
-						if (rc) goto out;
-					}
-				}
-			}
-				
-		}
-		//check if reset key is desired
-		else if (!strcmp(argv[i], "reset")) {
-			args->inForm = "reset";
-			args->inFile = "empty";
-			args->outForm = "auth";
-		}
-		// else set input and output formats
-		else {
-				args->inForm = strtok(argv[i], ":");
-				args->outForm = strtok(NULL, ":");
-				if (args->inForm == NULL || args->outForm == NULL) {
-					prlog(PR_ERR, "ERROR: Incorrect '<inputFormat>:<outputFormat>', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-		}
+			// else set input and output formats
+			args->inForm = strtok(arg, ":");
+			args->outForm = strtok(NULL, ":");
+			break;
+		case ARGP_KEY_SUCCESS:
+			// check that all essential args are given and valid
+			if (args->helpFlag)
+				break;
+			else if (args->inForm == NULL || args->outForm == NULL)
+				prlog(PR_ERR, "ERROR: Incorrect '<inputFormat>:<outputFormat>', see usage...\n");
+			else if (args->time && validateTime(args->time))
+				prlog(PR_ERR, "Invalid timestamp flag -t 'y-m-d h:m:s>' , see usage...\n");
+			else if (args->inForm[0] != 'r' && (args->inFile == NULL || isFile(args->inFile) ))
+				prlog(PR_ERR, "ERROR: Input File is invalid, see usage below...\n");
+			else if (args->varName && isVariable(args->varName))
+				prlog(PR_ERR, "ERROR: %s is not a valid variable name\n", args->varName);	
+			else if (args->outFile == NULL)
+				prlog(PR_ERR, "ERROR: No output file given, see usage below...\n");
+			else 
+				break;
+			argp_usage(state);
+			rc = ARG_PARSE_FAIL;
+			break;
 	}
-		
-out:
-	if (rc) {
+
+	if (rc) 
 		prlog(PR_ERR, "Failed during argument parsing\n");
-		usage();
-	}
+
 	return rc;
 }
-
 
 /*
  *after parsing argument information and getting input data, this will return the generated output data given the output format
@@ -448,9 +354,9 @@ static int getOutputData(const unsigned char *buff, size_t size, struct Argument
 			rc = generateHash(buff, size, args, hashFunction, outBuff, outBuffSize);
 			break;
         case 'x':
-            //intentional flow
+            // intentional flow
 		case 'a':
-			//intentional flow into pkcs7
+			// intentional flow into pkcs7
 		case 'p':
 			// if no time is given then get curent time
 			if (!args->time) {
@@ -469,8 +375,7 @@ static int getOutputData(const unsigned char *buff, size_t size, struct Argument
 			rc = generateESL(buff, size, args, hashFunction, outBuff, outBuffSize);
 			break;
 		default:
-			prlog(PR_ERR, "ERROR: Unkown output format %s , see usage below...\n", args->outForm);
-			usage();
+			prlog(PR_ERR, "ERROR: Unknown output format %s, use `--help` for more info\n", args->outForm);
 			rc = ARG_PARSE_FAIL;
 	}
 out:
@@ -498,9 +403,9 @@ static int generateAuthOrPKCS7(const unsigned char* buff, size_t size, struct Ar
 	
 	switch (args->inForm[0]) {
 		case 'f':
-			//intentional flow
+			// intentional flow
 		case 'h':
-			//intentional flow	
+			// intentional flow	
 		case 'c': 
 			rc = generateESL(buff, size, args, hashFunct, &intermediateBuff, &intermediateBuffSize);
 			if (rc) {
@@ -521,7 +426,7 @@ static int generateAuthOrPKCS7(const unsigned char* buff, size_t size, struct Ar
 			rc = SUCCESS;
 			break;
 		case 'r':
-			//if creating a reset key, ensure input is NULL and size of zero
+			// if creating a reset key, ensure input is NULL and size of zero
 			if (inpSize == 0 && *inpPtr == NULL)
 				rc = SUCCESS;
 			else {
@@ -531,8 +436,7 @@ static int generateAuthOrPKCS7(const unsigned char* buff, size_t size, struct Ar
 			}
 			break;
 		default:
-			prlog(PR_ERR, "ERROR: Unknown input format %s for generating %s file , see usage below...\n", args->inForm, (args->outForm[0] == 'a' ? "an Auth" : "a PKCS7"));
-			usage();
+			prlog(PR_ERR, "ERROR: Unknown input format %s for generating %s file.\n", args->inForm, (args->outForm[0] == 'a' ? "an Auth" : "a PKCS7"));
 			rc = ARG_PARSE_FAIL;
 	}
 	if (rc) {
@@ -548,7 +452,7 @@ static int generateAuthOrPKCS7(const unsigned char* buff, size_t size, struct Ar
 		rc = toPKCS7ForSecVar(*inpPtr, inpSize, args, hashFunct->mbedtls_funct, outBuff, outBuffSize);
 
 	if (rc) {
-		prlog(PR_ERR,"Failed to generate %s file\n", args->outForm[0] == 'a' ? "Auth" : args->outForm[0] == 'x' ? "pre-signed hash" : "PKCS7");
+		prlog(PR_ERR,"Failed to generate %s file, use `--help` for more info\n", args->outForm[0] == 'a' ? "Auth" : args->outForm[0] == 'x' ? "pre-signed hash" : "PKCS7");
 		goto out;
 	}
 out: 
@@ -629,8 +533,7 @@ static int generateESL(const unsigned char* buff, size_t size, struct Arguments 
 			rc = SUCCESS;
 			break;
 		default:
-			prlog(PR_ERR, "ERROR: Unkown input format %s for generating an ESL, see usage below...\n", args->inForm);
-			usage();
+			prlog(PR_ERR, "ERROR: unknown input format %s for generating an ESL, use `--help` for more info\n", args->inForm);
 			rc = ARG_PARSE_FAIL;
 
 	}
@@ -638,7 +541,7 @@ static int generateESL(const unsigned char* buff, size_t size, struct Arguments 
 		prlog(PR_ERR, "Failed to validate input format\n");
 		goto out;
 	}
-	//if input file is auth than extract it
+	// if input file is auth than extract it
 	if (args->inForm[0] == 'a') 
 		rc = authToESL(*inpPtr, inpSize, outBuff, outBuffSize);
 	else
@@ -686,8 +589,7 @@ static int generateHash(const unsigned char* data, size_t size, struct Arguments
 				rc = validateAuth(data, size, args->varName);
 				break;
 			default:
-				prlog(PR_ERR, "ERROR: Unkown input format %s for generating a hash, see usage below...\n", args->inForm);
-				usage();
+				prlog(PR_ERR, "ERROR: unknown input format %s for generating a hash, use `--help` for more info\n", args->inForm);
 				rc = ARG_PARSE_FAIL;
 		}	
 		if (rc) {
@@ -836,7 +738,7 @@ static int getHashFunction(const char* name, struct hash_funct **returnFunct)
 		}
 	}
 	prlog(PR_ERR, "ERROR: Invalid hash algorithm %s , hint: use -h { ", name);
-	//loop through all known hashes
+	// loop through all known hashes
   	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct); i++) {
   		if (i == sizeof(hash_functions) / sizeof(struct hash_funct) - 1)
   			prlog(PR_ERR, "%s }\n", hash_functions[i].name);
