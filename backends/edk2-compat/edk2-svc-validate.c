@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>// for exit
+#include <argp.h>
 #include <mbedtls/pk_internal.h> // for validating cert pk data
 #include "../../external/extraMbedtls/include/pkcs7.h"
 #include "include/edk2-svc.h"// import last!!
@@ -13,10 +14,8 @@ struct Arguments {
 	char inForm;
 }; 
 
-static void usage();
-static void help();
 static bool validate_hash(uuid_t type, size_t size);
-static int parseArgs(int argc, char *argv[], struct Arguments *args);
+static int parse_opt(int key, char *arg, struct argp_state *state);
 static int validateSingularESL(size_t* bytesRead, const unsigned char* esl, size_t eslvarsize, const char *varName);
 
 
@@ -44,17 +43,31 @@ int performValidation(int argc, char* argv[])
 		.helpFlag = 0, 
 		.inFile = NULL, .inForm = AUTH, .varName = NULL
 	};
+	// combine command and subcommand for usage/help messages
+	argv[0] = "secvarctl validate";
 
-	rc = parseArgs(argc, argv, &args);
+	struct argp_option options[] = 
+	{
+		{"verbose", 'v', 0, 0, "print more verbose process information"},
+		{"pkcs7", 'p', 0 ,0, "file is a PKCS7"},
+		{"esl", 'e', 0, 0, "file is an EFI Signature List (ESL)"},
+		{"cert", 'c', 0 ,0, "file is an x509 cert (DER or PEM format)"},
+		{"auth", 'a', 0, 0, "file is a properly generated authenticated variable, DEFAULT"},
+		{"dbx", 'x', 0, 0, "file is for the dbx (allows for data to contain a hash not an x509), Note: user still should specify the file type"},
+		{0}
+	};
+
+	struct argp argp = {
+		options, parse_opt, "<FILE>", 
+		"The purpose of this command is to help ensure that the format of the file is correct"
+		" and is able to be parsed for data. NOTE: This command mainly performs formatting checks, invalid content/signatures can still exist"
+		" use 'secvarctl verify' to see if content and file signature (if PKCS7/auth) are valid"
+	};
+
+	rc = argp_parse( &argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER, 0, &args);
 	if (rc || args.helpFlag)
 		goto out;
 	
-
-	if (!args.inFile) {
-		usage();
-		rc = ARG_PARSE_FAIL;
-		goto out;
-	}
 
 	buff = (unsigned char *)getDataFromFile(args.inFile, &size);
 	if (!buff) {
@@ -79,94 +92,82 @@ int performValidation(int argc, char* argv[])
 			break;
 	}
 out:
-	if (rc) 
-		printf("RESULT: Failure\n");
-	else 
-		printf("RESULT: SUCCESS\n");
 	if (buff) 
 		free(buff);
+	if (!args.helpFlag) 
+		printf("RESULT: %s\n", rc ? "FAILURE" : "SUCCESS");
 	
 	return rc;
 }
 
-static void usage() {
-	printf("USAGE:\n\t $ secvarctl validate [OPTIONS] <file>"
-		"\n\tOPTIONS:"
-		"\n\t\t--help/--usage"
-		"\n\t\t-v\t\tverbose, print process info"
-		"\n\t\t-x\t\tfile is for the dbx, allows data to be a hash not an x509,\n\t"
-		"\t\t\tNOTE: user still needs to specify file type"
-		"\n\t\t-p\t\tfile is a PKCS7\n\t\t-e\t\tfile is an ESL"
-		"\n\t\t-c\t\tfile is a x509 cert (DER or PEM format)"
-		"\n\t\t-a\t\tfile is a signed authenticated file containg a PKCS7 and appended ESL\n\t"
-		"\t\t\tDEFAULT\n");
-}
 
-static void help() {
-	printf( "HELP:\n\t"
-		"This purpose of this command is to help ensure that the format of the file is correct\n\t"
-		"and is able to be parsed for data. NOTE: This command does little data content checks,\n"
-		"\tuse 'secvarctl verify' to see if content and file signature (if PKCS7/auth) is valid\n");
-	usage();
-}
 
 /**
- *@param argv , array of command line arguments
- *@param argc, length of argv
- *@param args, struct that will be filled with data from argv
+ *@param key , every option that is parsed has a value to identify it
+ *@param arg, if key is an option than arg will hold its value ex: -<key> <arg>
+ *@param state,  argp_state struct that contains useful information about the current parsing state 
  *@return success or errno
  */
-static int parseArgs( int argc, char *argv[], struct Arguments *args) {
+static int parse_opt(int key, char *arg, struct argp_state *state) 
+{
+	struct Arguments *args = state->input;
 	int rc = SUCCESS;
-	for (int i = 0; i < argc; i++) {
-		if (argv[i][0] != '-') {
-			args->inFile = argv[i];
-			continue;
+	//this checks to see if help/usage is requested
+	//argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
+	//this becomes extra sticky since --usage/--help never actually get passed to this function (and neither does argv  [0])
+	if (args->helpFlag == 0) {
+		if (state->next == 0 && state->next + 1 < state->argc) {
+			if (strncmp("--u", state->argv[state->next + 1], strlen("--u")) == 0 
+				|| strncmp("--h", state->argv[state->next + 1], strlen("--h")) == 0
+				|| strncmp("-?", state->argv[state->next + 1], strlen("-?")) == 0)
+				args->helpFlag = 1;
 		}
-		if (!strcmp(argv[i], "--usage")) {
-			usage();
-			args->helpFlag = 1;
-			goto out;
-		}
-		else if (!strcmp(argv[i], "--help")) {
-			help();
-			args->helpFlag = 1;
-			goto out;
-		}
-		switch (argv[i][1]) {
-		// set verbose flag
-			case 'v': 
-				verbose = PR_DEBUG; 
-				break;
+		else if (state->next < state->argc)
+			if (strncmp("--u", state->argv[state->next], strlen("--u")) == 0 
+				|| strncmp("--h", state->argv[state->next], strlen("--h")) == 0
+				|| strncmp("-?", state->argv[state->next], strlen("-?")) == 0)
+				args->helpFlag = 1;
+	}
+
+	switch (key) {
+		case 'v': 
+			verbose = PR_DEBUG; 
+			break;
 		// set varname as dbx, important for validating ESL
-			case 'x':
-				args->varName = "dbx";
+		case 'x':
+			args->varName = "dbx";
+			break;
+		case 'a':
+			args->inForm = AUTH;
+			break;
+		case 'p':
+			args->inForm = PKCS7;
+			break;
+		case 'e':
+			args->inForm = ESL;
+			break;
+		case 'c':
+			args->inForm = CERT;
+			break;
+		case ARGP_KEY_ARG:
+			if (args->inFile == NULL)
+				args->inFile = arg;
+			break;
+		case ARGP_KEY_SUCCESS:
+			//check that all essential args are given and valid
+			if (args->helpFlag)
 				break;
-			case 'a':
-				args->inForm = AUTH;
+			if (!args->inFile) 
+				prlog(PR_ERR, "ERROR: missing input file, see usage...\n");
+			else 
 				break;
-			case 'p':
-				args->inForm = PKCS7;
-				break;
-			case 'e':
-				args->inForm = ESL;
-				break;
-			case 'c':
-				args->inForm = CERT;
-				break;
-			default:
-				prlog(PR_ERR, "ERROR: Unknown argument: %s\n", argv[i]);
-				rc = ARG_PARSE_FAIL;
-				goto out;
-		}
-		
+			argp_usage(state);
+			rc = ARG_PARSE_FAIL;
+			break;
 	}
-		
-out:
-	if (rc) {
+
+	if (rc) 
 		prlog(PR_ERR, "Failed during argument parsing\n");
-		usage();
-	}
 
 	return rc;
 }

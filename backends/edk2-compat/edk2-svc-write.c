@@ -33,7 +33,6 @@ int performWriteCommand(int argc, char* argv[])
 		.helpFlag = 0, .inpValid = 0, 
 		.pathToSecVars = NULL, .inFile = NULL, .varName = NULL
 	};
-	// combine command and subcommand for usage/help messages
 	argv[0] = "secvarctl write";
 
 	struct argp_option options[] = 
@@ -58,7 +57,8 @@ int performWriteCommand(int argc, char* argv[])
 		goto out;
 
 
-	rc = updateSecVar(args.varName, args.inFile, args.pathToSecVars, args.inpValid);	
+	rc = updateSecVar(args.varName, args.inFile, args.pathToSecVars, args.inpValid);
+
 out:
 	if (!args.helpFlag) 
 		printf("RESULT: %s\n", rc ? "FAILURE" : "SUCCESS");
