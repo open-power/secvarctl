@@ -4,7 +4,8 @@
 #include <string.h>
 #include <stdlib.h>// for exit
 #include <fcntl.h> // O_RDONLY
-#include <unistd.h> // has read/open funcitons
+#include <unistd.h> // has read/open functions
+#include <argp.h>
 #include "../../external/skiboot/include/opal-api.h"
 #include "../../external/skiboot/include/secvar.h"
 #include "include/edk2-svc.h"
@@ -19,14 +20,11 @@ struct Arguments {
 
 extern struct secvar_backend_driver edk2_compatible_v1;
 
-
-static void usage();
-static void help();
 static int verify(char **currentVars, int currCount, const char **updateVars, int updateCount, const char *path, int writeFlag);
 static int validateVarsArg(const char *vars[], int size);
 static int getCurrentVars(char **newCurr, int *size, const char *path);
 static char *opalErrToString(int rc);
-static int parseArgs(int argc, char *argv[], struct Arguments *args);
+static int parse_opt(int key, char *arg, struct argp_state *state);
 static int validateBanks(struct list_head *update_bank, struct list_head *variable_bank);
 static int setupBanks(struct list_head *variable_bank, struct list_head *update_bank, char *currentVars[], int currCount, const char *updateVars[], int updateCount, const char*path);
 static void printBanks(struct list_head *variable_bank, struct list_head *update_bank);
@@ -45,183 +43,166 @@ int performVerificationCommand(int argc, char* argv[])
 		.helpFlag = 0, .writeFlag = 0, .currVarCount = 0, .updateVarCount = 0,
 		.pathToSecVars = NULL, .updateVars = NULL, .currentVars = 0
 	};
+    // combine command and subcommand for usage/help messages
+	argv[0] = "secvarctl verify";
 
-	rc = parseArgs(argc, argv, &args);
+	struct argp_option options[] = 
+	{
+		{"verbose", 'v', 0, 0, "print more verbose process information"},
+		{"path", 'p', "PATH" ,0, "manually set path to current variables, looks for .../<var>/data file in PATH, default is " SECVARPATH " . Cannot be used with `-c` "},
+		{"current", 'c', "{CURRENT VAR LIST}", 0, "manually set current vars to be contents of CURRENT VAR LIST (see below for format)"},
+		{"write", 'w', 0, 0, "if successful, submit the update to be commited upon reboot. Equivalent to `secvarctl write`"},
+		{0, 'u', "{UPDATE LIST}", OPTION_HIDDEN, "set update variables (see below for format)"},
+		{0}
+	};
+
+	struct argp argp = {
+		options, parse_opt, "-u {UPDATE LIST}", 
+		"This command ensures that the proposed variable updates are"
+		" correctly signed by the current variables. If successful, then the user can run the same"
+		" command with the '-w' flag or use 'secvarctl write' to submit the updates to be"
+		" committed upon reboot\v"
+		"UPDATE LIST:\nAt least one variable-file pair is required. Formatted as:"
+		" ' -u <varName_1> <authFileForVar_1> <varName_2> <authFileForVar_2> ... '"
+		" Where <varName> is one of {'PK','KEK','db','dbx'}"
+		" and <authFileForVar> is a properly generated authenticated variable file that is"
+		" signed by a current variable with priviledges to approve the update\n\n"
+		"CURRENT_VAR_LIST:\nOptional, only used when -c is used. Formatted as:"
+		" ' -c <varName_1> <eslFileForVar_1> <varName_2> <eslFileForVar_2> ... '"
+		" Where <varName> is one of {'PK','KEK','db','dbx', 'TS'} and"
+		" <eslFileForVar> is an EFI Signature List."
+		" unless variable is TS (in which case it would contain 4 16 byte timestamps)"
+	};
+
+	rc = argp_parse( &argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER, 0, &args);
 	if (rc || args.helpFlag) {
-		goto out;
-	}
-	if (args.currVarCount && args.writeFlag) {
-		prlog(PR_ERR, "ERROR: Cannot update files if current variable files are given. remove -w\n");
-		usage();
-		rc = ARG_PARSE_FAIL;
 		goto out;
 	}
 
 	rc = verify(args.currentVars, args.currVarCount, args.updateVars, args.updateVarCount, args.pathToSecVars, args.writeFlag);
 	
 out:
-	if (rc) 
-		printf("RESULT: FAILURE\n");
-	else 
-		printf("RESULT: SUCCESS\n");
 	if (args.currentVars) 
 		free(args.currentVars);
 	if (args.updateVars) 
 		free(args.updateVars);
+	if (!args.helpFlag) 
+		printf("RESULT: %s\n", rc ? "FAILURE" : "SUCCESS");
 	
 	return rc;
 }
 
 /**
- *@param argv , array of command line arguments
- *@param argc, length of argv
- *@param args, struct that will be filled with data from argv
+ *@param key , every option that is parsed has a value to identify it
+ *@param arg, if key is an option than arg will hold its value ex: -<key> <arg>
+ *@param state,  argp_state struct that contains useful information about the current parsing state 
  *@return success or errno
  */
-static int parseArgs( int argc, char *argv[], struct Arguments *args) {
-	int rc = SUCCESS;
-	for (int i = 0; i < argc; i++) {
-		if (argv[i][0] == '-') {
-			if (!strcmp(argv[i], "--usage")) {
-				usage();
+static int parse_opt(int key, char *arg, struct argp_state *state) 
+{
+	struct Arguments *args = state->input;
+	int current, rc = SUCCESS;
+	//this checks to see if help/usage is requested
+	//argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
+	//this becomes extra sticky since --usage/--help never actually get passed to this function
+	if (args->helpFlag == 0) {
+		if (state->next == 0 && state->next + 1 < state->argc) {
+			if (strncmp("--u", state->argv[state->next + 1], strlen("--u")) == 0 
+				|| strncmp("--h", state->argv[state->next + 1], strlen("--h")) == 0
+				|| strncmp("-?", state->argv[state->next + 1], strlen("-?")) == 0)
 				args->helpFlag = 1;
-				goto out;
-			}
-			else if (!strcmp(argv[i], "--help")) {
-				help();
+		}
+		else if (state->next < state->argc)
+			if (strncmp("--u", state->argv[state->next], strlen("--u")) == 0 
+				|| strncmp("--h", state->argv[state->next], strlen("--h")) == 0
+				|| strncmp("-?", state->argv[state->next], strlen("-?")) == 0)
 				args->helpFlag = 1;
-				goto out;
+	}
+
+	switch (key) {
+		case 'p':
+			args->pathToSecVars = arg;
+			break;
+		case 'w':
+			args->writeFlag = 1;
+			break;
+		case 'v':
+			verbose = PR_DEBUG;
+			break;
+		case 'u':
+			if (args->updateVars) {
+				prlog(PR_ERR, "ERROR: Update variables defined twice, see usage...\n");
+				argp_usage(state);
+				rc = ARG_PARSE_FAIL;
+				break;
 			}
-			// set verbose flag
-			else if (!strcmp(argv[i], "-v")) {
-				verbose = PR_DEBUG; 
+			current = state ->next - 1;
+	        while(state->next != state->argc && state->argv[state->next][0] != '-')
+	            state->next++;
+	        args->updateVarCount = (state->next - current);
+	        args->updateVars = malloc(sizeof(char*) * args->updateVarCount);
+	        if (!args->updateVars) {
+	            prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+	            rc = ALLOC_FAIL;
+	            break;
+	        }
+        	memcpy(args->updateVars, &state->argv[current], args->updateVarCount * sizeof(char*));	        
+	        break;
+		case 'c':
+			if (args->currentVars) {
+				prlog(PR_ERR, "ERROR: Current variables defined twice, see usage...\n");
+				argp_usage(state);
+				rc = ARG_PARSE_FAIL;
+				break;
 			}
-			
-			// set current vars
-			else if(!strcmp(argv[i], "-c")) {	
-				if (args->currentVars) {
-					prlog(PR_ERR, "ERROR: Current variables defined twice, see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				i++;
-				// until next option is approached, add argument to array
-				while (i < argc && argv[i][0] != '-') { 
-					args->currVarCount++;
-					i++;
-				}
-				if (args->currVarCount > 0) {
-					args->currentVars = malloc(sizeof(char*) * args->currVarCount);
-					if (!args->currentVars) {
-						prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-						rc = ALLOC_FAIL;
-						goto out;
-					}
-					memcpy(args->currentVars, &argv[i - args->currVarCount], args->currVarCount * sizeof(char*));
-				}
-				// to iterate back to the -" " arg
-				i--;	
-				//make sure format was correct
-				if (validateVarsArg((const char **) args->currentVars, args->currVarCount)) {
+			current = state ->next - 1;
+	        while(state->next != state->argc && state->argv[state->next][0] != '-')
+	            state->next++;
+	        args->currVarCount = (state->next - current);
+	        args->currentVars = malloc(sizeof(char*) * args->currVarCount);
+	        if (!args->currentVars) {
+	            prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+	            rc = ALLOC_FAIL;
+	            break;
+	        }
+        	memcpy(args->currentVars, &state->argv[current], args->currVarCount * sizeof(char*));
+        	break;
+		case ARGP_KEY_SUCCESS:
+			//check that all essential args are given and valid
+			if (args->helpFlag)
+				break;
+			if (!args->updateVarCount || args->updateVarCount <= 1)
+				prlog(PR_ERR, "ERROR: No update variables/files given, use -u <varName_1> <authFileForVar_1>...\n\t\t"
+					"Where <varName> is one of {'PK','KEK','db','dbx'} and <authFileForVar> is "
+					"a properly generated authenticated variable file\n");
+			else if (validateVarsArg(args->updateVars, args->updateVarCount)) 
+					prlog(PR_ERR,"ERROR: Update vars list not in right format: "
+					"-u <varName_1> <authFileForVar_1> <varName_2> <authFileForVar_2> ...\n\t\t"
+					"Where <varName> is one of {'PK','KEK','db','dbx'} and <authFileForVar> is "
+					"a properly generated authenticated variable file\n");
+			else if (args->currVarCount) {
+				if (args->writeFlag)
+					prlog(PR_ERR, "ERROR: Cannot update files if current variable files are given. remove -w\n");
+				else if (validateVarsArg((const char **) args->currentVars, args->currVarCount)) 
 					prlog(PR_ERR,"ERROR: Current vars list not in right format: "
 						"<varName_1> <eslFileForVar_1> <varName_2> <eslFileForVar_2> ...\n\t\t"
-						"Where <varName> is one of {'PK','KEK','db','dbx', 'TS'} and <eslFileForVar> is an EFI Signature List file (unless TS variable)\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
+						"Where <varName> is one of {'PK','KEK','db','dbx', 'TS'} and <eslFileForVar> is an"
+						" EFI Signature List file (unless TS variable)\n");
+				else 
+					break;
+			}		
+			else 
+				break;
+			argp_usage(state);
+			rc = ARG_PARSE_FAIL;
+			break;
+	}
 
-			}
-			// set updateVars array
-			else if (!strcmp(argv[i], "-u")) {	
-				if (args->updateVars) {
-					prlog(PR_ERR, "ERROR: Update variables defined twice, see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				i++;
-				while(i < argc && argv[i][0] != '-'){
-					args->updateVarCount++;
-					i++;
-				}
-				if (args->updateVarCount > 0) {
-					args->updateVars = malloc(sizeof(char*) * args->updateVarCount);
-					if (!args->updateVars) {
-						prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-						rc = ALLOC_FAIL;
-						goto out;
-					}
-					memcpy(args->updateVars, &argv[i - args->updateVarCount], args->updateVarCount * sizeof(char*));
-				}
-				i--;
-				//make sure format was correct
-				if (validateVarsArg(args->updateVars, args->updateVarCount)) {
-					prlog(PR_ERR,"ERROR: Update vars list not in right format: "
-					"<varName_1> <authFileForVar_1> <varName_2> <authFileForVar_2> ...\n\t\t"
-					"Where <varName> is one of {'PK','KEK','db','dbx'} and <authFileForVar> is an authenticated file)\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-			}
-			else if (!strcmp(argv[i], "-p")) {
-				if (i + 1 >= argc || argv[i + 1][0] == '-') {
-					prlog(PR_ERR, "ERROR: Incorrect value for '-p', see usage...\n");
-					rc = ARG_PARSE_FAIL;
-					goto out;
-				}
-				else {
-					i++;
-					args->pathToSecVars= argv[i];
-				}
-			}
-			else if (!strcmp(argv[i], "-w"))
-				args->writeFlag = 1;
-		}
-	}
-		
-out:
-	if (rc) {
+	if (rc) 
 		prlog(PR_ERR, "Failed during argument parsing\n");
-		usage();
-	}
 
 	return rc;
 }
-
-
-static void usage()
-{
-	printf( "USAGE:\n\t$ secvarctl verify [OPTIONS] -u {UPDATE LIST}\n"
-		"OPTIONS:\n"
-		"\t--help/--usage\n"
-		"\t-v\t\t\tverbose, give process progress\n"
-		"\t-w\t\t\twrite, if successful, submit the update to be commited upon reboot\n\t"
-		"-c {CURRENT VAR LIST}\tset current vars to be contents of CURRENT VAR LIST,\n"
-		"\t\t\t\tdefault is keys from " SECVARPATH "\n\t"
-		"-p <path to vars>\tlooks for key directories {'PK','KEK','db','dbx', 'TS'} in <path>\n"
-		"\t\t\t\tdefault is " SECVARPATH "\n"
-		"\t\t\t\tcannot be used with '-c'\n"
-		"CURRENT VAR LIST:\n\tOptional, only used when -c is used. Formatted as:"
-		"\n\t\t' -c <varName_1> <eslFileForVar_1> <varName_2> <eslFileForVar_2> ... '\n\t\t"
-		"Where <varName> is one of {'PK','KEK','db','dbx', 'TS'} and\n"
-		"\t\t<eslFileForVar> is an EFI Signature List containing an x509 certificate\n"
-		"\t\tunless variable is TS (in which case it would contain 4 16 byte timestamps)\n"
-		"UPDATE LIST:\n\tAt least one variable-file pair is required. Formatted as:"
-		"\n\t\t' -u <varName_1> <authFileForVar_1> <varName_2> <authFileForVar_2> ... '\n\t\t"
-		"Where <varName> is one of {'PK','KEK','db','dbx'} \n"
-		"\t\tand <authFileForVar> is an authenticated file signed by a current variable with\n" 
-		"\t\tprivileges to approve the update\n");
-}
-
-static void help()
-{
-	printf( "HELP:\n\t"
-		"The purpose of this command is to ensure that the proposed variable updates are \n"
-		"\tsigned by the current variables. If successful, then the user can run the same\n"
-		"\tcommand with the '-w' flag or use 'secvarctl write' to submit the updates to be \n"
-		"\tcommitted upon reboot\n");
-	usage();
-}
-
 
 /**
  *runs actual verification process
@@ -310,12 +291,7 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 	size_t len;
 	struct secvar *tmp = NULL;
 	char * c;
-	// check that update string given
-	if (!updateVars || updateCount <= 1) {
-		fprintf(stderr,"ERROR: No update vars given\n");
-		usage();
-		return ARG_PARSE_FAIL;
-	}	
+
 	// if current vars string is given, check it. if not, get default/path vars
 	if (!currentVars) { 
 		defaultVarsFlag = 1;
