@@ -124,7 +124,7 @@ static struct backend *getBackend()
 		prlog(PR_WARNING, "WARNING!! Could not extract data from %s , assuming platform does not support secure variables\n", secVarFormatLocation);
 		goto out;
 	}
-	//loop through all known backends
+	// loop through all known backends
 	for (int i = 0; i < sizeof(backends) / sizeof(struct backend); i++) {
 		if (!strncmp(buff, backends[i].name, strlen(backends[i].name))) {
 			prlog(PR_NOTICE, "Found Backend %s\n", backends[i].name);

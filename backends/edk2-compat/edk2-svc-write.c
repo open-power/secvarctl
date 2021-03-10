@@ -78,9 +78,9 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 {
 	struct Arguments *args = state->input;
 	int rc = SUCCESS;
-	//this checks to see if help/usage is requested
-	//argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
-	//this becomes extra sticky since --usage/--help never actually get passed to this function
+	// this checks to see if help/usage is requested
+	// argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
+	// this becomes extra sticky since --usage/--help never actually get passed to this function
 	if (args->helpFlag == 0) {
 		if (state->next == 0 && state->next + 1 < state->argc) {
 			if (strncmp("--u", state->argv[state->next + 1], strlen("--u")) == 0 
@@ -112,7 +112,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 				args->inFile = arg;
 			break;
 		case ARGP_KEY_SUCCESS:
-			//check that all essential args are given and valid
+			// check that all essential args are given and valid
 			if (args->helpFlag)
 				break;
 			if(!args->varName) 

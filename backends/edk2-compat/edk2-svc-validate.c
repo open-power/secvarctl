@@ -112,9 +112,9 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 {
 	struct Arguments *args = state->input;
 	int rc = SUCCESS;
-	//this checks to see if help/usage is requested
-	//argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
-	//this becomes extra sticky since --usage/--help never actually get passed to this function (and neither does argv  [0])
+	// this checks to see if help/usage is requested
+	// argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
+	// this becomes extra sticky since --usage/--help never actually get passed to this function (and neither does argv  [0])
 	if (args->helpFlag == 0) {
 		if (state->next == 0 && state->next + 1 < state->argc) {
 			if (strncmp("--u", state->argv[state->next + 1], strlen("--u")) == 0 
@@ -154,7 +154,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 				args->inFile = arg;
 			break;
 		case ARGP_KEY_SUCCESS:
-			//check that all essential args are given and valid
+			// check that all essential args are given and valid
 			if (args->helpFlag)
 				break;
 			if (!args->inFile) 
@@ -458,7 +458,7 @@ static int validateSingularESL(size_t* bytesRead, const unsigned char* esl, size
 // from edk2-compat-process.c
 static bool validate_hash(uuid_t type, size_t size)
 {
-	//loop through all known hashes
+	// loop through all known hashes
 	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct); i++) {
         if (uuid_equals(&type, hash_functions[i].guid) && (size == hash_functions[i].size))
             return true;
@@ -526,8 +526,8 @@ int validateCert(const unsigned char *certBuf, size_t buflen, const char *varNam
 		goto out;
 	}
 	
-	//if x509 for db then signature can be RSA 4096 or other (since it won't be signing anything else)
-	//this addresses OS's that release certificates with non RSA-2048 (ex: RHEL)
+	// if x509 for db then signature can be RSA 4096 or other (since it won't be signing anything else)
+	// this addresses OS's that release certificates with non RSA-2048 (ex: RHEL)
 	if (varName == NULL || strncmp(varName, "db", strlen(varName))) {
 		if ( x509->sig_md != MBEDTLS_MD_SHA256 
 		|| strncmp((const char *)x509->sig_oid.p, MBEDTLS_OID_PKCS1_SHA256, x509->sig_oid.len) 

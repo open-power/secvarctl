@@ -2,14 +2,14 @@
 /* Copyright 2021 IBM Corp.*/
 #ifndef EDK2_SVC_SKIBOOT_H
 #define EDK2_SVC_SKIBOOT_H
-#include <stdint.h> //for uint_16 stuff like that
+#include <stdint.h> // for uint_16 stuff like that
 #include <mbedtls/x509_crt.h> // for printCertInfo
-#include "../../../external/skiboot/include/secvar.h" //for secvar struct
+#include "../../../external/skiboot/include/secvar.h" // for secvar struct
 #include "../../../include/err.h"
 #include "../../../include/prlog.h"
 #include "../../../include/generic.h"
 #include "../../../external/extraMbedtls/include/generate-pkcs7.h"
-#include "../../../external/skiboot/include/edk2.h" //include last or else problems from pragma pack(1)
+#include "../../../external/skiboot/include/edk2.h" // include last or else problems from pragma pack(1)
 
 
 #define CERT_BUFFER_SIZE        2048
