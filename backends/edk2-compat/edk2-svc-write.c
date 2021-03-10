@@ -33,6 +33,7 @@ int performWriteCommand(int argc, char* argv[])
 		.helpFlag = 0, .inpValid = 0, 
 		.pathToSecVars = NULL, .inFile = NULL, .varName = NULL
 	};
+	// combine command and subcommand for usage/help messages
 	argv[0] = "secvarctl write";
 
 	struct argp_option options[] = 
