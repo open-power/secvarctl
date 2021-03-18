@@ -4,40 +4,25 @@ cmake_minimum_required( VERSION 3.12 )
 project( secvarctl C )
 
 set( CMAKE_C_COMPILER gcc )
-#sources/dependencies for secvarctl
-set( DEPEN secvarctl.h prlog.h err.h generic.h )
-set( DEPDIR include/ )
-list( TRANSFORM DEPEN PREPEND ${DEPDIR} )
+#sources for secvarctl
 set( SRC secvarctl.c generic.c )
 
-#sources/dependencies for edk2 backend
-set( EDK2DEPEN edk2-svc.h )
-set( EDK2DEPDIR backends/edk2-compat/include/ )
-list( TRANSFORM EDK2DEPEN PREPEND ${EDK2DEPDIR} )
+#sources for edk2 backend
 set ( EDK2SRC edk2-svc-read.c edk2-svc-write.c edk2-svc-validate.c edk2-svc-verify.c edk2-svc-generate.c )
 set ( EDK2SRCDIR backends/edk2-compat/ )
 list( TRANSFORM EDK2SRC PREPEND ${EDK2SRCDIR} )
-list( APPEND DEPEN ${EDK2DEPEN} )
 list( APPEND SRC ${EDK2SRC} )
 
-#sources/dependencies for borrowed skiboot code
-set( SKIBOOTDEPEN list.h config.h container_of.h check_type.h secvar.h opal-api.h endian.h short_types.h edk2.h edk2-compat-process.h )
-set( SKIBOOTDEPDIR external/skiboot/include/ )
-list( TRANSFORM SKIBOOTDEPEN PREPEND ${SKIBOOTDEPDIR} )
+#sources for borrowed skiboot code
 set ( SKIBOOTSRC secvar_util.c edk2-compat.c edk2-compat-process.c )
 set ( SKIBOOTSRCDIR external/skiboot/ )
 list( TRANSFORM SKIBOOTSRC PREPEND ${SKIBOOTSRCDIR} )
-list( APPEND DEPEN ${SKIBOOTDEPEN} )
 list( APPEND SRC ${SKIBOOTSRC} )
 
-#sources/dependencies for extra mbedtls functions
-set( EXTRAMBEDTLSDEP generate-pkcs7.h pkcs7.h )
-set( EXTRAMBEDTLSDEPDIR external/extraMbedtls/include/ )
-list( TRANSFORM EXTRAMBEDTLSDEP PREPEND ${EXTRAMBEDTLSDEPDIR} )
+#sources for extra mbedtls functions
 set ( EXTRAMBEDTLSSRC generate-pkcs7.c pkcs7.c )
 set ( EXTRAMBEDTLSSRCDIR  external/extraMbedtls/ )
 list( TRANSFORM EXTRAMBEDTLSSRC PREPEND ${EXTRAMBEDTLSSRCDIR} )
-list( APPEND DEPEN ${EXTRAMBEDTLSDEP} )
 list( APPEND SRC ${EXTRAMBEDTLSSRC} )
 
 add_executable( secvarctl ${SRC} )
@@ -94,8 +79,6 @@ set( CMAKE_C_FLAGS_COVERAGE    "-O0 -g3 -fprofile-arcs -ftest-coverage" )
 
 
 target_compile_options( secvarctl PRIVATE -Wall -Werror )
-
-
 
 #set c standard
 set( CMAKE_C_STANDARD 99 )
