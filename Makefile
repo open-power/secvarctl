@@ -9,7 +9,7 @@ DEBUG ?= 0
 ifeq ($(DEBUG),1)
 _CFLAGS += -g
 else
-_CFLAGS += -s
+_LDFLAGS += -s
 endif
 
 EDK2OBJDIR = backends/edk2-compat
