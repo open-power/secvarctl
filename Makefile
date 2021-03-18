@@ -3,7 +3,7 @@
 #_*_MakeFile_*_
 CC = gcc 
 _CFLAGS = -MMD -O2 -std=gnu99 -Wall -Werror
-LFLAGS = -lmbedtls -lmbedx509 -lmbedcrypto
+_LDFLAGS = -lmbedtls -lmbedx509 -lmbedcrypto
 
 DEBUG ?= 0
 ifeq ($(DEBUG),1)
@@ -34,7 +34,7 @@ MANDIR=usr/local/share/man
 STATIC = 0
 ifeq ($(STATIC),1)
 	STATICFLAG=-static
-	LFLAGS +=-lpthread
+	_LDFLAGS +=-lpthread
 else 
 	STATICFLAG=
 endif
@@ -47,7 +47,7 @@ endif
 
 
 secvarctl: $(OBJ) 
-	$(CC) $(CFLAGS) $(_CFLAGS) $(STATICFLAG) $^  -o $@ $(LFLAGS)
+	$(CC) $(CFLAGS) $(_CFLAGS) $(STATICFLAG) $^  -o $@ $(LDFLAGS) $(_LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(_CFLAGS) -c  $< -o $@
@@ -61,7 +61,7 @@ clean:
 	$(CC) $(CFLAGS) $(_CFLAGS) -c  --coverage $< -o $@
 
 secvarctl-cov: $(OBJCOV) 
-	$(CC) $(CFLAGS) $(_CFLAGS) $^  $(STATICFLAG) -fprofile-arcs -ftest-coverage -o $@ $(LFLAGS)
+	$(CC) $(CFLAGS) $(_CFLAGS) $^  $(STATICFLAG) -fprofile-arcs -ftest-coverage -o $@ $(LDFLAGS) $(_LDFLAGS)
 
 install: secvarctl
 	mkdir -p $(DESTDIR)/usr/bin
