@@ -11,6 +11,7 @@
 #include <mbedtls/md.h>     /* generic interface */
 #include <mbedtls/platform.h> /*mbedtls functions*/
 #include "external/extraMbedtls/include/pkcs7.h" // for PKCS7 OID
+#include "external/extraMbedtls/include/generate-pkcs7.h"
 #include "external/skiboot/include/endian.h"
 #include "backends/edk2-compat/include/edk2-svc.h"
 #include "external/skiboot/include/edk2-compat-process.h" // work on factoring this out
@@ -475,11 +476,11 @@ static int generateAuthOrPKCS7(const unsigned char* buff, size_t size, struct Ar
 	}
 	
 	if (args->outForm[0] == 'a')
-		rc = toAuth(*inpPtr, inpSize, args, hashFunct->mbedtls_funct, outBuff, outBuffSize);
+		rc = toAuth(*inpPtr, inpSize, args, hashFunct->crypto_md_funct, outBuff, outBuffSize);
 	else if (args->outForm[0] == 'x')
         rc = toHashForSecVarSigning(*inpPtr, inpSize, args, outBuff, outBuffSize);
     else
-		rc = toPKCS7ForSecVar(*inpPtr, inpSize, args, hashFunct->mbedtls_funct, outBuff, outBuffSize);
+		rc = toPKCS7ForSecVar(*inpPtr, inpSize, args, hashFunct->crypto_md_funct, outBuff, outBuffSize);
 
 	if (rc) {
 		prlog(PR_ERR,"Failed to generate %s file, use `--help` for more info\n", args->outForm[0] == 'a' ? "Auth" : args->outForm[0] == 'x' ? "pre-signed hash" : "PKCS7");
@@ -511,7 +512,7 @@ static int generateESL(const unsigned char* buff, size_t size, struct Arguments 
 
 	switch (args->inForm[0]) {
 		case 'f':
-			rc = toHash(buff, size, hashFunct->mbedtls_funct, &intermediateBuff, &intermediateBuffSize);
+			rc = toHash(buff, size, hashFunct->crypto_md_funct, &intermediateBuff, &intermediateBuffSize);
 			if (rc) {
 				prlog(PR_ERR,"Failed to generate hash from file\n");
 				break;
@@ -627,7 +628,7 @@ static int generateHash(const unsigned char* data, size_t size, struct Arguments
 			return rc;
 		}	
 	}
-	rc = toHash(data, size, alg->mbedtls_funct, outHash, outHashSize);
+	rc = toHash(data, size, alg->crypto_md_funct, outHash, outHashSize);
 	if (rc) {
 		prlog(PR_ERR, "Failed to generate hash\n");
 		return rc;
