@@ -2,14 +2,15 @@
 /* Copyright 2021 IBM Corp.*/
 #ifndef EDK2_SVC_SKIBOOT_H
 #define EDK2_SVC_SKIBOOT_H
+
 #include <stdint.h> // for uint_16 stuff like that
-#include <mbedtls/x509_crt.h> // for printCertInfo
 #include "external/skiboot/include/secvar.h" // for secvar struct
 #include "err.h"
 #include "prlog.h"
 #include "generic.h"
-#include "external/extraMbedtls/include/generate-pkcs7.h"
+#include "crypto/crypto.h"
 #include "external/skiboot/include/edk2.h" // include last or else problems from pragma pack(1)
+
 
 // all argp options must have a single character option 
 // so we set --usage to have a single character option that is out of range
@@ -28,14 +29,14 @@
 static const struct hash_funct {
     char name[8];
     size_t size;
-    int mbedtls_funct;
+    int crypto_md_funct;
     uuid_t const* guid;
 } hash_functions[] = {
-    { .name = "SHA1", .size = 20 , .mbedtls_funct = MBEDTLS_MD_SHA1, .guid = &EFI_CERT_SHA1_GUID },
-    { .name = "SHA224", .size = 28 , .mbedtls_funct = MBEDTLS_MD_SHA224, .guid = &EFI_CERT_SHA224_GUID },
-    { .name = "SHA256", .size = 32, .mbedtls_funct = MBEDTLS_MD_SHA256, .guid = &EFI_CERT_SHA256_GUID },
-    { .name = "SHA384", .size = 48, .mbedtls_funct = MBEDTLS_MD_SHA384, .guid = &EFI_CERT_SHA384_GUID },
-    { .name = "SHA512", .size = 64, .mbedtls_funct = MBEDTLS_MD_SHA512, .guid = &EFI_CERT_SHA512_GUID },
+    { .name = "SHA1", .size = 20 , .crypto_md_funct = CRYPTO_MD_SHA1, .guid = &EFI_CERT_SHA1_GUID },
+    { .name = "SHA224", .size = 28 , .crypto_md_funct = CRYPTO_MD_SHA224, .guid = &EFI_CERT_SHA224_GUID },
+    { .name = "SHA256", .size = 32, .crypto_md_funct = CRYPTO_MD_SHA256, .guid = &EFI_CERT_SHA256_GUID },
+    { .name = "SHA384", .size = 48, .crypto_md_funct = CRYPTO_MD_SHA384, .guid = &EFI_CERT_SHA384_GUID },
+    { .name = "SHA512", .size = 64, .crypto_md_funct = CRYPTO_MD_SHA512, .guid = &EFI_CERT_SHA512_GUID },
 };
 
 int performReadCommand(int argc, char *argv[]);
@@ -44,7 +45,7 @@ int performWriteCommand(int argc, char *argv[]);
 int performValidation(int argc, char* argv[]); 
 int performGenerateCommand(int argc, char* argv[]);
 
-int printCertInfo(mbedtls_x509_crt *x509);
+int printCertInfo(void *x509);
 void printESLInfo(EFI_SIGNATURE_LIST *sigList);
 void printTimestamp(struct efi_time t);
 void printGuidSig(const void *sig);
@@ -52,7 +53,7 @@ void printGuidSig(const void *sig);
 EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen);
 ssize_t get_esl_cert( const char *c,EFI_SIGNATURE_LIST *list ,char **cert);
 size_t get_pkcs7_len(const struct efi_variable_authentication_2 *auth);
-int parseX509(mbedtls_x509_crt *x509, const unsigned char *certBuf, size_t buflen);
+int parseX509(void **x509, const unsigned char *certBuf, size_t buflen);
 const char* getSigType(const uuid_t);
 
 int getSecVar(struct secvar **var, const char* name, const char *fullPath);

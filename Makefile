@@ -3,7 +3,6 @@
 #_*_MakeFile_*_
 CC = gcc 
 _CFLAGS = -MMD -O2 -std=gnu99 -I./ -Iinclude/ -Wall -Werror
-_LDFLAGS = -lmbedtls -lmbedx509 -lmbedcrypto
 
 DEBUG ?= 0
 ifeq ($(DEBUG),1)
@@ -20,12 +19,10 @@ SKIBOOTOBJDIR = external/skiboot/
 _SKIBOOT_OBJ = secvar_util.o edk2-compat.o edk2-compat-process.o
 SKIBOOT_OBJ = $(patsubst %,$(SKIBOOTOBJDIR)/%, $(_SKIBOOT_OBJ))
 
-EXTRAMBEDTLSDIR = external/extraMbedtls
-_EXTRAMBEDTLS = generate-pkcs7.o pkcs7.o 
-EXTRAMBEDTLS = $(patsubst %,$(EXTRAMBEDTLSDIR)/%, $(_EXTRAMBEDTLS))
+CRYPTO_OBJ = crypto/crypto.o
 
 OBJ =secvarctl.o  generic.o 
-OBJ +=$(SKIBOOT_OBJ) $(EXTRAMBEDTLS) $(EDK2_OBJ)
+OBJ +=$(SKIBOOT_OBJ) $(EDK2_OBJ) $(CRYPTO_OBJ)
 
 OBJCOV = $(patsubst %.o, %.cov.o,$(OBJ))
 
@@ -45,6 +42,21 @@ ifeq ($(NO_CRYPTO),1)
 	_CFLAGS+=-DNO_CRYPTO
 endif
 
+#Build with crypto library = openssl rather than mbedtls
+OPENSSL = 0
+ifeq ($(OPENSSL),1)
+	_LDFLAGS += -lcrypto
+	_CFLAGS += -DOPENSSL
+else
+	_LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
+	_CFLAGS += -DMBEDTLS
+
+	EXTRAMBEDTLSDIR = external/extraMbedtls
+	_EXTRAMBEDTLS = generate-pkcs7.o pkcs7.o 
+	EXTRAMBEDTLS = $(patsubst %,$(EXTRAMBEDTLSDIR)/%, $(_EXTRAMBEDTLS))
+	OBJ += $(EXTRAMBEDTLS)
+
+endif
 
 secvarctl: $(OBJ) 
 	$(CC) $(CFLAGS) $(_CFLAGS) $(STATICFLAG) $^  -o $@ $(LDFLAGS) $(_LDFLAGS)

@@ -4,9 +4,8 @@
 #include <string.h>
 #include <stdlib.h>// for exit
 #include <argp.h>
-#include <mbedtls/pk_internal.h> // for validating cert pk data
-#include "external/extraMbedtls/include/pkcs7.h"
-#include "backends/edk2-compat/include/edk2-svc.h"// import last!!
+#include "crypto/crypto.h"
+#include "include/edk2-svc.h"// import last!!
 
 struct Arguments {
 	int helpFlag;
@@ -17,7 +16,7 @@ struct Arguments {
 static bool validate_hash(uuid_t type, size_t size);
 static int parse_opt(int key, char *arg, struct argp_state *state);
 static int validateSingularESL(size_t* bytesRead, const unsigned char* esl, size_t eslvarsize, const char *varName);
-
+static int validateCertStruct(void *x509, const char *varName);
 
 
 enum fileTypes{
@@ -274,51 +273,49 @@ int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key)
  */
 int validatePKCS7(const unsigned char *cert_data, size_t len) 
 {
-	mbedtls_x509_crt *pkcs7cert = NULL;
-	mbedtls_pkcs7 *pkcs7 = NULL;
-	int rc;
+	void *pkcs7 = NULL, *pkcs7_cert = NULL;
+	int rc = SUCCESS, cert_num = 0;
 
 	prlog(PR_INFO, "VALIDATING PKCS7:\n");
-	pkcs7 = malloc(sizeof(struct mbedtls_pkcs7));
-	if (!pkcs7){
-		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		return ALLOC_FAIL;
-	}
-	mbedtls_pkcs7_init(pkcs7);
-	rc = mbedtls_pkcs7_parse_der(cert_data, len, pkcs7);
-	if (rc != MBEDTLS_PKCS7_SIGNED_DATA) {	// if pkcs7 parsing fails, then try new signed data format 
-			prlog(PR_ERR, "ERROR: parsing pkcs7 failed mbedtls error #%04x\n", rc);
-			goto out;	
+	pkcs7 = crypto_pkcs7_parse_der(cert_data, len);
+	if (!pkcs7) {
+		rc = PKCS7_FAIL;
+		goto out;	
 	}
 	// make sure digest alg is sha246
-	if (memcmp(pkcs7->signed_data.digest_alg_identifiers.p, MBEDTLS_OID_DIGEST_ALG_SHA256, strlen(MBEDTLS_OID_DIGEST_ALG_SHA256) )!= 0) {
+	if (crypto_pkcs7_md_is_sha256(pkcs7) != 0) {
 		prlog(PR_ERR, "ERROR: PKCS7 data is not signed with SHA256\n");
+		rc = PKCS7_FAIL;
 		goto out;
 	}
 	prlog(PR_INFO, "\tDigest Alg: SHA256\n");
 	// print info on all siging certificates
-	pkcs7cert = &pkcs7->signed_data.certs;
+	pkcs7_cert = crypto_get_signing_cert(pkcs7, cert_num);
+
 	do {
-		prlog(PR_INFO, "VALIDATING SIGNING CERTIFIATE:\n");
-		rc = validateCert(pkcs7cert->raw.p, pkcs7cert->raw.len, NULL);
+		prlog(PR_INFO, "VALIDATING SIGNING CERTIFICATE:\n");
+		//ensure first cert is not null
+		if (pkcs7_cert)
+			rc = validateCertStruct(pkcs7_cert, NULL);
+		else 
+			rc = CERT_FAIL;
 		if (rc) {
 			prlog(PR_ERR,"ERROR: failure to parse x509 signing certificate\n");
 			goto out;
 		}
 		
-		pkcs7cert = pkcs7cert->next;
+		cert_num++;
+		pkcs7_cert = crypto_get_signing_cert(pkcs7, cert_num);
 	}
-	while (pkcs7cert);
-	mbedtls_pkcs7_free(pkcs7);
-	free(pkcs7);
-	return SUCCESS;
+	while (pkcs7_cert);
+	rc = SUCCESS;
 
 out:
-	mbedtls_pkcs7_free(pkcs7);
-	free(pkcs7);
-	pkcs7 = NULL;
+	if (pkcs7) { 
+		crypto_pkcs7_free(pkcs7);
+    }
 	
-	return PKCS7_FAIL;
+	return rc;
 }
 
 /**
@@ -471,73 +468,95 @@ static bool validate_hash(uuid_t type, size_t size)
  */
 int validateCert(const unsigned char *certBuf, size_t buflen, const char *varName) 
 {
-	char *x509_info = NULL;
-	mbedtls_x509_crt *x509;
 	int rc;
+	void *x509 = NULL;
 
 	if (buflen == 0) {
 		prlog(PR_ERR, "ERROR: Length %zd is invalid\n", buflen);
 		return CERT_FAIL;
 	}
-	x509 = malloc(sizeof(*x509));
-	if (!x509){
-		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		return ALLOC_FAIL;
-	}
-	rc = parseX509(x509, certBuf, buflen);
+	rc = parseX509(&x509, certBuf, buflen);
 	if (rc) {
 		rc = CERT_FAIL;
 		goto out;
 	}
+	
+	rc = validateCertStruct(x509, varName);
+
+out:
+	if (x509) crypto_x509_free(x509);
+
+	return rc;
+}
+
+/**
+ *takes a pointer to the x509 struct and validates the content for secvar specific requirements
+ *@param x509, a pointer to either an openssl or a mbedtls x509 struct, already filled with data
+ *@param varName ,  variable name {"db","dbx","KEK", "PK"} b/c db allows for any RSA len, if NULL expect RSA-2048
+ *@return SUCCESS or errno depending on if x509 is valid
+ */
+static int validateCertStruct(void *x509, const char *varName) 
+{
+	int rc, len, version;
+	char *x509_info;
 	// check raw cert data has data
-	if (x509->raw.len <= 0) {	
-		prlog(PR_ERR, "ERROR: X509 has no data\n");
-		rc = CERT_FAIL;
-		goto out;
+	len = crypto_get_x509_der_len(x509);
+	if (len < 0) {	
+		prlog(PR_ERR, "ERROR: Could not read X509 length in DER\n");
+		return CERT_FAIL;
 	}
-	// check raw certificate body has data type defined
-	if (x509->tbs.len <= 0) { 
-		prlog(PR_ERR,"ERROR: X509 certificate has no data\n");
-		rc = CERT_FAIL;
-		goto out;
+	if (len == 0) {	
+		prlog(PR_ERR, "ERROR: X509 has no data\n");
+		return CERT_FAIL;
+	}
+	// check raw certificate body has TBSCertificate data
+	len = crypto_get_tbs_x509_der_len(x509);
+	if (len < 0) { 
+		prlog(PR_ERR,"ERROR: Could not read length of X509 TBS Certificate\n");
+		return CERT_FAIL;
+	}
+	if (len == 0) { 
+		prlog(PR_ERR,"ERROR: X509 TBS Certificate has no data\n");
+		return CERT_FAIL;
 	}
 	// check if version is something other than 1,2,3
-	if (x509->version < 1 || x509->version > 3) { 
-		prlog(PR_ERR,"ERROR: X509 version %d is not valid\n", x509->version );
-		rc = CERT_FAIL;
-		goto out;
+	version = crypto_get_x509_version(x509);
+	
+	 if (version < 1 || version > 3) { 
+	 	prlog(PR_ERR,"ERROR: X509 version %d is not valid\n", version);
+	 	return CERT_FAIL;
 	}
-	// if public key type is not in range of asn1 pk type enum
-	if ((int)(x509->pk.pk_info->type) < 0 || x509->pk.pk_info->type > 6 ) { 
-		prlog(PR_ERR,"ERROR: public key type not supported\n");
-		rc = CERT_FAIL;
-		goto out;
+	// if public key type is not RSA, then quit (example failures: DSA, ECDSA, RSA_PCC)
+	rc = crypto_x509_is_RSA(x509);
+	if (rc) { 
+		prlog(PR_ERR,"ERROR: public key type not supported, expected RSA, found type ID %d (defined by crypto lib)\n", rc);
+		return CERT_FAIL;
 	}
+	
+	len = crypto_get_x509_sig_len(x509);
 	// if sig doesnt have data
-	if (x509->sig.len <= 0) { 
+	if (len <= 0) { 
 		prlog(PR_ERR, "ERROR: X509 has no signature data\n");
-		rc = CERT_FAIL;
-		goto out;
+		return CERT_FAIL;
 	}
 	
 	// if x509 for db then signature can be RSA 4096 or other (since it won't be signing anything else)
 	// this addresses OS's that release certificates with non RSA-2048 (ex: RHEL)
 	if (varName == NULL || strncmp(varName, "db", strlen(varName))) {
-		if ( x509->sig_md != MBEDTLS_MD_SHA256 
-		|| strncmp((const char *)x509->sig_oid.p, MBEDTLS_OID_PKCS1_SHA256, x509->sig_oid.len) 
-		|| (int) mbedtls_pk_get_bitlen( &x509->pk ) != 2048 
-		|| x509->sig.len != 256) { 
+		if (crypto_x509_md_is_sha256(x509)
+			|| crypto_x509_oid_is_pkcs1_sha256(x509)
+			|| crypto_x509_get_pk_bit_len(x509) != 2048) {
+
 			x509_info = malloc(CERT_BUFFER_SIZE);
-			if (!x509_info){
-				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-				rc = CERT_FAIL;
-				goto out;
-			}
-			rc = mbedtls_x509_sig_alg_gets(x509_info, CERT_BUFFER_SIZE, &x509->sig_oid,
-                       x509->sig_pk, x509->sig_md, x509->sig_opts );
-			prlog(PR_ERR,"ERROR: Wanted Cert with RSA 2048 and SHA-256. Discovered %s with key size %d and signature length %zd\n", x509_info, (int)mbedtls_pk_get_bitlen( &x509->pk ), x509->sig.len);
-			free(x509_info);
-			goto out;
+		    if (!x509_info){
+		        prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+		        return CERT_FAIL;
+		    }
+			crypto_x509_get_short_info(x509, x509_info, CERT_BUFFER_SIZE);
+			prlog(PR_ERR,"ERROR: Wanted x509 with RSA 2048 and SHA-256. Discovered %s with signature length %d bits\n", x509_info, crypto_x509_get_pk_bit_len(x509));
+			if (x509_info) free(x509_info);
+			return CERT_FAIL;
+			
 		}
 	}
 	
@@ -545,55 +564,49 @@ int validateCert(const unsigned char *certBuf, size_t buflen, const char *varNam
 	if (verbose >= PR_INFO) {
 		rc = printCertInfo(x509);
 		if (rc) {
-			rc = CERT_FAIL;
-			goto out;
+			return CERT_FAIL;
 		}
 	}
 
-out:
-	mbedtls_x509_crt_free(x509);
-	if (x509) 
-		free(x509);
-
-	return rc;
+	//if made it this far then return success
+	return SUCCESS;
 }
 
 /**
  *parses x509 certficate buffer (PEM or DER) into certificate struct
- *@param x509, returned x509, expected to be allocated mbedtls_x509_crt struct,
+ *@param x509, returned pointer to address of x509,
  *@param certBuf pointer to certificate data
  *@param buflen length of certBuf
  *@return CERT_FAIL if certificate cant be parsed
  *@return SUCCESS if certificate is valid
+ *NOTE: Remember to unallocate the returned x509 struct!
  */
-int parseX509(mbedtls_x509_crt *x509, const unsigned char *certBuf, size_t buflen) 
+int parseX509(void **x509, const unsigned char *certBuf, size_t buflen) 
 {
-	int failures;
 	unsigned char *generatedDER = NULL;
 	size_t generatedDERSize;
 	if ((ssize_t)buflen <= 0) {
 		prlog(PR_ERR, "ERROR: Certificate has invalid length %zd, cannot validate\n", buflen);
 		return CERT_FAIL;
 	}
-	mbedtls_x509_crt_init(x509);
 	// puts cert data into x509_Crt struct and returns number of failed parses
-	failures = mbedtls_x509_crt_parse(x509, certBuf, buflen); 
-	if (failures) {
-		prlog(PR_INFO, "Failed to parse cert as DER mbedtls err#%d, trying PEM...\n", failures);
+	*x509 = crypto_x509_parse_der(certBuf, buflen);
+	if (!*x509) {
+		prlog(PR_INFO, "Failed to parse x509 as DER, trying PEM...\n");
 		// if failed, maybe input is PEM and so try converting PEM to DER, if conversion fails then we know it was DER and it failed
-		if (convert_pem_to_der(certBuf, buflen, &generatedDER, &generatedDERSize)) {
-			prlog(PR_ERR, "Parsing x509 as PEM format failed mbedtls err#%d \n", failures);
+		if (crypto_convert_pem_to_der(certBuf, buflen, &generatedDER, &generatedDERSize)) {
+			prlog(PR_ERR, "ERROR: Failed to parse x509 in DER and file is not in PEM\n");
 			return CERT_FAIL;
 		}
 		// if success then try to parse into x509 struct again
-		failures = mbedtls_x509_crt_parse(x509, generatedDER, generatedDERSize); 
-		if (failures) {
-			prlog(PR_ERR, "Parsing x509 from PEM failed with MBEDTLS exit code: %d \n", failures);
+		*x509 = crypto_x509_parse_der(generatedDER, generatedDERSize); 
+		if (!*x509) {
+			prlog(PR_ERR, "ERROR: Failed to parse x509 (tried DER and PEM formats). \n");
 			return CERT_FAIL;
 		}
 	}
 	if (generatedDER) 
-		free(generatedDER);
+	 	free(generatedDER);
 
 	return SUCCESS;
 }

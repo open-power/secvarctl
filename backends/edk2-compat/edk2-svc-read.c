@@ -4,17 +4,14 @@
 #include <sys/types.h>
 #include <fcntl.h> // O_RDONLY
 #include <unistd.h> // has read/open funcitons
-#include <mbedtls/x509_crt.h> // for reading certdata
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <argp.h>
+#include "crypto/crypto.h"
 #include "external/skiboot/include/secvar.h" // for secvar struct
 #include "backends/edk2-compat/include/edk2-svc.h"// include last, pragma pack(1) issue
-
-
-
 
 static int readFiles(const char* var, const char* file, int hrFlag, const  char* path);
 static int printReadable(const char *c , size_t size, const char * key);
@@ -29,7 +26,6 @@ struct Arguments {
 	const char *pathToSecVars, *varName, *inFile;
 }; 
 static int parse_opt(int key, char *arg, struct argp_state *state);
-
 
 /*
  *called from main()
@@ -182,7 +178,7 @@ static int readFileFromSecVar(const char *path, const char *variable, int hrFlag
 	int extra = 10, rc;
 	struct secvar *var = NULL;
 	char *fullPath = NULL;
-	
+
 	fullPath = malloc(strlen(path) + strlen(variable) + extra);
 	if (!fullPath) { 
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
@@ -356,7 +352,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 	int count = 0, offset = 0, rc;
 	unsigned char *cert = NULL;
 	EFI_SIGNATURE_LIST *sigList;
-	mbedtls_x509_crt *x509 = NULL;
+	void *x509 = NULL;
 
 	while (eslvarsize > 0) {
 		if (eslvarsize < sizeof(EFI_SIGNATURE_LIST)) { 
@@ -391,12 +387,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 			printHex(cert, cert_size);
 		}
 		else {
-			x509 = malloc(sizeof(*x509));
-			if (!x509) {
-				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-				return ALLOC_FAIL;
-			}
-			rc = parseX509(x509, cert, (size_t) cert_size);
+			rc = parseX509(&x509, cert, (size_t) cert_size);
 			if (rc)
 				break;
 			rc = printCertInfo(x509);
@@ -404,8 +395,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 				break;
 			free(cert);
 			cert = NULL;
-			mbedtls_x509_crt_free(x509);
-			free(x509);
+			crypto_x509_free(x509);
 			x509 = NULL;
 		}
 		
@@ -416,10 +406,8 @@ static int printReadable(const char *c, size_t size, const char *key)
 		eslvarsize -= eslsize;	
 	}
 	printf("\tFound %d ESL's\n\n", count);
-	if (x509) {
-		mbedtls_x509_crt_free(x509);
-		free(x509);
-	}
+	if (x509)
+		crypto_x509_free(x509);
 	if (cert) 
 		free(cert);
 
@@ -439,27 +427,28 @@ void printESLInfo(EFI_SIGNATURE_LIST *sigList)
 }
 
 // prints info on x509
-int printCertInfo(mbedtls_x509_crt *x509)
+int printCertInfo(void *x509)
 {
-	char *x509_info;
+	char *x509_info = NULL;
 	int failures;
 
-	x509_info = malloc(CERT_BUFFER_SIZE);
+	x509_info = calloc(1, CERT_BUFFER_SIZE);
 	if (!x509_info){
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 		return CERT_FAIL;
 	}
 	// failures = number of bytes written, x509_info now has string of ascii data
-	failures = mbedtls_x509_crt_info(x509_info, CERT_BUFFER_SIZE, "\t\t", x509); 
+	failures = crypto_x509_get_long_desc(x509_info, CERT_BUFFER_SIZE, "\t\t", x509);
 	if (failures <= 0) {
 		prlog(PR_ERR, "\tERROR: Failed to get cert info, wrote %d bytes when getting info\n", failures);
 		return CERT_FAIL;
 	}
-	printf("\tFOUND %d bytes of certificate info:\n %s", failures, x509_info);
+	printf("\tFound certificate info:\n %s \n", x509_info);
 	free(x509_info);
 
 	return SUCCESS;
  }
+
 /**
  *prints all 16 byte timestamps into human readable of TS variable
  *@param data, timestamps of normal variables {pk, db, kek, dbx}
@@ -483,6 +472,7 @@ static int readTS(const char *data, size_t size)
 
 	return SUCCESS;
 }
+
 /** 
  *inspired by secvar/backend/edk2-compat-process.c by Nayna Jain
  *@param c  pointer to start of esl file
@@ -610,7 +600,6 @@ static int getSizeFromSizeFile(size_t *returnSize, const char* path)
 
 	return rc;
 }
-
 
 struct command edk2_compat_command_table[] = {
 	{ .name = "read", .func = performReadCommand },
