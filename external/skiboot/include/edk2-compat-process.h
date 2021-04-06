@@ -25,7 +25,7 @@
 //added by nick child
 #include "short_types.h"
 #include "opal-api.h"
-#include "external/extraMbedtls/include/pkcs7.h"
+//#include "external/extraMbedtls/include/pkcs7.h"
 #include "external/skiboot/include/secvar.h"
 #include "external/skiboot/include/edk2.h"
 #include "endian.h"
@@ -40,7 +40,9 @@
 #define PR_INFO		6
 #define PR_DEBUG	7
 #define CERT_BUFFER_SIZE        2048
-#define MBEDTLS_ERR_BUFFER_SIZE 1024	
+//NICK CHILD, ABSTRACTING CRYPTO LIB
+//#define MBEDTLS_ERR_BUFFER_SIZE 1024	
+#define CRYPTO_ERR_BUFFER_SIZE 1024
 #define zalloc(...) calloc(1,__VA_ARGS__)
 
 #define EDK2_MAX_KEY_LEN        SECVAR_MAX_KEY_LEN
