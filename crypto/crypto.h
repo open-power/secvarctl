@@ -53,6 +53,16 @@ void * crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen);
  */
 void* crypto_get_signing_cert(void *pkcs7, int cert_num);
 
+/*
+ *determines if signed data in pkcs7 is correctly signed by x509 by signing the hash with the pk and comparing the resulting signature with that in the pkcs7
+ *@param pkcs7 , a pointer to either an openssl or mbedtls pkcs7 struct
+ *@param x509 , a pinter to either an openssl or mbedtls x509 struct
+ *@param hash , the expected hash
+ *@param hash_len , the length of expected hash (ex: SHA256 = 32), if 0 then asssumptions are made based on md in pkcs7
+ *@return SUCCESS or error number if resulting hashes are not equal
+ */
+int crypto_pkcs7_signed_hash_verify(void *pkcs7, void *x509, unsigned char *hash, int hash_len);
+
 
 /**====================X509 Functions ====================**/
 int crypto_get_x509_der_len(void *x509);
@@ -108,6 +118,8 @@ void *crypto_x509_parse_der(const unsigned char *data, size_t data_len);
  */
 void crypto_x509_free(void *x509);
 
+
+/**====================General Functions ====================**/
 /*
  *attempts to convert PEM data buffer into DER data buffer
  *@param input , PEM data buffer
@@ -119,4 +131,44 @@ void crypto_x509_free(void *x509);
  */
 int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen, unsigned char **output, size_t *olen);
 
+/*
+ *accepts an error code from either mbedtls or openssl and returns a string describing it
+ *@param rc , the error code, from mbedtls or openssl
+ *@param out_str , an already allocated string, will be filled with string describing the error code
+ *@out_max_len , the number of bytes allocated to out_str
+ */
+void crypto_strerror(int rc, char *out_str, size_t out_max_len);
+
+
+/**====================Hashing Functions ====================**/
+/*
+ *Initializes and returns hashing context for the hashing function identified
+ *@param ctx , the returned hashing context
+ *@param md_id , the id of the hahsing function see above for possible values (CRYPTO_MD_xxx )
+ *@return SUCCESS or err if the digest context setup failed
+ */
+int crypto_md_ctx_init(void **ctx, int md_id);
+
+/*
+ *can be repeatedly called to add data to be hashed by ctx
+ *@param ctx , a pointer to either an mbedtls or openssl hashing context
+ *@param data , data to be hashed
+ *@param data_len , length of data to be hashed
+ *@return SUCCESS or err if additional data could not be added to context
+ */
+int crypto_md_update(void *ctx, const unsigned char *data, size_t data_len);
+
+/*
+ *runs the hash over the supplied data (given with crypto_md_update) and returns it in hash
+ *@param  ctx , a pointer to either an mbedtls or openssl hashing context
+ *@param hash, an allocated data blob where the returned hash will be stored
+ *@return SUCCESS or err if the hash generation was successful
+ */
+int crypto_md_finish(void *ctx, unsigned char *hash);
+
+/*
+ *frees the memory alloacted for the hashing context
+ *@param ctx , a pointer to either an mbedtls or openssl hashing context
+ */
+void crypto_md_free(void *ctx); 
 #endif
