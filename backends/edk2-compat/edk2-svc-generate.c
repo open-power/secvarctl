@@ -15,14 +15,23 @@
 #include "../../external/skiboot/include/edk2-compat-process.h" // work on factoring this out
 
 
+enum pkcs7_generation_method {
+	// for -k <key> option
+	W_PRIVATE_KEYS = 0,
+	// for -s <sig> option
+	W_EXTERNAL_GEN_SIG,
+	// default, when not generating a pkcs7/auth
+	NO_PKCS7_GEN_METHOD
+};
+
 struct Arguments {
-    // the alreadySignedFlag is to determine if signKeys stores a private key file(0) or signed data (1)
-	int helpFlag, inpValid, signKeyCount, signCertCount, alreadySignedFlag;
+    // the pkcs7_gen_meth is to determine if signKeys stores a private key file(0) or signed data (1)
+	int helpFlag, inpValid, signKeyCount, signCertCount;
 	const char *inFile, *outFile, 
 	**signCerts, **signKeys,
 	*inForm, *outForm, *varName, *hashAlg;
-	char **currentVars;
 	struct efi_time *time;
+	enum pkcs7_generation_method pkcs7_gen_meth;
 }; 
 
 static int parse_opt(int key, char *arg, struct argp_state *state);
@@ -54,10 +63,10 @@ int performGenerateCommand(int argc,char* argv[])
 	struct hash_funct *hashFunction;
 	unsigned char *buff = NULL, *outBuff = NULL;
 	struct Arguments args = {	
-		.helpFlag = 0, .inpValid = 0, .signKeyCount = 0, .signCertCount = 0, .alreadySignedFlag = 2,
+		.helpFlag = 0, .inpValid = 0, .signKeyCount = 0, .signCertCount = 0,
 		.inFile = NULL, .outFile = NULL,  
 		.signCerts = NULL, .signKeys = NULL, .inForm = NULL, .outForm = NULL, .varName = NULL, 
-		.hashAlg = NULL, .time = NULL
+		.hashAlg = NULL, .time = NULL, .pkcs7_gen_meth = NO_PKCS7_GEN_METHOD
 	};
     // combine command and subcommand for usage/help messages
     argv[0] = "secvarctl generate";
@@ -139,7 +148,7 @@ int performGenerateCommand(int argc,char* argv[])
 
 	// if signing each signer needs a certificate
 	if (args.signCertCount != args.signKeyCount) {
-		if (args.alreadySignedFlag == 1)
+		if (args.pkcs7_gen_meth == W_EXTERNAL_GEN_SIG)
             prlog(PR_ERR, "ERROR: Number of certificates does not equal number of signature files, %d != %d\n",args.signCertCount, args.signKeyCount);
         else
             prlog(PR_ERR, "ERROR: Number of certificates does not equal number of keys, %d != %d\n",args.signCertCount, args.signKeyCount);
@@ -220,12 +229,12 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			break;
 		case 'k':
 			 // if already storing signed data, then don't allow for private keys
-            if (args->alreadySignedFlag == 1){
+            if (args->pkcs7_gen_meth == W_EXTERNAL_GEN_SIG){
                 prlog(PR_ERR, "ERROR: Cannot have both signed data files and private keys for signing\n");
                 rc = ARG_PARSE_FAIL;
                 break;
             }
-            args->alreadySignedFlag = 0;
+            args->pkcs7_gen_meth = W_PRIVATE_KEYS;
 			args->signKeyCount++;
 			args->signKeys = realloc(args->signKeys, args->signKeyCount * sizeof(char*));
 			args->signKeys[args->signKeyCount - 1] = arg;
@@ -243,12 +252,12 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			break;
 		case 's':
 			// if already storing private keys, then don't allow for signed data
-            if (args->alreadySignedFlag == 0){
+            if (args->pkcs7_gen_meth == W_PRIVATE_KEYS){
                 prlog(PR_ERR, "ERROR: Cannot have both signed data files and private keys for signing");
                 rc = ARG_PARSE_FAIL;
                 break;
             }
-            args->alreadySignedFlag = 1;
+            args->pkcs7_gen_meth = W_EXTERNAL_GEN_SIG;
             args->signKeyCount++;
             args->signKeys = realloc(args->signKeys, args->signKeyCount * sizeof(char*));
             args->signKeys[args->signKeyCount - 1] = arg;
@@ -915,8 +924,8 @@ static int toPKCS7ForSecVar(const unsigned char* newData, size_t dataSize, struc
         prlog(PR_ERR, "Failed to generate pre-hash data for PKCS7\n");
         goto out;
     }
-	// get pkcs7 and size, if we are already given ths signatures then call appropriate funciton
-	if (args->alreadySignedFlag){
+	// get pkcs7 and size, if we are already given ths signatures then call appropriate funcion
+	if (args->pkcs7_gen_meth){
         prlog(PR_INFO, "Generating PKCS7 with already signed data\n");
         rc = to_pkcs7_already_signed_data((unsigned char **)outBuff, outBuffSize, actualData, totalSize, args->signCerts, args->signKeys, args->signKeyCount, MBEDTLS_MD_SHA256);
     }
