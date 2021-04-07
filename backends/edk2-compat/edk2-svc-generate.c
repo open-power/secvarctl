@@ -236,12 +236,20 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
             }
             args->pkcs7_gen_meth = W_PRIVATE_KEYS;
 			args->signKeyCount++;
-			args->signKeys = realloc(args->signKeys, args->signKeyCount * sizeof(char*));
+			rc = reallocArray((void **)&args->signKeys, args->signKeyCount, sizeof(*args->signKeys));
+			if (rc) {
+            	prlog(PR_ERR, "Failed to realloc private key (-k <>) array\n");
+            	break;
+            }
 			args->signKeys[args->signKeyCount - 1] = arg;
 			break;
 		case 'c':
 			args->signCertCount++;
-			args->signCerts = realloc(args->signCerts, args->signCertCount * sizeof(char*));
+			rc = reallocArray((void **)&args->signCerts, args->signCertCount, sizeof(*args->signCerts));
+			if (rc) {
+            	prlog(PR_ERR, "Failed to realloc certificate (-c <>) array\n");
+            	break;
+            }
 			args->signCerts[args->signCertCount - 1] = arg;
 			break;
 		case 'f':
@@ -259,7 +267,11 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
             }
             args->pkcs7_gen_meth = W_EXTERNAL_GEN_SIG;
             args->signKeyCount++;
-            args->signKeys = realloc(args->signKeys, args->signKeyCount * sizeof(char*));
+            rc = reallocArray((void **)&args->signKeys, args->signKeyCount, sizeof(*args->signKeys));
+            if (rc) {
+            	prlog(PR_ERR, "Failed to realloc signature (-s <>) array\n");
+            	break;
+            }
             args->signKeys[args->signKeyCount - 1] = arg;
 			break;
 		case 'i':

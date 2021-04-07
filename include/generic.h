@@ -15,4 +15,5 @@ void printRaw(const char* c, size_t size) ;
 int isFile(const char* path);
 size_t getLeadingWhitespace(unsigned char* data, size_t dataSize);
 void printHex(unsigned char* data, size_t length);
+int reallocArray(void **arr, size_t new_length, size_t size_each);
 #endif
