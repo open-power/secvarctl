@@ -11,7 +11,9 @@
 #include "../../../external/extraMbedtls/include/generate-pkcs7.h"
 #include "../../../external/skiboot/include/edk2.h" // include last or else problems from pragma pack(1)
 
-
+// all argp options must have a single character option 
+// so we set --usage to have a single character option that is out of range
+#define ARGP_OPT_USAGE_KEY 0x100
 #define CERT_BUFFER_SIZE        2048
 
 #ifndef SECVARPATH

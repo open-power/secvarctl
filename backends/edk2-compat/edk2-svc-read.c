@@ -53,6 +53,8 @@ int performReadCommand(int argc, char* argv[])
 		{"verbose", 'v', 0, 0, "print more verbose process information"},
 		{"file", 'f', "FILE", 0, "navigates to ESL file from working directiory"},
 		{"path", 'p', "PATH" ,0, "looks for key directories {'PK','KEK','db','dbx', 'TS'} in PATH, default is " SECVARPATH},
+        {"help", '?', 0, 0, "Give this help list", 1},
+		{"usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{0}
 	};
 
@@ -65,7 +67,7 @@ int performReadCommand(int argc, char* argv[])
 		" then the '-f' command would be appropriate."
 		"\vvalues for [VARIABLES] = {'PK','KEK','db','dbx', 'TS'} type one of the following to get info on that key, default is all. NOTE does not work when -f option is present"
 	};
-	rc = argp_parse( &argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER, 0, &args);
+	rc = argp_parse( &argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
 	if (rc || args.helpFlag)
 		goto out;
 
@@ -85,24 +87,16 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 {
 	struct Arguments *args = state->input;
 	int rc = SUCCESS;
-	// this checks to see if help/usage is requested
-	// argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
-	// this becomes extra sticky since --usage/--help never actually get passed to this function
-	if (args->helpFlag == 0) {
-		if (state->next == 0 && state->next + 1 < state->argc) {
-			if (strncmp("--u", state->argv[state->next + 1], strlen("--u")) == 0 
-				|| strncmp("--h", state->argv[state->next + 1], strlen("--h")) == 0
-				|| strncmp("-?", state->argv[state->next + 1], strlen("-?")) == 0)
-				args->helpFlag = 1;
-		}
-		else if (state->next < state->argc)
-			if (strncmp("--u", state->argv[state->next], strlen("--u")) == 0 
-				|| strncmp("--h", state->argv[state->next], strlen("--h")) == 0
-				|| strncmp("-?", state->argv[state->next], strlen("-?")) == 0)
-				args->helpFlag = 1;
-	}
 
 	switch (key) {
+		case '?':
+			args->helpFlag = 1;
+			argp_state_help(state, stdout, ARGP_HELP_STD_HELP);
+			break;
+		case ARGP_OPT_USAGE_KEY:
+			args->helpFlag = 1;
+			argp_state_help(state, stdout, ARGP_HELP_USAGE);
+			break;
 		case 'r':
 			args->printRaw = 1;
 			break;
