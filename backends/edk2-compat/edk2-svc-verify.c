@@ -53,6 +53,8 @@ int performVerificationCommand(int argc, char* argv[])
 		{"current", 'c', "{CURRENT VAR LIST}", 0, "manually set current vars to be contents of CURRENT VAR LIST (see below for format)"},
 		{"write", 'w', 0, 0, "if successful, submit the update to be commited upon reboot. Equivalent to `secvarctl write`"},
 		{0, 'u', "{UPDATE LIST}", OPTION_HIDDEN, "set update variables (see below for format)"},
+		{"help", '?', 0, 0, "Give this help list", 1},
+		{"usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{0}
 	};
 
@@ -74,7 +76,7 @@ int performVerificationCommand(int argc, char* argv[])
 		" unless variable is TS (in which case it would contain 4 16 byte timestamps)"
 	};
 
-	rc = argp_parse( &argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER, 0, &args);
+	rc = argp_parse( &argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
 	if (rc || args.helpFlag) {
 		goto out;
 	}
@@ -102,24 +104,16 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 {
 	struct Arguments *args = state->input;
 	int current, rc = SUCCESS;
-	// this checks to see if help/usage is requested
-	// argp can either exit() or raise no errors, we want to go to cleanup and then exit so we need a special flag
-	// this becomes extra sticky since --usage/--help never actually get passed to this function
-	if (args->helpFlag == 0) {
-		if (state->next == 0 && state->next + 1 < state->argc) {
-			if (strncmp("--u", state->argv[state->next + 1], strlen("--u")) == 0 
-				|| strncmp("--h", state->argv[state->next + 1], strlen("--h")) == 0
-				|| strncmp("-?", state->argv[state->next + 1], strlen("-?")) == 0)
-				args->helpFlag = 1;
-		}
-		else if (state->next < state->argc)
-			if (strncmp("--u", state->argv[state->next], strlen("--u")) == 0 
-				|| strncmp("--h", state->argv[state->next], strlen("--h")) == 0
-				|| strncmp("-?", state->argv[state->next], strlen("-?")) == 0)
-				args->helpFlag = 1;
-	}
 
 	switch (key) {
+		case '?':
+			args->helpFlag = 1;
+			argp_state_help(state, stdout, ARGP_HELP_STD_HELP);
+			break;
+		case ARGP_OPT_USAGE_KEY:
+			args->helpFlag = 1;
+			argp_state_help(state, stdout, ARGP_HELP_USAGE);
+			break;
 		case 'p':
 			args->pathToSecVars = arg;
 			break;
