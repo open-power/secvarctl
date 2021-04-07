@@ -63,6 +63,36 @@ void* crypto_get_signing_cert(void *pkcs7, int cert_num);
  */
 int crypto_pkcs7_signed_hash_verify(void *pkcs7, void *x509, unsigned char *hash, int hash_len);
 
+/*
+ *generates a PKCS7 and create signature with private and public keys
+ *@param pkcs7, the resulting PKCS7 DER buff, newData not appended, NOTE: REMEMBER TO UNALLOC THIS MEMORY
+ *@param pkcs7Size, the length of pkcs7
+ *@param newData, data to be added to be used in digest
+ *@param dataSize , length of newData
+ *@param crtFiles, array of file paths to public keys to sign with(PEM)
+ *@param keyFiles, array of file paths to private keys to sign with
+ *@param keyPairs, array length of key/crtFiles
+ *@param hashFunct, hash function to use in digest, see crypto_hash_funct for values 
+ *@return SUCCESS or err number 
+ */
+int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
+    const char** crtFiles, const char** keyFiles,  int keyPairs, int hashFunct);
+
+/*
+ *generates a PKCS7 with given signed data
+ *@param pkcs7, the resulting PKCS7, newData not appended, NOTE: REMEMBER TO UNALLOC THIS MEMORY
+ *@param pkcs7Size, the length of pkcs7
+ *@param newData, data to be added to be used in digest
+ *@param dataSize , length of newData
+ *@param crtFiles, array of file paths to public keys that were used in signing with(PEM)
+ *@param sigFiles, array of file paths to raw signed data files 
+ *@param keyPairs, array length of crt/signatures
+ *@param hashFunct, hash function to use in digest, see crypto_hash_funct for values
+ *@return SUCCESS or err number 
+ */
+int crypto_pkcs7_generate_w_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
+    const char** crtFiles, const char** sigFiles,  int keyPairs, int hashFunct);
+
 
 /**====================X509 Functions ====================**/
 int crypto_get_x509_der_len(void *x509);
@@ -171,4 +201,16 @@ int crypto_md_finish(void *ctx, unsigned char *hash);
  *@param ctx , a pointer to either an mbedtls or openssl hashing context
  */
 void crypto_md_free(void *ctx); 
+
+/*
+ *given a data buffer it generates the desired hash 
+ *@param data, data to be hashed
+ *@param size , length of buff
+ *@param hashFunct, crypto_md_funct, message digest type
+ *@param outBuff, the resulting hash, NOTE: REMEMBER TO UNALLOC THIS MEMORY
+ *@param outBuffSize, should be alg->size
+ *@return SUCCESS or err number 
+ *NOTE: outHash is allocated inside this funtion and must be unallocated sometime after calling
+ */
+int crypto_md_generate_hash(const unsigned char* data, size_t size, int hashFunct, unsigned char** outHash, size_t* outHashSize);
 #endif
