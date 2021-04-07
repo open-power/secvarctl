@@ -19,21 +19,34 @@ set ( SKIBOOTSRCDIR external/skiboot/ )
 list( TRANSFORM SKIBOOTSRC PREPEND ${SKIBOOTSRCDIR} )
 list( APPEND SRC ${SKIBOOTSRC} )
 
-#sources for extra mbedtls functions
-set ( EXTRAMBEDTLSSRC generate-pkcs7.c pkcs7.c )
-set ( EXTRAMBEDTLSSRCDIR  external/extraMbedtls/ )
-list( TRANSFORM EXTRAMBEDTLSSRC PREPEND ${EXTRAMBEDTLSSRCDIR} )
-list( APPEND SRC ${EXTRAMBEDTLSSRC} )
+#sources/dependencies for abstract crypto functions (mbedtls or openssl)
+set( CRYPTOSRC crypto.c )
+set( CRYPTOSRCDIR crypto/ )
+list( TRANSFORM CRYPTOSRC PREPEND ${CRYPTOSRCDIR} )
+list ( APPEND SRC ${CRYPTOSRC} )
 
 # include paths:
 #  - include/
 #  - the root directory so that we can e.g. #include "{external,backends}/..."
 include_directories(include ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable( secvarctl ${SRC} )
-
-
 #User specified options 
+
+#OPENSSL compiles with openssl instead of mbedtls = no extra sources
+option( OPENSSL "Compile with OpenSSL as crypto library, default mbedtls")
+if ( OPENSSL )
+else ()
+  #sources/dependencies for extra mbedtls functions
+  set( EXTRAMBEDTLSDEP generate-pkcs7.h pkcs7.h )
+  set( EXTRAMBEDTLSDEPDIR external/extraMbedtls/include/ )
+  list( TRANSFORM EXTRAMBEDTLSDEP PREPEND ${EXTRAMBEDTLSDEPDIR} )
+  set ( EXTRAMBEDTLSSRC generate-pkcs7.c pkcs7.c )
+  set ( EXTRAMBEDTLSSRCDIR  external/extraMbedtls/ )
+  list( TRANSFORM EXTRAMBEDTLSSRC PREPEND ${EXTRAMBEDTLSSRCDIR} )
+  list( APPEND DEPEN ${EXTRAMBEDTLSDEP} )
+  list( APPEND SRC ${EXTRAMBEDTLSSRC} )
+endif()
+
 option( STATIC "Create statically linked executable" OFF )
 if ( STATIC )
   set( BUILD_SHARED_LIBRARIES OFF )
@@ -48,6 +61,9 @@ if ( STRIP )
   string( APPEND CMAKE_C_FLAGS "-s" )
 endif(  )
 
+
+add_executable( secvarctl ${SRC} )
+
 #no crypto means don't compile the generate command = smaller executable
 option( NO_CRYPTO "Build without crypto functions for smaller executable, some functionality lost" OFF )
 if ( NO_CRYPTO )
@@ -57,19 +73,28 @@ endif(  )
 #append possible extensions for library
 LIST( APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.0" ".a" ".so" )
 
-#get mbedtls if custom path defined
-if ( DEFINED CUSTOM_MBEDTLS )
-    find_library( MBEDX509 mbedx509 PATHS ${CUSTOM_MBEDTLS}/library NO_DEFAULT_PATH REQUIRED )
-    find_library( MBEDCRYPTO mbedcrypto PATHS ${CUSTOM_MBEDTLS}/library NO_DEFAULT_PATH REQUIRED )
-    find_library( MBEDTLS mbedtls PATHS ${CUSTOM_MBEDTLS}/library NO_DEFAULT_PATH REQUIRED )
-    include_directories( ${CUSTOM_MBEDTLS}/include )
- 
-else(  )
-    find_library( MBEDX509 mbedx509 HINTS ENV PATH REQUIRED )
-    find_library( MBEDCRYPTO mbedcrypto HINTS ENV PATH REQUIRED )
-    find_library( MBEDTLS mbedtls HINTS ENV PATH REQUIRED )
-endif (  )
-target_link_libraries( secvarctl ${MBEDTLS} ${MBEDX509} ${MBEDCRYPTO} ${PTHREAD} ) 
+#if compiling with openssl, get libraries
+if (OPENSSL)
+  find_package(OpenSSL REQUIRED)
+  target_link_libraries(secvarctl OpenSSL::SSL)
+  target_compile_definitions( secvarctl PRIVATE  OPENSSL )
+#else get mbedtls libraries
+else()
+  #get mbedtls if custom path defined
+  if ( DEFINED CUSTOM_MBEDTLS )
+      find_library( MBEDX509 mbedx509 PATHS ${CUSTOM_MBEDTLS}/library NO_DEFAULT_PATH REQUIRED )
+      find_library( MBEDCRYPTO mbedcrypto PATHS ${CUSTOM_MBEDTLS}/library NO_DEFAULT_PATH REQUIRED )
+      find_library( MBEDTLS mbedtls PATHS ${CUSTOM_MBEDTLS}/library NO_DEFAULT_PATH REQUIRED )
+      include_directories( ${CUSTOM_MBEDTLS}/include ) 
+  else(  )
+      find_library( MBEDX509 mbedx509 HINTS ENV PATH REQUIRED )
+      find_library( MBEDCRYPTO mbedcrypto HINTS ENV PATH REQUIRED )
+      find_library( MBEDTLS mbedtls HINTS ENV PATH REQUIRED )
+  endif (  )
+  target_link_libraries( secvarctl ${MBEDTLS} ${MBEDX509} ${MBEDCRYPTO} ${PTHREAD} )
+  target_compile_definitions( secvarctl PRIVATE  MBEDTLS ) 
+endif()
+
 
 #set default build type to release
 set( DEFAULT_BUILD_TYPE "Debug" )
