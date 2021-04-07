@@ -22,6 +22,7 @@
 #include <mbedtls/error.h> 
 #include "external/extraMbedtls/include/pkcs7.h"
 #include "external/extraMbedtls/include/generate-pkcs7.h"
+#include <mbedtls/platform.h>
 
 #endif
 
@@ -203,6 +204,174 @@ out:
     return PKCS7_FAIL;
 }
 
+int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
+    const char** crtFiles, const char** keyFiles,  int keyPairs, int hashFunct)
+{
+    int rc;
+    PKCS7 *gen_pkcs7_struct = NULL;
+    BIO *bio = NULL, *out_bio = NULL;
+    EVP_PKEY *evp_pkey = NULL;
+    const EVP_MD *evp_md = NULL;
+    void *x509 = NULL;
+    size_t pkcs7_out_len;
+    unsigned char *keyPEM = NULL, *key = NULL, *keyTmp, *crtPEM = NULL, *crt = NULL, *out_bio_der = NULL;
+    size_t keySizePEM, keySize, crtSizePEM, crtSize;
+    
+    if (keyPairs == 0) {
+        prlog(PR_ERR, "ERROR: No signers given, cannot generate PKCS7\n");
+        return PKCS7_FAIL;
+    }
+
+    evp_md = EVP_get_digestbynid(hashFunct);
+    if (!evp_md) {
+        prlog(PR_ERR, "ERROR: Unknown NID (%d) for MD found in PKCS7\n", hashFunct);
+        return PKCS7_FAIL;
+    }
+
+    bio = BIO_new_mem_buf(newData, newDataSize);
+    if (!bio) {
+        prlog(PR_ERR, "ERROR: Failed to initialize new data BIO structure\n");
+        rc = PKCS7_FAIL;
+        goto out;
+    }
+
+    gen_pkcs7_struct = PKCS7_sign(NULL, NULL, NULL, bio, PKCS7_PARTIAL | PKCS7_DETACHED);
+    if (!gen_pkcs7_struct){
+        prlog(PR_ERR, "ERROR: Failed to initialize pkcs7 structure\n");
+        rc = PKCS7_FAIL;
+        goto out;
+    }
+    //for every key pair get the data and add the signer to the pkcs7
+    for (int i = 0; i < keyPairs; i++) {
+        // get data of private keys
+        keyPEM = (unsigned char *)getDataFromFile(keyFiles[i], &keySizePEM);
+        if (!keyPEM) {
+            prlog(PR_ERR, "ERROR: failed to get data from priv key file %s\n", keyFiles[i]);
+            rc = INVALID_FILE;
+            goto out;
+        }
+        rc = crypto_convert_pem_to_der(keyPEM, keySizePEM, (unsigned char **) &key, &keySize);
+        if (rc) {
+            prlog(PR_ERR, "Conversion for %s from PEM to DER failed\n", keyFiles[i]);
+            goto out;
+        }
+        //get data from crt
+        crtPEM = (unsigned char *)getDataFromFile(crtFiles[i], &crtSizePEM);
+        if (!keyPEM) {
+            prlog(PR_ERR, "ERROR: failed to get data from cert file %s\n", crtFiles[i]);
+            rc = INVALID_FILE;
+            goto out;
+        }
+        rc = crypto_convert_pem_to_der(crtPEM, crtSizePEM, (unsigned char **) &crt, &crtSize);
+        if (rc) {
+            prlog(PR_ERR, "Conversion for %s from PEM to DER failed\n", crtFiles[i]);
+            goto out;
+        }
+        //get private key from private key DER buff
+        keyTmp = key;
+        evp_pkey = d2i_AutoPrivateKey(NULL, (const unsigned char **)&keyTmp, keySize);
+        if (!evp_pkey) {
+            prlog(PR_ERR, "ERROR: Failed to parse private key into EVP_PKEY openssl struct\n");
+            rc = INVALID_FILE;
+            goto out;
+        }
+        //get x509 from cert DER buff
+        x509 = crypto_x509_parse_der(crt, crtSize);
+        if (!x509) {
+            prlog(PR_ERR, "ERROR: Failed to parse certificate into x509 openssl struct\n");
+            rc = INVALID_FILE;
+            goto out;
+        }
+        //add the signature to the pkcs7
+        //returns NULL is failure
+        if (!PKCS7_sign_add_signer(gen_pkcs7_struct, (X509 *)x509, evp_pkey, evp_md, PKCS7_NOATTR)) {
+            prlog(PR_ERR, "ERROR: Failed to add signer to the pkcs7 structure\n");
+            rc = PKCS7_FAIL;
+            goto out;
+        }
+        //reset mem
+        free(keyPEM);
+        keyPEM = NULL;
+        free(key);
+        key = NULL;
+        free(crtPEM);
+        crtPEM = NULL;
+        EVP_PKEY_free(evp_pkey);
+        evp_pkey = NULL;
+        free(crt);
+        crt = NULL;
+        crypto_x509_free(x509);
+        x509 = NULL;
+    }
+    //finalize the struct, runs hashing and signatures
+    rc = PKCS7_final(gen_pkcs7_struct, bio, PKCS7_BINARY);
+    if (rc != 1) {
+        prlog(PR_ERR, "ERROR: Failed to finalize openssl pkcs7 struct\n");
+        rc = PKCS7_FAIL;
+        goto out;
+    }
+    //convert to DER
+    out_bio = BIO_new(BIO_s_mem());
+    if (!out_bio) {
+        prlog(PR_ERR, "ERROR: Failed to initialize openssl BIO \n");
+        rc = ALLOC_FAIL;
+        goto out;
+    }
+    //returns 1 for success
+    rc = i2d_PKCS7_bio(out_bio, gen_pkcs7_struct);
+    if (!rc) {
+        prlog(PR_ERR, "ERROR: Failed to convert PKCS7 Struct to DER\n");
+        rc = PKCS7_FAIL;
+        goto out;
+    }
+    //get data out of BIO and into return values
+    pkcs7_out_len = BIO_get_mem_data(out_bio, &out_bio_der);
+    //returns number of bytes decoded or error
+    if (pkcs7_out_len <= 0) {
+        prlog(PR_ERR, "ERROR: Failed to extract PKCS7 DER data from openssl BIO\n");
+        rc = PKCS7_FAIL;
+        goto out;
+    }
+    *pkcs7 = malloc(pkcs7_out_len);
+    if (!*pkcs7) {
+        prlog(PR_ERR, "ERROR: Failed to allocate memory\n");
+        rc = ALLOC_FAIL;
+        goto out;
+    }
+    *pkcs7Size = pkcs7_out_len;
+    //copy memory over so it is persistent
+    memcpy(*pkcs7, out_bio_der, *pkcs7Size);
+    //if here then successfull generation
+    rc = SUCCESS;
+
+out:
+    if (keyPEM)
+        free(keyPEM);
+    if (key)
+        free(key);
+    if (crtPEM)
+        free(crtPEM);
+    if (crt)
+        free(crt);
+    if (evp_pkey)
+        EVP_PKEY_free(evp_pkey);
+    if (x509)
+        crypto_x509_free(x509);
+    if (gen_pkcs7_struct)
+        PKCS7_free(gen_pkcs7_struct);
+    BIO_free(bio);
+    BIO_free(out_bio);
+
+    return rc;
+}
+
+int crypto_pkcs7_generate_w_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
+    const char** crtFiles, const char** sigFiles,  int keyPairs, int hashFunct)
+{
+    prlog(PR_ERR, "ERROR: Currently unable to support generation of PKCS7 with externally generated signatures when compiling with OpenSSL\n");
+    return PKCS7_FAIL;
+}
+
 int crypto_get_x509_der_len(void *x509) 
 {
     return i2d_X509(((X509 *)x509), NULL); 
@@ -369,7 +538,7 @@ void crypto_strerror(int rc, char *out_str, size_t out_max_len)
 
 int crypto_md_ctx_init(void **ctx, int md_id) 
 {
-    const EVP_MD * md;
+    const EVP_MD *md;
     md = EVP_get_digestbynid(md_id);
     if (!md) {
         prlog(PR_ERR, "ERROR: Invalid MD NID\n");
@@ -394,11 +563,71 @@ int crypto_md_finish(void *ctx, unsigned char *hash)
 {
     return !EVP_DigestFinal_ex((EVP_MD_CTX *)ctx, hash, NULL);
 }
+
 void crypto_md_free(void *ctx) 
 {
     EVP_MD_CTX_free((EVP_MD_CTX *)ctx);
 }
 
+int crypto_md_generate_hash(const unsigned char* data, size_t size, int hashFunct, unsigned char** outHash, size_t* outHashSize)
+{
+    int rc;
+    void *ctx;
+    size_t hash_len;
+    rc = crypto_md_ctx_init(&ctx, hashFunct);
+    if (rc)
+        return rc;
+
+    rc = crypto_md_update(ctx, data, size);
+    if (rc)
+        goto out;
+    //get hashlen
+   switch (hashFunct) {
+        case CRYPTO_MD_SHA1:
+            hash_len = SHA_DIGEST_LENGTH;
+            break;
+        case CRYPTO_MD_SHA224:
+            hash_len = SHA224_DIGEST_LENGTH;
+            break;
+        case CRYPTO_MD_SHA256:
+            hash_len = SHA256_DIGEST_LENGTH;
+            break;
+        case CRYPTO_MD_SHA384:
+            hash_len = SHA384_DIGEST_LENGTH;
+            break;
+        case CRYPTO_MD_SHA512:
+            hash_len = SHA512_DIGEST_LENGTH;
+            break;
+        default:
+            prlog(PR_ERR, "ERROR: Unknown NID (%d)\n", hashFunct);
+            rc = HASH_FAIL;
+            goto out;
+    }
+
+    *outHash = malloc(hash_len);
+    if (!*outHash) {
+        prlog(PR_ERR, "ERROR: Failed to allocate data\n");
+        rc = ALLOC_FAIL;
+        goto out;
+    }
+    rc = crypto_md_finish(ctx, *outHash);
+    if (rc) {
+        free(*outHash);
+        *outHash = NULL;
+        goto out;
+    }
+    *outHashSize = hash_len;
+
+    if (verbose) { 
+        printf("Hash generation successful, %s: ", OBJ_nid2sn(hashFunct) );
+        printHex(*outHash, *outHashSize);
+    }
+
+out:
+    crypto_md_free(ctx);
+    return rc;
+
+}
 
 /*=====================END OPENSSL FUNCTIONS=====================*/
 #else
@@ -423,7 +652,8 @@ void *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen)
         rc = SUCCESS;
 
     if (rc) {
-        crypto_pkcs7_free(pkcs7);
+        mbedtls_pkcs7_free(pkcs7);
+        free(pkcs7);
         return NULL;
     }
     else
@@ -456,6 +686,19 @@ int crypto_pkcs7_signed_hash_verify(void *pkcs7, void *x509, unsigned char *hash
 {
     return mbedtls_pkcs7_signed_hash_verify((struct mbedtls_pkcs7 *)pkcs7, (mbedtls_x509_crt *)x509, hash, hash_len);
 }
+
+int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
+    const char** crtFiles, const char** keyFiles,  int keyPairs, int hashFunct)
+{
+    return to_pkcs7_generate_signature(pkcs7, pkcs7Size, newData, newDataSize, crtFiles, keyFiles, keyPairs, hashFunct);
+}
+
+int crypto_pkcs7_generate_w_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
+    const char** crtFiles, const char** sigFiles,  int keyPairs, int hashFunct)
+{
+    return to_pkcs7_already_signed_data(pkcs7, pkcs7Size, newData, newDataSize, crtFiles, sigFiles, keyPairs, hashFunct);
+}
+
 int crypto_get_x509_der_len(void *x509) 
 {
     return ((mbedtls_x509_crt *)x509)->raw.len; 
@@ -582,9 +825,17 @@ int crypto_md_finish(void *ctx, unsigned char *hash)
 {
     return mbedtls_md_finish((mbedtls_md_context_t *)ctx, hash);
 }
+
 void crypto_md_free(void *ctx) 
 {
     mbedtls_md_free(ctx);
     if (ctx) free(ctx);
 }
+
+int crypto_md_generate_hash(const unsigned char* data, size_t size, int hashFunct, unsigned char** outHash, size_t* outHashSize)
+{
+    //calls function in generate-pkcs7 (mbedtls specific)
+    return toHash(data, size, hashFunct, outHash, outHashSize);
+}
+
 #endif

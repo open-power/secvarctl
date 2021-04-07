@@ -8,10 +8,7 @@
 #include <time.h> // for timestamp
 #include <ctype.h> // for isspace
 #include <argp.h>
-#include <mbedtls/md.h>     /* generic interface */
-#include <mbedtls/platform.h> /*mbedtls functions*/
-#include "external/extraMbedtls/include/pkcs7.h" // for PKCS7 OID
-#include "external/extraMbedtls/include/generate-pkcs7.h"
+#include "crypto/crypto.h"
 #include "external/skiboot/include/endian.h"
 #include "backends/edk2-compat/include/edk2-svc.h"
 #include "external/skiboot/include/edk2-compat-process.h" // work on factoring this out
@@ -512,7 +509,7 @@ static int generateESL(const unsigned char* buff, size_t size, struct Arguments 
 
 	switch (args->inForm[0]) {
 		case 'f':
-			rc = toHash(buff, size, hashFunct->crypto_md_funct, &intermediateBuff, &intermediateBuffSize);
+			rc = crypto_md_generate_hash(buff, size, hashFunct->crypto_md_funct, &intermediateBuff, &intermediateBuffSize);
 			if (rc) {
 				prlog(PR_ERR,"Failed to generate hash from file\n");
 				break;
@@ -535,9 +532,9 @@ static int generateESL(const unsigned char* buff, size_t size, struct Arguments 
 		case 'c': 
 			// two intermediate buffers needed, one for input -> DER and one for DER -> ESL,
 			prlog(PR_INFO, "Converting x509 from PEM to DER...\n");
-			rc = convert_pem_to_der(*inpPtr, inpSize, (unsigned char **)&intermediateBuff, &intermediateBuffSize);
+			rc = crypto_convert_pem_to_der(*inpPtr, inpSize, (unsigned char **)&intermediateBuff, &intermediateBuffSize);
 			if (rc) {
-				prlog(PR_ERR, "ERROR: Could not convert PEM to DER mbedtls error #%d\n", rc);
+				prlog(PR_ERR, "ERROR: Could not convert PEM to DER\n");
 				break;
 			}
 			if (!args->inpValid) {
@@ -628,7 +625,7 @@ static int generateHash(const unsigned char* data, size_t size, struct Arguments
 			return rc;
 		}	
 	}
-	rc = toHash(data, size, alg->crypto_md_funct, outHash, outHashSize);
+	rc = crypto_md_generate_hash(data, size, alg->crypto_md_funct, outHash, outHashSize);
 	if (rc) {
 		prlog(PR_ERR, "Failed to generate hash\n");
 		return rc;
@@ -831,7 +828,7 @@ static int toHashForSecVarSigning(const unsigned char* ESL, size_t ESL_size, str
         prlog(PR_ERR, "Failed to generate pre-hash data\n");
         goto out;
     }
-    rc = toHash(preHash, preHash_size, MBEDTLS_MD_SHA256, outBuff, outBuffSize);
+    rc = crypto_md_generate_hash(preHash, preHash_size, CRYPTO_MD_SHA256, outBuff, outBuffSize);
     if (rc) {
         prlog(PR_ERR, "Failed to generate hash\n");
         goto out;
@@ -965,10 +962,10 @@ static int toPKCS7ForSecVar(const unsigned char* newData, size_t dataSize, struc
 	// get pkcs7 and size, if we are already given ths signatures then call appropriate funcion
 	if (args->pkcs7_gen_meth){
         prlog(PR_INFO, "Generating PKCS7 with already signed data\n");
-        rc = to_pkcs7_already_signed_data((unsigned char **)outBuff, outBuffSize, actualData, totalSize, args->signCerts, args->signKeys, args->signKeyCount, MBEDTLS_MD_SHA256);
+        rc = crypto_pkcs7_generate_w_already_signed_data((unsigned char **)outBuff, outBuffSize, actualData, totalSize, args->signCerts, args->signKeys, args->signKeyCount, CRYPTO_MD_SHA256);
     }
     else
-      rc = to_pkcs7_generate_signature((unsigned char **)outBuff, outBuffSize, actualData, totalSize, args->signCerts, args->signKeys, args->signKeyCount, MBEDTLS_MD_SHA256 );
+      rc = crypto_pkcs7_generate_w_signature((unsigned char **)outBuff, outBuffSize, actualData, totalSize, args->signCerts, args->signKeys, args->signKeyCount, CRYPTO_MD_SHA256 );
 	if (rc) {
 		prlog(PR_ERR,"ERROR: making PKCS7 failed\n");
 		rc = PKCS7_FAIL;
