@@ -164,3 +164,31 @@ int createFile(const char * file, const char * buff, size_t size)
 	return SUCCESS;
 }
 
+/*
+ *returns a new pointer to an array with new length
+ *@param arr , a pointer to the array, will be reallocated to have new_length*size_each bytes or NULL if error
+ *@param new_length , the desired number of elements
+ *@param size_each , size of each elements
+ *@return 0 for success or ALLOC_FAIL if fail (memory will be freed in this case)
+ */
+int reallocArray(void **arr, size_t new_length, size_t size_each)
+{
+	void *old_arr;
+	size_t new_size;
+	//if realloc returns null it does not free memory so we must keep a pointer to it
+	old_arr = *arr;
+	//check if requested size is too big
+	if (__builtin_mul_overflow(new_length, size_each, &new_size)) {
+		prlog(PR_ERR, "ERROR: Invalid size to alloc %zd * %zd\n", new_length, size_each);
+		goto out;
+	}
+	*arr = realloc(*arr, size_each*new_length);
+	if (*arr == NULL)
+		goto out;
+
+	return SUCCESS;
+
+out:
+	free(old_arr);
+  	return ALLOC_FAIL;
+}
