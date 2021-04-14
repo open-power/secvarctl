@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+/* Copyright 2021 IBM Corp.*/
 #ifndef SECVARCTL_CRYPTO_H
 #define SECVARCTL_CRYPTO_H
 

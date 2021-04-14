@@ -19,10 +19,8 @@ SKIBOOTOBJDIR = external/skiboot/
 _SKIBOOT_OBJ = secvar_util.o edk2-compat.o edk2-compat-process.o
 SKIBOOT_OBJ = $(patsubst %,$(SKIBOOTOBJDIR)/%, $(_SKIBOOT_OBJ))
 
-CRYPTO_OBJ = crypto/crypto.o
-
 OBJ =secvarctl.o  generic.o 
-OBJ +=$(SKIBOOT_OBJ) $(EDK2_OBJ) $(CRYPTO_OBJ)
+OBJ +=$(SKIBOOT_OBJ) $(EDK2_OBJ) 
 
 OBJCOV = $(patsubst %.o, %.cov.o,$(OBJ))
 
@@ -47,6 +45,7 @@ OPENSSL = 0
 ifeq ($(OPENSSL),1)
 	_LDFLAGS += -lcrypto
 	_CFLAGS += -DOPENSSL
+	CRYPTO_OBJ = crypto/crypto-openssl.o
 else
 	_LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
 	_CFLAGS += -DMBEDTLS
@@ -56,7 +55,11 @@ else
 	EXTRAMBEDTLS = $(patsubst %,$(EXTRAMBEDTLSDIR)/%, $(_EXTRAMBEDTLS))
 	OBJ += $(EXTRAMBEDTLS)
 
+	CRYPTO_OBJ = crypto/crypto-mbedtls.o
+
 endif
+
+OBJ += $(CRYPTO_OBJ)
 
 secvarctl: $(OBJ) 
 	$(CC) $(CFLAGS) $(_CFLAGS) $(STATICFLAG) $^  -o $@ $(LDFLAGS) $(_LDFLAGS)

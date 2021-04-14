@@ -19,12 +19,6 @@ set ( SKIBOOTSRCDIR external/skiboot/ )
 list( TRANSFORM SKIBOOTSRC PREPEND ${SKIBOOTSRCDIR} )
 list( APPEND SRC ${SKIBOOTSRC} )
 
-#sources/dependencies for abstract crypto functions (mbedtls or openssl)
-set( CRYPTOSRC crypto.c )
-set( CRYPTOSRCDIR crypto/ )
-list( TRANSFORM CRYPTOSRC PREPEND ${CRYPTOSRCDIR} )
-list ( APPEND SRC ${CRYPTOSRC} )
-
 # include paths:
 #  - include/
 #  - the root directory so that we can e.g. #include "{external,backends}/..."
@@ -35,6 +29,10 @@ include_directories(include ${CMAKE_CURRENT_SOURCE_DIR})
 #OPENSSL compiles with openssl instead of mbedtls = no extra sources
 option( OPENSSL "Compile with OpenSSL as crypto library, default mbedtls")
 if ( OPENSSL )
+  #sources for crypto function implemented w
+  set( CRYPTOSRC crypto-openssl.c )
+  set( CRYPTOSRCDIR crypto/ )
+  list( TRANSFORM CRYPTOSRC PREPEND ${CRYPTOSRCDIR} )
 else ()
   #sources/dependencies for extra mbedtls functions
   set( EXTRAMBEDTLSDEP generate-pkcs7.h pkcs7.h )
@@ -45,7 +43,12 @@ else ()
   list( TRANSFORM EXTRAMBEDTLSSRC PREPEND ${EXTRAMBEDTLSSRCDIR} )
   list( APPEND DEPEN ${EXTRAMBEDTLSDEP} )
   list( APPEND SRC ${EXTRAMBEDTLSSRC} )
+  #sources for crypto function implemented w secvarctl
+  set( CRYPTOSRC crypto-mbedtls.c )
+  set( CRYPTOSRCDIR crypto/ )
+  list( TRANSFORM CRYPTOSRC PREPEND ${CRYPTOSRCDIR} )
 endif()
+list ( APPEND SRC ${CRYPTOSRC} )
 
 option( STATIC "Create statically linked executable" OFF )
 if ( STATIC )
