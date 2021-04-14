@@ -352,7 +352,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 	int count = 0, offset = 0, rc;
 	unsigned char *cert = NULL;
 	EFI_SIGNATURE_LIST *sigList;
-	void *x509 = NULL;
+	crypto_x509 *x509 = NULL;
 
 	while (eslvarsize > 0) {
 		if (eslvarsize < sizeof(EFI_SIGNATURE_LIST)) { 
@@ -427,7 +427,7 @@ void printESLInfo(EFI_SIGNATURE_LIST *sigList)
 }
 
 // prints info on x509
-int printCertInfo(void *x509)
+int printCertInfo(crypto_x509 *x509)
 {
 	char *x509_info = NULL;
 	int failures;
