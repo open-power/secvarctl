@@ -29,7 +29,7 @@
 #ifdef OPENSSL
 
 #include "generic.h"
-void *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen) 
+crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen) 
 {
     int rc, i, num_signers;
     PKCS7* pkcs7;
@@ -77,14 +77,14 @@ out:
     if (rc)
         return NULL;
 
-    return (void *)pkcs7; 
+    return pkcs7; 
 }
 
-int crypto_pkcs7_md_is_sha256(void *pkcs7)
+int crypto_pkcs7_md_is_sha256(crypto_pkcs7 *pkcs7)
 {
     X509_ALGOR *alg;
     //extract signer algorithms from pkcs7
-    alg = sk_X509_ALGOR_value(((PKCS7 *)pkcs7)->d.sign->md_algs, 0);
+    alg = sk_X509_ALGOR_value(pkcs7->d.sign->md_algs, 0);
     if (!alg) {
         prlog(PR_ERR, "ERROR: Could not extract message digest identifiers from PKCS7\n");
         return PKCS7_FAIL;
@@ -96,22 +96,22 @@ int crypto_pkcs7_md_is_sha256(void *pkcs7)
         return PKCS7_FAIL;
 }
 
-void crypto_pkcs7_free(void *pkcs7) 
+void crypto_pkcs7_free(crypto_pkcs7 *pkcs7) 
 {
-    PKCS7_free((PKCS7 *)pkcs7);
+    PKCS7_free(pkcs7);
 }
 
-void* crypto_get_signing_cert(void *pkcs7, int cert_num)
+crypto_x509 *crypto_pkcs7_get_signing_cert(crypto_pkcs7 *pkcs7, int cert_num)
 {
     X509 *pkcs7_cert = NULL;
 
-    pkcs7_cert = sk_X509_value(((PKCS7 *)pkcs7)->d.sign->cert, cert_num);
+    pkcs7_cert = sk_X509_value(pkcs7->d.sign->cert, cert_num);
 
-    return (void *)pkcs7_cert;
+    return pkcs7_cert;
 
 }
 
-int crypto_pkcs7_signed_hash_verify(void *pkcs7, void *x509, unsigned char *hash, int hash_len)
+int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509, unsigned char *hash, int hash_len)
 {
     //currently this function works and the mbedtls version currently perform the following steps
     //  1. the hash, md context and given x509 are used to generated a signature
@@ -126,7 +126,7 @@ int crypto_pkcs7_signed_hash_verify(void *pkcs7, void *x509, unsigned char *hash
     PKCS7_SIGNER_INFO *signer_info;
 
     //generate a signature with the x509
-    pk = X509_get_pubkey((X509 *)x509);
+    pk = X509_get_pubkey(x509);
     pk_ctx = EVP_PKEY_CTX_new(pk, NULL);
     if (pk == NULL || pk_ctx == NULL) {
         prlog(PR_ERR, "ERROR: Failed to create public key context from x509\n");
@@ -143,7 +143,7 @@ int crypto_pkcs7_signed_hash_verify(void *pkcs7, void *x509, unsigned char *hash
         goto out;
     }
       //extract signer algorithms from pkcs7
-    alg = sk_X509_ALGOR_value(((PKCS7 *)pkcs7)->d.sign->md_algs, 0);
+    alg = sk_X509_ALGOR_value(pkcs7->d.sign->md_algs, 0);
     if (!alg) {
         prlog(PR_ERR, "ERROR: Could not extract message digest identifiers from PKCS7\n");
         rc = PKCS7_FAIL;
@@ -212,7 +212,7 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size, 
     BIO *bio = NULL, *out_bio = NULL;
     EVP_PKEY *evp_pkey = NULL;
     const EVP_MD *evp_md = NULL;
-    void *x509 = NULL;
+    crypto_x509 *x509 = NULL;
     size_t pkcs7_out_len;
     unsigned char *keyPEM = NULL, *key = NULL, *keyTmp, *crtPEM = NULL, *crt = NULL, *out_bio_der = NULL;
     size_t keySizePEM, keySize, crtSizePEM, crtSize;
@@ -284,7 +284,7 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size, 
         }
         //add the signature to the pkcs7
         //returns NULL is failure
-        if (!PKCS7_sign_add_signer(gen_pkcs7_struct, (X509 *)x509, evp_pkey, evp_md, PKCS7_NOATTR)) {
+        if (!PKCS7_sign_add_signer(gen_pkcs7_struct, x509, evp_pkey, evp_md, PKCS7_NOATTR)) {
             prlog(PR_ERR, "ERROR: Failed to add signer to the pkcs7 structure\n");
             rc = PKCS7_FAIL;
             goto out;
@@ -372,36 +372,36 @@ int crypto_pkcs7_generate_w_already_signed_data(unsigned char **pkcs7, size_t *p
     return PKCS7_FAIL;
 }
 
-int crypto_get_x509_der_len(void *x509) 
+int crypto_x509_get_der_len(crypto_x509 *x509) 
 {
-    return i2d_X509(((X509 *)x509), NULL); 
+    return i2d_X509(x509, NULL); 
 }
 
-int crypto_get_tbs_x509_der_len(void *x509) 
+int crypto_x509_get_tbs_der_len(crypto_x509 *x509) 
 {
-    return i2d_re_X509_tbs(((X509 *)x509), NULL); 
+    return i2d_re_X509_tbs(x509, NULL); 
 }
 
-int crypto_get_x509_version(void *x509) 
+int crypto_x509_get_version(crypto_x509 *x509) 
 {
     //add one because function return one less than actual certificate version, see https://www.openssl.org/docs/man1.1.0/man3/X509_get_version.html
-    return X509_get_version((X509 *) x509) + 1;
+    return X509_get_version( x509) + 1;
 }
 
-int crypto_x509_is_RSA(void *x509)
+int crypto_x509_is_RSA(crypto_x509 *x509)
 {
     int pk_type;
-    pk_type = X509_get_signature_type((X509 *)x509);
+    pk_type = X509_get_signature_type(x509);
     if (pk_type != EVP_PK_RSA)
         return pk_type;
     else 
         return SUCCESS;
 }
 
-int crypto_get_x509_sig_len(void *x509)
+int crypto_x509_get_sig_len(crypto_x509 *x509)
 {
     ASN1_BIT_STRING *sig;
-    sig = X509_get0_pubkey_bitstr((X509 *) x509);
+    sig = X509_get0_pubkey_bitstr( x509);
     if (!sig) {
         prlog( PR_ERR, "ERROR: Could not extract signature length from x509\n");
         return CERT_FAIL;
@@ -410,10 +410,10 @@ int crypto_get_x509_sig_len(void *x509)
     return sig->length;
 }
 
-int crypto_x509_md_is_sha256(void *x509)
+int crypto_x509_md_is_sha256(crypto_x509 *x509)
 {
     const X509_ALGOR *alg = NULL;
-    alg = X509_get0_tbs_sigalg((X509 *)x509);
+    alg = X509_get0_tbs_sigalg(x509);
     if (!alg) {
         prlog(PR_ERR, "ERROR: Could not extract algorithm from X509\n");
         return CERT_FAIL;
@@ -428,11 +428,11 @@ int crypto_x509_md_is_sha256(void *x509)
     }
 }
 
-int crypto_x509_oid_is_pkcs1_sha256(void *x509)
+int crypto_x509_oid_is_pkcs1_sha256(crypto_x509 *x509)
 {
     const X509_ALGOR *alg = NULL;
 
-    alg = X509_get0_tbs_sigalg((X509 *)x509);
+    alg = X509_get0_tbs_sigalg(x509);
     if (!alg) {
         prlog(PR_ERR, "ERROR: Could not extract algorithm from X509\n");
         return CERT_FAIL;
@@ -444,13 +444,13 @@ int crypto_x509_oid_is_pkcs1_sha256(void *x509)
 }
 
 
-int crypto_x509_get_pk_bit_len(void *x509)
+int crypto_x509_get_pk_bit_len(crypto_x509 *x509)
 {
     EVP_PKEY * pub = NULL;
     RSA *rsa = NULL;
     int length;
     
-    pub = X509_get_pubkey((X509 *)x509);
+    pub = X509_get_pubkey(x509);
     if (!pub) {
         prlog( PR_ERR, "ERROR: Failed to extract public key from x509\n");
         return CERT_FAIL;
@@ -466,10 +466,10 @@ int crypto_x509_get_pk_bit_len(void *x509)
     return length;
 }
 
-void crypto_x509_get_short_info(void *x509, char *short_desc, size_t max_len)
+void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc, size_t max_len)
 {
     const X509_ALGOR *alg = NULL;
-    alg = X509_get0_tbs_sigalg((X509 *)x509);
+    alg = X509_get0_tbs_sigalg(x509);
     //unlikely failure
     if (!alg) {
         prlog(PR_ERR, "ERROR: Could not extract algorithm from X509\n");
@@ -480,13 +480,13 @@ void crypto_x509_get_short_info(void *x509, char *short_desc, size_t max_len)
 
 }
 
-int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim, void *x509)
+int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim, crypto_x509 *x509)
 {
     int rc;
     long actual_mem_len;
     BIO *bio = BIO_new(BIO_s_mem());
     char *tmp = NULL;
-    rc = X509_print_ex(bio,(X509 *)x509, XN_FLAG_MULTILINE, X509_FLAG_COMPAT | X509_FLAG_NO_PUBKEY | X509_FLAG_NO_SIGDUMP);
+    rc = X509_print_ex(bio, x509, XN_FLAG_MULTILINE, X509_FLAG_COMPAT | X509_FLAG_NO_PUBKEY | X509_FLAG_NO_SIGDUMP);
     if (rc < 0){
         prlog(PR_ERR, "ERROR: could not get BIO data on X509, openssl err#%d\n",rc);
         return rc;
@@ -500,7 +500,7 @@ int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim, void
     return actual_mem_len;
 }
 
-void *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
+crypto_x509 *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
 {
     X509* x509;
     x509 = d2i_X509(NULL, &data, data_len);
@@ -508,12 +508,12 @@ void *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
     if (!x509)
         return NULL;
 
-    return (void *)x509; 
+    return x509; 
 }
 
-void crypto_x509_free(void *x509)
+void crypto_x509_free(crypto_x509 *x509)
 {
-    X509_free((X509 *)x509);
+    X509_free(x509);
 }
 
 int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen, unsigned char **output, size_t *olen)
@@ -536,7 +536,7 @@ void crypto_strerror(int rc, char *out_str, size_t out_max_len)
     ERR_error_string_n(rc, out_str, out_max_len);
 }
 
-int crypto_md_ctx_init(void **ctx, int md_id) 
+int crypto_md_ctx_init(crypto_md_ctx **ctx, int md_id) 
 {
     const EVP_MD *md;
     md = EVP_get_digestbynid(md_id);
@@ -553,26 +553,26 @@ int crypto_md_ctx_init(void **ctx, int md_id)
     
 }
 
-int crypto_md_update(void *ctx, const unsigned char *data, size_t data_len)
+int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data, size_t data_len)
 {
     //returns 1 on success and 0 for fail
-    return !EVP_DigestUpdate((EVP_MD_CTX *)ctx, data, data_len);    
+    return !EVP_DigestUpdate(ctx, data, data_len);    
 }
 
-int crypto_md_finish(void *ctx, unsigned char *hash) 
+int crypto_md_finish(crypto_md_ctx *ctx, unsigned char *hash) 
 {
-    return !EVP_DigestFinal_ex((EVP_MD_CTX *)ctx, hash, NULL);
+    return !EVP_DigestFinal_ex(ctx, hash, NULL);
 }
 
-void crypto_md_free(void *ctx) 
+void crypto_md_free(crypto_md_ctx *ctx) 
 {
-    EVP_MD_CTX_free((EVP_MD_CTX *)ctx);
+    EVP_MD_CTX_free(ctx);
 }
 
 int crypto_md_generate_hash(const unsigned char* data, size_t size, int hashFunct, unsigned char** outHash, size_t* outHashSize)
 {
     int rc;
-    void *ctx;
+    crypto_md_ctx *ctx;
     size_t hash_len;
     rc = crypto_md_ctx_init(&ctx, hashFunct);
     if (rc)
@@ -635,7 +635,7 @@ out:
 
 
 
-void *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen) 
+crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen) 
 {
     int rc;
     struct mbedtls_pkcs7 *pkcs7;
@@ -657,34 +657,35 @@ void *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen)
         return NULL;
     }
     else
-        return (void *)pkcs7;
+        return pkcs7;
 }
 
-int crypto_pkcs7_md_is_sha256(void *pkcs7)
+int crypto_pkcs7_md_is_sha256(crypto_pkcs7 *pkcs7)
 {
     return MBEDTLS_OID_CMP(MBEDTLS_OID_DIGEST_ALG_SHA256, &((struct mbedtls_pkcs7 *)pkcs7)->signed_data.digest_alg_identifiers);
 }
-void crypto_pkcs7_free(void *pkcs7)
+
+void crypto_pkcs7_free(crypto_pkcs7 *pkcs7)
 {
         mbedtls_pkcs7_free((struct mbedtls_pkcs7 *)pkcs7);
         free(pkcs7);
 }
 
-void* crypto_get_signing_cert(void *pkcs7, int cert_num)
+crypto_x509* crypto_pkcs7_get_signing_cert(crypto_pkcs7 *pkcs7, int cert_num)
 {
     mbedtls_x509_crt *pkcs7_cert = NULL;
 
-    pkcs7_cert = &((struct mbedtls_pkcs7 *)pkcs7)->signed_data.certs;
+    pkcs7_cert = &pkcs7->signed_data.certs;
     for (int i = 0; i < cert_num && pkcs7_cert != NULL; i++)
         pkcs7_cert = pkcs7_cert->next;
 
-    return (void *)pkcs7_cert;
+    return pkcs7_cert;
 
 }
 
-int crypto_pkcs7_signed_hash_verify(void *pkcs7, void *x509, unsigned char *hash, int hash_len)
+int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509, unsigned char *hash, int hash_len)
 {
-    return mbedtls_pkcs7_signed_hash_verify((struct mbedtls_pkcs7 *)pkcs7, (mbedtls_x509_crt *)x509, hash, hash_len);
+    return mbedtls_pkcs7_signed_hash_verify(pkcs7, x509, hash, hash_len);
 }
 
 int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
@@ -699,25 +700,25 @@ int crypto_pkcs7_generate_w_already_signed_data(unsigned char **pkcs7, size_t *p
     return to_pkcs7_already_signed_data(pkcs7, pkcs7Size, newData, newDataSize, crtFiles, sigFiles, keyPairs, hashFunct);
 }
 
-int crypto_get_x509_der_len(void *x509) 
+int crypto_x509_get_der_len(crypto_x509 *x509) 
 {
-    return ((mbedtls_x509_crt *)x509)->raw.len; 
+    return x509->raw.len; 
 }
 
-int crypto_get_tbs_x509_der_len(void *x509) 
+int crypto_x509_get_tbs_der_len(crypto_x509 *x509) 
 {
-    return ((mbedtls_x509_crt *)x509)->tbs.len;
+    return x509->tbs.len;
 }
 
-int crypto_get_x509_version(void *x509) 
+int crypto_x509_get_version(crypto_x509 *x509) 
 {
-    return ((mbedtls_x509_crt *)x509)->version;
+    return x509->version;
 }
 
-int crypto_x509_is_RSA(void *x509)
+int crypto_x509_is_RSA(crypto_x509 *x509)
 {
     int pk_type;
-    pk_type = ((mbedtls_x509_crt *)x509)->pk.pk_info->type;
+    pk_type = x509->pk.pk_info->type;
     if (pk_type != MBEDTLS_PK_RSA)
         //zero is also a pk type (MBEDTLS_PK_NONE) so return generic failure if zero so it doesnt look like a success
        return  (pk_type == 0 ? CERT_FAIL : pk_type);
@@ -725,45 +726,44 @@ int crypto_x509_is_RSA(void *x509)
         return SUCCESS;
 }
 
-int crypto_get_x509_sig_len(void *x509)
+int crypto_x509_get_sig_len(crypto_x509 *x509)
 {
-    return ((mbedtls_x509_crt *)x509)->sig.len;
+    return x509->sig.len;
 }
 
-int crypto_x509_md_is_sha256(void *x509)
+int crypto_x509_md_is_sha256(crypto_x509 *x509)
 {
-    if (((mbedtls_x509_crt *)x509)->sig_md == MBEDTLS_MD_SHA256) 
+    if (x509->sig_md == MBEDTLS_MD_SHA256) 
         return SUCCESS;
     else
         return CERT_FAIL;
 }
 
-int crypto_x509_oid_is_pkcs1_sha256(void *x509)
+int crypto_x509_oid_is_pkcs1_sha256(crypto_x509 *x509)
 {
-    if ( MBEDTLS_OID_CMP(MBEDTLS_OID_PKCS1_SHA256, &((mbedtls_x509_crt *)x509)->sig_oid))
+    if ( MBEDTLS_OID_CMP(MBEDTLS_OID_PKCS1_SHA256, &x509->sig_oid))
         return CERT_FAIL;
     return SUCCESS;
 }
 
-int crypto_x509_get_pk_bit_len(void *x509)
+int crypto_x509_get_pk_bit_len(crypto_x509 *x509)
 {
-    return mbedtls_pk_get_bitlen( &((mbedtls_x509_crt *)x509)->pk);
+    return mbedtls_pk_get_bitlen( &x509->pk);
 }
 
-void crypto_x509_get_short_info(void *x509, char *short_desc, size_t max_len)
+void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc, size_t max_len)
 {
 
-    mbedtls_x509_sig_alg_gets(short_desc, max_len, &((mbedtls_x509_crt *)x509)->sig_oid,
-                       ((mbedtls_x509_crt *)x509)->sig_pk, ((mbedtls_x509_crt *)x509)->sig_md, 
-                       ((mbedtls_x509_crt *)x509)->sig_opts );
+    mbedtls_x509_sig_alg_gets(short_desc, max_len, &x509->sig_oid,
+                       x509->sig_pk, x509->sig_md, x509->sig_opts );
 }
 
-int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim, void *x509)
+int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim, crypto_x509 *x509)
 {
-    return mbedtls_x509_crt_info(x509_info, max_len, delim, ((mbedtls_x509_crt *)x509)); 
+    return mbedtls_x509_crt_info(x509_info, max_len, delim, x509); 
 }
 
-void *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
+crypto_x509 *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
 {
     int rc;
     mbedtls_x509_crt *x509 = NULL;
@@ -780,12 +780,12 @@ void *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
         return NULL;
     }
     else
-        return (void *)x509;
+        return x509;
 }
 
-void crypto_x509_free(void *x509)
+void crypto_x509_free(crypto_x509 *x509)
 {
-    mbedtls_x509_crt_free((mbedtls_x509_crt *)x509);
+    mbedtls_x509_crt_free(x509);
     free(x509);
 }
 
@@ -799,7 +799,7 @@ void crypto_strerror(int rc, char *out_str, size_t out_max_len)
     mbedtls_strerror(rc, out_str, out_max_len);
 }
 
-int crypto_md_ctx_init(void **ctx, int md_id) 
+int crypto_md_ctx_init(crypto_md_ctx **ctx, int md_id) 
 {
     int rc;
     const mbedtls_md_info_t *md_info;
@@ -809,24 +809,24 @@ int crypto_md_ctx_init(void **ctx, int md_id)
         return ALLOC_FAIL;
     }
     md_info = mbedtls_md_info_from_type(md_id);
-    mbedtls_md_init((mbedtls_md_context_t *) *ctx);
-    rc = mbedtls_md_setup((mbedtls_md_context_t *)*ctx, md_info, 0);
+    mbedtls_md_init(*ctx);
+    rc = mbedtls_md_setup(*ctx, md_info, 0);
     if (rc)
         return HASH_FAIL;
-    return mbedtls_md_starts((mbedtls_md_context_t *)*ctx);
+    return mbedtls_md_starts(*ctx);
 }
 
-int crypto_md_update(void *ctx, const unsigned char *data, size_t data_len)
+int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data, size_t data_len)
 {
     return mbedtls_md_update((mbedtls_md_context_t *)ctx, data, data_len);    
 }
 
-int crypto_md_finish(void *ctx, unsigned char *hash) 
+int crypto_md_finish(crypto_md_ctx *ctx, unsigned char *hash) 
 {
-    return mbedtls_md_finish((mbedtls_md_context_t *)ctx, hash);
+    return mbedtls_md_finish(ctx, hash);
 }
 
-void crypto_md_free(void *ctx) 
+void crypto_md_free(crypto_md_ctx *ctx) 
 {
     mbedtls_md_free(ctx);
     if (ctx) free(ctx);

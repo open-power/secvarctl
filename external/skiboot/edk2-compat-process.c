@@ -218,7 +218,7 @@ static bool validate_cert(char *signing_cert, int signing_cert_size)
 {
 	//NICK CHILD removed direct mbedtls call, use general crypto
 	// mbedtls_x509_crt x509;
-	void *x509;
+	crypto_x509 *x509;
 	char *x509_buf = NULL;
 	int rc;
 
@@ -439,13 +439,13 @@ int check_timestamp(const char *key, const struct efi_time *timestamp,
 /* Extract PKCS7 from the authentication header */
 //NICK CHILD removed direct mbedtls call, use general crypto
 // static mbedtls_pkcs7* get_pkcs7(const struct efi_variable_authentication_2 *auth)
-static void* get_pkcs7(const struct efi_variable_authentication_2 *auth)
+static crypto_pkcs7* get_pkcs7(const struct efi_variable_authentication_2 *auth)
 {
 	char *checkpkcs7cert = NULL;
 	size_t len;
 	//NICK CHILD removed direct mbedtls call, use general crypto
 	// mbedtls_pkcs7 *pkcs7 = NULL;
-	void *pkcs7 = NULL;
+	crypto_pkcs7 *pkcs7 = NULL;
 
 	int rc;
 
@@ -474,7 +474,7 @@ static void* get_pkcs7(const struct efi_variable_authentication_2 *auth)
 	// rc = mbedtls_x509_crt_info(checkpkcs7cert, CERT_BUFFER_SIZE, "CRT:",
 	// 			   &(pkcs7->signed_data.certs));
 	rc = crypto_x509_get_long_desc(checkpkcs7cert, CERT_BUFFER_SIZE, "CRT:",
-				  crypto_get_signing_cert(pkcs7, 0));
+				  crypto_pkcs7_get_signing_cert(pkcs7, 0));
 	if (rc < 0) {
 		prlog(PR_ERR, "Failed to parse the certificate in PKCS7 structure\n");
 		free(checkpkcs7cert);
@@ -501,8 +501,9 @@ static int verify_signature(const struct efi_variable_authentication_2 *auth,
 	//NICK CHILD removed direct mbedtls call, use general crypto
 	//mbedtls_pkcs7 *pkcs7 = NULL;
 	//mbedtls_x509_crt x509;
-	void *pkcs7 = NULL;
-	void *x509 = NULL;
+	crypto_pkcs7 *pkcs7 = NULL;
+	crypto_x509 *x509 = NULL;
+
 	char *signing_cert = NULL;
 	char *x509_buf = NULL;
 	int signing_cert_size;
@@ -645,7 +646,7 @@ static char *get_hash_to_verify(const char *key, const char *new_data,
 	//NICK CHILD removed direct mbedtls call, use general crypto
 	// const mbedtls_md_info_t *md_info;
 	// mbedtls_md_context_t ctx;
-	void *ctx;
+	crypto_md_ctx *ctx;
 
 	int rc;
 

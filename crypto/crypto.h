@@ -4,21 +4,34 @@
 #ifdef OPENSSL
 
 #include <openssl/obj_mac.h>
+#include <openssl/pkcs7.h>
+#include <openssl/x509.h>
+#include <openssl/evp.h>
+
 #define CRYPTO_MD_SHA1 NID_sha1
 #define CRYPTO_MD_SHA224 NID_sha224
 #define CRYPTO_MD_SHA256 NID_sha256 
 #define CRYPTO_MD_SHA384 NID_sha384
 #define CRYPTO_MD_SHA512 NID_sha512
 
+typedef PKCS7 crypto_pkcs7;
+typedef X509 crypto_x509;
+typedef EVP_MD_CTX crypto_md_ctx;
+
+
 #elif defined MBEDTLS
 
 #include <mbedtls/md.h>
+#include "external/extraMbedtls/include/pkcs7.h"
 #define CRYPTO_MD_SHA1 MBEDTLS_MD_SHA1
 #define CRYPTO_MD_SHA224 MBEDTLS_MD_SHA224
 #define CRYPTO_MD_SHA256 MBEDTLS_MD_SHA256 
 #define CRYPTO_MD_SHA384 MBEDTLS_MD_SHA384
 #define CRYPTO_MD_SHA512  MBEDTLS_MD_SHA512
 
+typedef struct mbedtls_pkcs7  crypto_pkcs7;
+typedef mbedtls_x509_crt crypto_x509;
+typedef mbedtls_md_context_t crypto_md_ctx;
 #endif
 /**====================PKCS7 Functions ====================**/
 
@@ -27,13 +40,13 @@
  *@param pkcs7 , a pointer to either an openssl or mbedtls pkcs7 struct
  *@return SUCCESS if message digest is SHA256 else return errno
  */
-int crypto_pkcs7_md_is_sha256(void *pkcs7);
+int crypto_pkcs7_md_is_sha256(crypto_pkcs7 *pkcs7);
 
 /*
  *free's the memory allocated for a pkcs7 structure
  *@param pkcs7 , a pointer to either an openssl or mbedtls pkcs7 struct
  */
-void crypto_pkcs7_free(void *pkcs7);
+void crypto_pkcs7_free(crypto_pkcs7 *pkcs7);
 
 /*
  *parses a buffer into a pointer to a pkcs7 struct. struct allocation is done internally to this func, but not dealloc
@@ -42,7 +55,7 @@ void crypto_pkcs7_free(void *pkcs7);
  *@return if successful, a void pointer to either an openssl or mbedtls pkcs7 struct. else returns NULL
  *NOTE: if successful (returns not NULL), remember to call crypto_free_pkcs7 to unalloc. 
  */
-void * crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen);
+crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen);
 
 /*
  *returns one signing ceritficate from the PKKCS7 signing certificate chain
@@ -51,7 +64,7 @@ void * crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen);
  *@return a pointer to either an openssl or mbedtls X509 Struct
  *NOTE: The returned pointer need not be freed, since it is a reference to memory in pkcs7
  */
-void* crypto_get_signing_cert(void *pkcs7, int cert_num);
+crypto_x509 *crypto_pkcs7_get_signing_cert(crypto_pkcs7 *pkcs7, int cert_num);
 
 /*
  *determines if signed data in pkcs7 is correctly signed by x509 by signing the hash with the pk and comparing the resulting signature with that in the pkcs7
@@ -61,7 +74,7 @@ void* crypto_get_signing_cert(void *pkcs7, int cert_num);
  *@param hash_len , the length of expected hash (ex: SHA256 = 32), if 0 then asssumptions are made based on md in pkcs7
  *@return SUCCESS or error number if resulting hashes are not equal
  */
-int crypto_pkcs7_signed_hash_verify(void *pkcs7, void *x509, unsigned char *hash, int hash_len);
+int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509, unsigned char *hash, int hash_len);
 
 /*
  *generates a PKCS7 and create signature with private and public keys
@@ -95,19 +108,19 @@ int crypto_pkcs7_generate_w_already_signed_data(unsigned char **pkcs7, size_t *p
 
 
 /**====================X509 Functions ====================**/
-int crypto_get_x509_der_len(void *x509);
-int crypto_get_tbs_x509_der_len(void *x509);
-int crypto_get_x509_version(void *x509);
-int crypto_get_x509_sig_len(void *x509);
-int crypto_x509_md_is_sha256(void *x509);
-int crypto_x509_oid_is_pkcs1_sha256(void *x509);
-int crypto_x509_get_pk_bit_len(void *x509);
+int crypto_x509_get_der_len(crypto_x509 *x509);
+int crypto_x509_get_tbs_der_len(crypto_x509 *x509);
+int crypto_x509_get_version(crypto_x509 *x509);
+int crypto_x509_get_sig_len(crypto_x509 *x509);
+int crypto_x509_md_is_sha256(crypto_x509 *x509);
+int crypto_x509_oid_is_pkcs1_sha256(crypto_x509 *x509);
+int crypto_x509_get_pk_bit_len(crypto_x509 *x509);
 /*
  *checks the type of the x509 and ensures that it is of type RSA
  *@param x509, a pointer to either an openssl or mbedtls x509 struct
  *@return SUCCESS if RSA or if not, returns the returned type value (differs for openssl and mbedtls)
  */
-int crypto_x509_is_RSA(void *x509);
+int crypto_x509_is_RSA(crypto_x509 *x509);
 
 /*
  *returns a short string describing the x509 message digest and encryption algorithms
@@ -115,7 +128,7 @@ int crypto_x509_is_RSA(void *x509);
  *@param short_desc ,  already alloc'd pointer to output string
  *@param max_len   , number of bytes allocated to short_desc arg
  */
-void crypto_x509_get_short_info(void *x509, char *short_desc, size_t max_len);
+void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc, size_t max_len);
 
 /*
  *parses the x509 struct into a human readable informational string
@@ -125,7 +138,7 @@ void crypto_x509_get_short_info(void *x509, char *short_desc, size_t max_len);
  *@param x509 ,  a pointer to either an openssl or mbedtls x509 struct
  *@return number of bytes written to x509_info
  */
-int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim, void *x509);
+int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim, crypto_x509 *x509);
 
 /*
  *parses a data buffer into an x509 struct 
@@ -140,13 +153,13 @@ int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim, void
  *@return if successful, a void pointer to either an openssl or mbedtls x509 struct. else returns NULL
  *NOTE: if successful (returns not NULL), remember to call crypto_x509_free to unalloc. 
  */
-void *crypto_x509_parse_der(const unsigned char *data, size_t data_len);
+crypto_x509 *crypto_x509_parse_der(const unsigned char *data, size_t data_len);
 
 /*
  *unallocates x509 struct and memory
  *@param x509 ,  a pointer to either an openssl or mbedtls x509 struct, should have already been allocated
  */
-void crypto_x509_free(void *x509);
+void crypto_x509_free(crypto_x509 *x509);
 
 
 /**====================General Functions ====================**/
@@ -177,7 +190,7 @@ void crypto_strerror(int rc, char *out_str, size_t out_max_len);
  *@param md_id , the id of the hahsing function see above for possible values (CRYPTO_MD_xxx )
  *@return SUCCESS or err if the digest context setup failed
  */
-int crypto_md_ctx_init(void **ctx, int md_id);
+int crypto_md_ctx_init(crypto_md_ctx **ctx, int md_id);
 
 /*
  *can be repeatedly called to add data to be hashed by ctx
@@ -186,7 +199,7 @@ int crypto_md_ctx_init(void **ctx, int md_id);
  *@param data_len , length of data to be hashed
  *@return SUCCESS or err if additional data could not be added to context
  */
-int crypto_md_update(void *ctx, const unsigned char *data, size_t data_len);
+int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data, size_t data_len);
 
 /*
  *runs the hash over the supplied data (given with crypto_md_update) and returns it in hash
@@ -194,13 +207,13 @@ int crypto_md_update(void *ctx, const unsigned char *data, size_t data_len);
  *@param hash, an allocated data blob where the returned hash will be stored
  *@return SUCCESS or err if the hash generation was successful
  */
-int crypto_md_finish(void *ctx, unsigned char *hash);
+int crypto_md_finish(crypto_md_ctx *ctx, unsigned char *hash);
 
 /*
  *frees the memory alloacted for the hashing context
  *@param ctx , a pointer to either an mbedtls or openssl hashing context
  */
-void crypto_md_free(void *ctx); 
+void crypto_md_free(crypto_md_ctx *ctx); 
 
 /*
  *given a data buffer it generates the desired hash 

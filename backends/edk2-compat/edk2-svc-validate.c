@@ -16,14 +16,14 @@ struct Arguments {
 static bool validate_hash(uuid_t type, size_t size);
 static int parse_opt(int key, char *arg, struct argp_state *state);
 static int validateSingularESL(size_t* bytesRead, const unsigned char* esl, size_t eslvarsize, const char *varName);
-static int validateCertStruct(void *x509, const char *varName);
+static int validateCertStruct(crypto_x509 *x509, const char *varName);
 
 
 enum fileTypes{
-	AUTH = 'a',
-	PKCS7 = 'p',
-	ESL = 'e',
-	CERT = 'c'
+	AUTH_FILE = 'a',
+	PKCS7_FILE = 'p',
+	ESL_FILE = 'e',
+	CERT_FILE = 'c'
 };
 
 /*
@@ -40,7 +40,7 @@ int performValidation(int argc, char* argv[])
 	int rc; 
 	struct Arguments args = {	
 		.helpFlag = 0, 
-		.inFile = NULL, .inForm = AUTH, .varName = NULL
+		.inFile = NULL, .inForm = AUTH_FILE, .varName = NULL
 	};
 	// combine command and subcommand for usage/help messages
 	argv[0] = "secvarctl validate";
@@ -78,16 +78,16 @@ int performValidation(int argc, char* argv[])
 	}
 
 	switch (args.inForm) {
-		case CERT:
+		case CERT_FILE:
 			rc = validateCert(buff, size, args.varName);
 			break;
-		case ESL:
+		case ESL_FILE:
 			rc = validateESL(buff, size, args.varName);
 			break;
-		case PKCS7:
+		case PKCS7_FILE:
 			rc = validatePKCS7(buff,size);
 			break;
-		case AUTH:
+		case AUTH_FILE:
 		default:
 			rc = validateAuth(buff, size, args.varName);
 			break;
@@ -131,16 +131,16 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			args->varName = "dbx";
 			break;
 		case 'a':
-			args->inForm = AUTH;
+			args->inForm = AUTH_FILE;
 			break;
 		case 'p':
-			args->inForm = PKCS7;
+			args->inForm = PKCS7_FILE;
 			break;
 		case 'e':
-			args->inForm = ESL;
+			args->inForm = ESL_FILE;
 			break;
 		case 'c':
-			args->inForm = CERT;
+			args->inForm = CERT_FILE;
 			break;
 		case ARGP_KEY_ARG:
 			if (args->inFile == NULL)
@@ -273,7 +273,8 @@ int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key)
  */
 int validatePKCS7(const unsigned char *cert_data, size_t len) 
 {
-	void *pkcs7 = NULL, *pkcs7_cert = NULL;
+	void *pkcs7_cert = NULL;
+    crypto_pkcs7 *pkcs7 = NULL;
 	int rc = SUCCESS, cert_num = 0;
 
 	prlog(PR_INFO, "VALIDATING PKCS7:\n");
@@ -290,7 +291,7 @@ int validatePKCS7(const unsigned char *cert_data, size_t len)
 	}
 	prlog(PR_INFO, "\tDigest Alg: SHA256\n");
 	// print info on all siging certificates
-	pkcs7_cert = crypto_get_signing_cert(pkcs7, cert_num);
+	pkcs7_cert = crypto_pkcs7_get_signing_cert(pkcs7, cert_num);
 
 	do {
 		prlog(PR_INFO, "VALIDATING SIGNING CERTIFICATE:\n");
@@ -305,7 +306,7 @@ int validatePKCS7(const unsigned char *cert_data, size_t len)
 		}
 		
 		cert_num++;
-		pkcs7_cert = crypto_get_signing_cert(pkcs7, cert_num);
+		pkcs7_cert = crypto_pkcs7_get_signing_cert(pkcs7, cert_num);
 	}
 	while (pkcs7_cert);
 	rc = SUCCESS;
@@ -469,7 +470,7 @@ static bool validate_hash(uuid_t type, size_t size)
 int validateCert(const unsigned char *certBuf, size_t buflen, const char *varName) 
 {
 	int rc;
-	void *x509 = NULL;
+	crypto_x509 *x509 = NULL;
 
 	if (buflen == 0) {
 		prlog(PR_ERR, "ERROR: Length %zd is invalid\n", buflen);
@@ -495,12 +496,12 @@ out:
  *@param varName ,  variable name {"db","dbx","KEK", "PK"} b/c db allows for any RSA len, if NULL expect RSA-2048
  *@return SUCCESS or errno depending on if x509 is valid
  */
-static int validateCertStruct(void *x509, const char *varName) 
+static int validateCertStruct(crypto_x509 *x509, const char *varName) 
 {
 	int rc, len, version;
 	char *x509_info;
 	// check raw cert data has data
-	len = crypto_get_x509_der_len(x509);
+	len = crypto_x509_get_der_len(x509);
 	if (len < 0) {	
 		prlog(PR_ERR, "ERROR: Could not read X509 length in DER\n");
 		return CERT_FAIL;
@@ -510,7 +511,7 @@ static int validateCertStruct(void *x509, const char *varName)
 		return CERT_FAIL;
 	}
 	// check raw certificate body has TBSCertificate data
-	len = crypto_get_tbs_x509_der_len(x509);
+	len = crypto_x509_get_tbs_der_len(x509);
 	if (len < 0) { 
 		prlog(PR_ERR,"ERROR: Could not read length of X509 TBS Certificate\n");
 		return CERT_FAIL;
@@ -520,7 +521,7 @@ static int validateCertStruct(void *x509, const char *varName)
 		return CERT_FAIL;
 	}
 	// check if version is something other than 1,2,3
-	version = crypto_get_x509_version(x509);
+	version = crypto_x509_get_version(x509);
 	
 	 if (version < 1 || version > 3) { 
 	 	prlog(PR_ERR,"ERROR: X509 version %d is not valid\n", version);
@@ -533,7 +534,7 @@ static int validateCertStruct(void *x509, const char *varName)
 		return CERT_FAIL;
 	}
 	
-	len = crypto_get_x509_sig_len(x509);
+	len = crypto_x509_get_sig_len(x509);
 	// if sig doesnt have data
 	if (len <= 0) { 
 		prlog(PR_ERR, "ERROR: X509 has no signature data\n");
@@ -581,7 +582,7 @@ static int validateCertStruct(void *x509, const char *varName)
  *@return SUCCESS if certificate is valid
  *NOTE: Remember to unallocate the returned x509 struct!
  */
-int parseX509(void **x509, const unsigned char *certBuf, size_t buflen) 
+int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen) 
 {
 	unsigned char *generatedDER = NULL;
 	size_t generatedDERSize;

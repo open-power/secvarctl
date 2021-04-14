@@ -45,7 +45,7 @@ int performWriteCommand(int argc, char *argv[]);
 int performValidation(int argc, char* argv[]); 
 int performGenerateCommand(int argc, char* argv[]);
 
-int printCertInfo(void *x509);
+int printCertInfo(crypto_x509 *x509);
 void printESLInfo(EFI_SIGNATURE_LIST *sigList);
 void printTimestamp(struct efi_time t);
 void printGuidSig(const void *sig);
@@ -53,7 +53,7 @@ void printGuidSig(const void *sig);
 EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen);
 ssize_t get_esl_cert( const char *c,EFI_SIGNATURE_LIST *list ,char **cert);
 size_t get_pkcs7_len(const struct efi_variable_authentication_2 *auth);
-int parseX509(void **x509, const unsigned char *certBuf, size_t buflen);
+int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen);
 const char* getSigType(const uuid_t);
 
 int getSecVar(struct secvar **var, const char* name, const char *fullPath);
