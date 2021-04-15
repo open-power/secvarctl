@@ -189,7 +189,7 @@ to force to generation.  If [h]ash is input or output type be sure to specify th
 .B -s 
 <sigFile> in replacement of the private key argument. <sigFile> would contain only the raw signed data of a digest generated with `secvarctl generate c:x`, it is important that both these commands use the same custom timestamp argument 
 .B -t
-<y-m-d h:m:s>.
+<YYYY-MM-DDThh:mm:ss>.
  When generating an [a]uth file, it is required the user give the secure variable name that the auth file is for,
 .B -n
 <varName> , where <varName> is one of {"PK","KEK", "db", "dbx"}. This argument is also useful when the input file is an ESL for the dbx (use 
@@ -197,7 +197,7 @@ to force to generation.  If [h]ash is input or output type be sure to specify th
 dbx) because then the prevalidation will look for an ESL containing a hash rather than an x509.
  Also, when the output type is a [p]kcs7 or [a]uth file, the user can use a custom timestamp with 
 .B -t 
-<time> , where <time> is in the format "y-m-d h:m:s". If this argument is not used then the current date and time are used.
+<time> , where <time> is in the format 'YYYY-MM-DDThh:mm:ss'. If this argument is not used then the current date and time are used.
  When using the input type '[f]ile' it will be assumed to be a text file and if output file is '[e]sl', '[p]kcs7' or '[a]uth' it will be hashed according to <hashAlg> (default SHA256).
  To make a variable reset file, the user can replace
 .B generate <inputFormat>:<outputFormat> 
@@ -374,7 +374,19 @@ OPTIONAL:
 <varName> , name of secure boot variable, used when generating an auth file, PKCS7, or when the input file contains hashed data rather than x509 (use '-n dbx'), current <varName> are: {'PK','KEK','db','dbx'}
 .PP
 .B -t 
-<time> , where time is of the format 'y-m-d h:m:s'. creates a custom timestamp used when generating an auth or PKCS7 file, if not given then current time is used
+<time> , where <time> is of the format described below. creates a custom timestamp used when generating an auth or PKCS7 file, if not given then current time is used, all times are in UTC
+.RS 
+format of <time> = 'YYYY-MM-DDThh:mm:ss' where:
+.RS
+- 'YYYY' four-digit year
+ - 'MM' two-digit month (01=January, etc.)
+ - 'DD' two-digit day of month (01 through 31)
+ - 'T' appears literally
+ - 'hh' two digits of hour (00 through 23) (am/pm NOT allowed)
+ - 'mm' two digits of minute (00 through 59)
+ - 'ss' two digits of second (00 through 59)
+.RE
+.RE
 .PP
 .B -h 
 <hashAlg> , hash function, used when output or input format is hash, current values for <hashAlg> are : {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}
@@ -439,15 +451,15 @@ To create an auth file from a certificate for a KEK update (this will create an 
       $secvarctl generate c:a -k signer.key -c signer.crt -n KEK -i file.crt -o file.auth 
 .PP
 To create a PKCS7 file from an ESL for a db update with a custom timestamp:
-      $secvarctl generate e:p -k signer.key -c signer.crt -n db -t 2020-10-1 13:45:42 -i file.crt -o file.pkcs7 
+      $secvarctl generate e:p -k signer.key -c signer.crt -n db -t 2020-10-1T13:45:42 -i file.crt -o file.pkcs7 
 .PP
 To create an empty update to reset the db variable:
       $secvarctl generate reset -k signer.key -c signer.crt -n db -o db.auth 
 .PP
 To create an auth file using an external signing framework for db update:
-      $secvarctl generate c:x -n db -t 2021-1-1 1:1:1 -i file.crt -o file.hash
+      $secvarctl generate c:x -n db -t 2021-1-1T1:1:1 -i file.crt -o file.hash
       <user sends file.hash to be signed by external entity, signature is now in file.sig>
-      $secvarctl generate c:a -n db -t 2021-1-1 1:1:1 -c signer.crt -s file.sig -i file.crt -o file.auth 
+      $secvarctl generate c:a -n db -t 2021-1-1T1:1:1 -c signer.crt -s file.sig -i file.crt -o file.auth 
 
 .SH AUTHOR
 Nick Child nick.child@ibm.com,

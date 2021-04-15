@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#define __USE_XOPEN // needed for strptime
 #include <time.h> // for timestamp
 #include <ctype.h> // for isspace
 #include <argp.h>
@@ -48,7 +49,8 @@ static int getOutputData (const unsigned char *buff, size_t size, struct Argumen
 static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out, size_t *outSize);
 static int toHashForSecVarSigning(const unsigned char* ESL, size_t ESL_size, struct Arguments *args, unsigned char** outBuff, size_t* outBuffSize);
 static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const unsigned char *ESL, size_t ESL_size, struct Arguments *args);
-
+static int parseCustomTimestamp(struct efi_time *strct, const char *str);
+static void convert_tm_to_efi_time(struct efi_time *efi_t, struct tm *tm_t);
 /*
  *called from main()
  *handles argument parsing for generate command
@@ -89,7 +91,8 @@ int performGenerateCommand(int argc,char* argv[])
         								" `secvarctl generate c:x ...` and then signed externally into FILE, remember to use the"
         								" same '-t <timestamp>' argument for both commands"},
 		{"cert", 'c', "FILE", 0, "x509 cetificate (PEM), used when signing data for PKCS7/Auth files"},
-		{"time", 't', "'y-m-d h:m:s'", 0, "set custom timestamp when generating PKCS7/Auth/presigned digest, default is currrent time"},
+		{"time", 't', "<YYYY-MM-DDThh:mm:ss>", 0, "set custom timestamp in UTC when generating PKCS7/Auth/presigned "
+                                        "digest, default is currrent time in UTC, format defined by ISO 8601, note 'T' is literally in the string, see manpage for value info/ranges"},
 		{"force", 'f', 0 ,0, "does not do prevalidation on the input file, assumes format is correct"},
 		// these are hidden because they are mandatory and are described in the help message instead of in the options
 		{0, 'i', "FILE", OPTION_HIDDEN, "input file"},
@@ -136,7 +139,7 @@ int performGenerateCommand(int argc,char* argv[])
 		"  -create an auth file for a key reset:\n"
 		"\t'... reset -k <file> -c <file> -n <varName> -o <file>'\n"
         "  -create an auth file using an external signing framework:\n"
-        "\t'... c:x -n <varName> -t <y-m-d h:m:s> -i <file> -o <file>'\n"
+        "\t'... c:x -n <varName> -t <y-m-dTh:m:s> -i <file> -o <file>'\n"
         "\tthen user gets output signed through server (<sigFile>):\n"
         "\t'... c:a -n <> -t <sameTime!> -s <sigFile> -c <crtfile> -i <file> -o <file>\n"
 
@@ -293,20 +296,10 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 				rc = ALLOC_FAIL;
 				break;
 			}
-			// make sure -t flag has two strings <date> <time>
-			if (state->next >= state->argc || state->argv[state->next][0] == '-') {
-				prlog(PR_ERR, "ERROR: Incorrect flag '-t', see usage...\n");
-				argp_usage(state);
-				rc = ARG_PARSE_FAIL;
-				break;
-			}
-			// make sure timestamp is correct format
-			if (sscanf(arg,"%hd-%hhd-%hhd", &args->time->year, &args->time->month, &args->time->day) != 3
-				|| sscanf(state->argv[state->next], "%hhd:%hhd:%hhd", &args->time->hour, &args->time->minute, &args->time->second) != 3) {
-				prlog(PR_ERR, "ERROR: Could not parse given timestamp, make sure it is in format 'y-m-d h:m:s'\n");
-				rc = ARG_PARSE_FAIL;
-			}
-			state->next++;
+            if (parseCustomTimestamp(args->time, arg)) {
+                prlog(PR_ERR, "ERROR: Could not parse given timestamp %s, make sure it is in format YYYY-MM-DDThh:mm:ss\n", arg);
+                rc = ARG_PARSE_FAIL;
+            }
 			break;
 		case ARGP_KEY_ARG:
 			// check if reset key is desired
@@ -327,7 +320,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			else if (args->inForm == NULL || args->outForm == NULL)
 				prlog(PR_ERR, "ERROR: Incorrect '<inputFormat>:<outputFormat>', see usage...\n");
 			else if (args->time && validateTime(args->time))
-				prlog(PR_ERR, "Invalid timestamp flag -t 'y-m-d h:m:s>' , see usage...\n");
+				prlog(PR_ERR, "Invalid timestamp flag '-t YYYY-MM-DDThh:mm:ss' , see usage...\n");
 			else if (args->inForm[0] != 'r' && (args->inFile == NULL || isFile(args->inFile) ))
 				prlog(PR_ERR, "ERROR: Input File is invalid, see usage below...\n");
 			else if (args->varName && isVariable(args->varName))
@@ -347,6 +340,28 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 	return rc;
 }
 
+/*
+ *parses a '-t YYYY-MM-DDThh:mm:ss>' argument into the efi_time struct
+ *@param strct, the allocated efi_time struct, to be filled with data
+ *@param str,  the given timestamp string
+ *@return SUCCESS or errno if failed to extract data
+ */
+static int parseCustomTimestamp(struct efi_time *strct, const char *str)
+{
+    struct tm t;
+    char *ret = NULL;
+    memset(&t, 0, sizeof(t));
+    ret = strptime(str, "%FT%T", &t);
+    if (ret == NULL)
+        return INVALID_TIMESTAMP;
+    else if (*ret != '\0') {
+        prlog(PR_ERR, "ERROR: Failed to parse timestamp value at %s\n", ret);
+        return INVALID_TIMESTAMP;
+    }
+
+    convert_tm_to_efi_time(strct, &t);
+    return SUCCESS;
+}
 /*
  *after parsing argument information and getting input data, this will return the generated output data given the output format
  *@param buff, inut data, it must be of the same type as specified by inform
@@ -765,6 +780,21 @@ static int getHashFunction(const char* name, struct hash_funct **returnFunct)
 }
 
 /*
+ *converts the time in a tm timestamp to the equivalent efi_time
+ *@param efi_t , a pointer to an allocated efi_time struct, will be filled in with data
+ *@param tm_t , the tm struct filled with data
+ */
+static void convert_tm_to_efi_time(struct efi_time *efi_t, struct tm *tm_t)
+{
+    efi_t->year = 1900 + tm_t->tm_year;
+    efi_t->month = tm_t->tm_mon + 1; // makes 1-12 not 0-11
+    efi_t->day = tm_t->tm_mday;
+    efi_t->hour = tm_t->tm_hour;
+    efi_t->minute = tm_t->tm_min;
+    efi_t->second = tm_t->tm_sec;
+}
+
+/*
  *gets current time and puts into an efi_time struct
  *@param ts, the outputted current time
  *@return SUCCESS or errno if generated timestamp is incorrect
@@ -774,13 +804,8 @@ static int getTimestamp(struct efi_time *ts) {
 	struct tm *t;
 
 	time(&epochTime);	
-	t = localtime(&epochTime);
-	ts->year = 1900 + t->tm_year;
-    ts->month = t->tm_mon + 1; // makes 1-12 not 0-11
-    ts->day = t->tm_mday;
-   	ts->hour = t->tm_hour;
-   	ts->minute = t->tm_min;
-  	ts->second = t->tm_sec;
+	t = gmtime(&epochTime);
+    convert_tm_to_efi_time(ts, t);
 
   	return validateTime(ts);	
 }

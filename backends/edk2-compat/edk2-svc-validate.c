@@ -633,30 +633,34 @@ out:
 	return rc;
 }
 
-
+/*
+ *ensures that efi_time values are  in correct ranges
+ *@param time , pointer to an efi_time struct
+ *return SUCCESS or INVALID_TIMESTAMP if not valid
+ */
 int validateTime(struct efi_time *time) 
 {
-	if (time->year < 0 || time->year > 9999) {
+	if (time->year < 1900 || time->year > 9999) {
 		prlog(PR_ERR,"ERROR: Invalid Timestamp value for year: %d\n", time->year);
 		return INVALID_TIMESTAMP;
 	}
 	
-	if (time->month < 0 || time->month > 12){
+	if (time->month < 1 || time->month > 12){
 		prlog(PR_ERR,"ERROR: Invalid Timestamp value for month: %d\n", time->month );
 		return INVALID_TIMESTAMP;
 	}
 	
-	if (time->day < 0 || time->day > 31){
+	if (time->day < 1 || time->day > 31){
 		prlog(PR_ERR,"ERROR: Invalid Timestamp value for day: %d\n", time->day);
 		return INVALID_TIMESTAMP;
 	}
 		
-	if (time->hour < 0 || time->hour > 24){
+	if (time->hour < 0 || time->hour > 23){
 		prlog(PR_ERR,"ERROR: Invalid Timestamp value for hour: %d\n", time->hour);
 		return INVALID_TIMESTAMP;
 	}
 		
-	if (time->minute < 0 || time->minute > 60){
+	if (time->minute < 0 || time->minute > 59){
 		prlog(PR_ERR,"ERROR: Invalid Timestamp value for minute: %d\n", time->minute);
 		return INVALID_TIMESTAMP;
 	}
@@ -673,5 +677,5 @@ void printTimestamp(struct efi_time t)
 {
 	// NOTE: if auth is made with sign-efi-sig-list, year will be actual year+1 (see https:// blog.hansenpartnership.com/updating-pk-kek-db-and-x-in-user-mode/), 
 	// also month could be one less bc months are 0-11 not 1-12
-	printf("%04d-%02d-%02d %02d:%02d:%02d\n", t.year,t.month,t.day, t.hour, t.minute, t.second); 
+	printf("%04d-%02d-%02d %02d:%02d:%02d UTC\n", t.year,t.month,t.day, t.hour, t.minute, t.second); 
 }
