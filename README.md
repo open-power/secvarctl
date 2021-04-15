@@ -171,7 +171,15 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		-v , verbose, gives process info
 		-n <varName> , name of secure boot variable, used when generating an auth file, PKCS7, or when the input file contains hashed data rather than x509 (use '-n dbx'), current <varName> are: {'PK','KEK','db','dbx'}
 		-f force generation, skips validation of input file, assumes format to be correct
-		-t <time> , where time is of the format 'y-m-d h:m:s'. creates a custom timestamp used when generating an auth or PKCS7 file, if not given then current time is used
+		-t <time> , where <time> is of the format described below. creates a custom timestamp used when generating an auth or PKCS7 file, if not given then current time is used, all times are in UTC
+                    format of <time> = 'YYYY-MM-DDThh:mm:ss' where:
+                        - 'YYYY' four-digit year
+                        - 'MM' two-digit month (01=January, etc.)
+                        - 'DD' two-digit day of month (01 through 31)
+                        - 'T' appears literally
+                        - 'hh' two digits of hour (00 through 23) (am/pm NOT allowed)
+                        - 'mm' two digits of minute (00 through 59)
+                        - 'ss' two digits of second (00 through 59)
 		-h <hashAlg> hash function, used when output or input format is [h]ash, current <hashAlg> are : {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}
 		-k <privKey> , private key, used when generating [p]kcs7 or [a]uth file
 		-c <certFile> , x509 certificate (PEM), used when generating [p]kcs7 or [a]uth file

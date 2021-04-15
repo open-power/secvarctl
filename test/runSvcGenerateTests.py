@@ -44,12 +44,13 @@ badSignedCommands = [
 [["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n"], False], #no var name
 [["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "foo"], False], #Invalid var
 [["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t","2020-10-2010:2:20", ], False], #Wrong timestamp format
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "10:2:20", "2020-10-20"], False], #Wrong timestamp order
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-50-20", "10:2:20" ], False], #bad month
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-200", "10:2:20" ], False], #bad day
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20", "25:2:20" ], False], #bad hour
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20", "10:61:20" ], False], #bad minute
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20", "10:2:61" ], False], #bad sec
+[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "10:2:20T2020-10-20"], False], #Wrong timestamp order
+[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-50-20T10:2:20" ], False], #bad month
+[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-200T10:2:20" ], False], #bad day
+[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T25:2:20" ], False], #bad hour
+[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:61:20" ], False], #bad minute
+[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:61" ], False], #bad sec
+[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t" ], False], #no timestammp arg
 [["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #no key file
 [["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k","./testdata/goldenKeys/PK/PK.key", "-c","-n", "db"], False], #no crt file
 [["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k","./testdata/goldenKeys/PK/PK.key","-c", "./testdata/goldenKeys/PK/PK.crt",  "-c", "./testdata/goldenKeys/KEK/KEK.crt", "-n", "db"], False], #crt != #keys
@@ -259,9 +260,9 @@ class Test(unittest.TestCase):
 		#now test custom timestamp works
 		customTSAuth1 = OUTDIR+"db_by_PK_customTS1.auth"
 		customTSAuth2 = OUTDIR+"db_by_PK_customTS2.auth"
-		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth1, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20", "10:2:8" ], out, self), True) 
+		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth1, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8" ], out, self), True) 
 		time.sleep(4)
-		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth2, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20", "10:2:8" ], out, self), True) 
+		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth2, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8" ], out, self), True) 
 		self.assertEqual( getCmdResult([SECTOOLS, "validate", customTSAuth1], out, self), True)
 		self.assertEqual( getCmdResult([SECTOOLS, "validate", customTSAuth2], out, self), True)
 		self.assertEqual( compareFiles(customTSAuth1, customTSAuth2), True)
@@ -327,7 +328,7 @@ class Test(unittest.TestCase):
 
 	def test_genExternalSig(self):
 		out = "genExternalSigLog.txt"
-		timestamp = ["-t", "2020-1-1","1:1:1"]
+		timestamp = ["-t", "2020-1-1T1:1:1"]
 		inpCrt = "./testdata/db_by_KEK.crt"
 		sigCrt = "./testdata/goldenKeys/KEK/KEK.crt"
 		sigKey = "./testdata/goldenKeys/KEK/KEK.key"
