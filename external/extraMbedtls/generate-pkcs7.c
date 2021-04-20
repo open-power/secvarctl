@@ -600,7 +600,7 @@ static int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char** crtFil
 	size_t crtSizePEM,*crtSizes = NULL, pkcs7BuffSize, whiteSpace, oidLen; 
 	int rc;
 
-	crts = calloc (1, sizeof(char*) * keyPairs);
+	crts = calloc (1, sizeof(unsigned char*) * keyPairs);
 	crtSizes = calloc(1, sizeof(size_t) * keyPairs);
 	if (!crts || !crtSizes) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
@@ -711,7 +711,7 @@ int to_pkcs7_generate_signature(unsigned char **pkcs7, size_t *pkcs7Size, const 
 		rc = ARG_PARSE_FAIL;
 		goto out;
 	}
-	keys = calloc(1, sizeof(char*) * keyPairs);
+	keys = calloc(1, sizeof(unsigned char*) * keyPairs);
 	keySizes = calloc(1, sizeof(size_t) * keyPairs);
 	if (!keys || !keySizes) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
