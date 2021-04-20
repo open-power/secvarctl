@@ -604,7 +604,8 @@ static int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char** crtFil
 	crtSizes = calloc(1, sizeof(size_t) * keyPairs);
 	if (!crts || !crtSizes) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		return ALLOC_FAIL;
+		rc = ALLOC_FAIL;
+		goto out;
 	}
 	for (int i = 0; i < keyPairs; i++) {
 		// get data from public keys
@@ -714,7 +715,8 @@ int to_pkcs7_generate_signature(unsigned char **pkcs7, size_t *pkcs7Size, const 
 	keySizes = calloc(1, sizeof(size_t) * keyPairs);
 	if (!keys || !keySizes) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		return ALLOC_FAIL;	
+		rc = ALLOC_FAIL;
+		goto out;	
 	}
 
 	for (int i = 0; i < keyPairs; i++) {
@@ -789,7 +791,8 @@ int to_pkcs7_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const
 	sig_sizes = calloc(1, sizeof(size_t) * keyPairs);
 	if (!sigs || !sig_sizes) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		return ALLOC_FAIL;	
+		rc = ALLOC_FAIL;
+		goto out;	
 	}
 
 	for (int i = 0; i < keyPairs; i++) {
