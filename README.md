@@ -221,4 +221,4 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 
       
 ## License   
-The files located in the `external` directory are borrowed files from other packages. They retain their licenses from their respective license headers. All other files are protected under Apache 2.0, as specified in the `LICENSE` file. 
+The files located in the `external` directory are borrowed files from other packages. They retain their licenses from their respective license headers. For example, the file `external/linux/.clang-format` is protected under GPL-2.0 as specified by its file header and `external/skiboot/LICENSE` . All other files not in the `external` directory are protected under Apache 2.0, as specified in the `LICENSE` file.

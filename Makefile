@@ -84,4 +84,11 @@ install: secvarctl
 	mkdir -p $(DESTDIR)/$(MANDIR)/man1
 	install -m 0644 secvarctl.1 $(DESTDIR)/$(MANDIR)/man1
 
+#dont add all c files, extra mbedtls and skiboot should retain its own format
+CLANG_FORMAT ?= clang-format
+format:
+	cp external/linux/.clang-format .
+	$(CLANG_FORMAT) --style=file -i *.c include/*.h crypto/*.c crypto/*.h backends/*/*.c backends/*/*/*.h
+	rm .clang-format
+
 -include $(OBJ:.o=.d)
