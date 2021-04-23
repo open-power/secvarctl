@@ -19,21 +19,23 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 
 
 ## REQUIREMENTS:  
-  -Must be on a POWER machine that supports Secure Boot (for reading and updating secure variables), x86 works for generation  
-  -Mbedtls version 2.14 and above   
-  -GNU Make or a build tool  
+  -Must be on a POWER machine that supports Secure Boot (for reading and updating secure variables), x86 works for file generation and validation  
+  -Mbedtls version 2.14 and above or OpenSSL   
+  -GNU Make or CMake 
   -C compiler
 	
 
 ## BUILDING:  
  |               | Make      | CMake |
  ---             | ----------- | ----------- |
- | Build  | `make [build options]`      | `mdkir build && cd build && cmake [build options] ../ . && cmake --build .`      |
+ | Default Build (Mbedtls is cryptolib) | `make [build options]`      | `mdkir build && cd build && cmake [build options] ../ . && cmake --build .`      |
+ | Build W OpenSSL as cryptolib | `make OPENSSL=1` | `mdkir build && cd build && cmake -DOPENSSL=1 [build options] ../ . && cmake --build .` |
  | Static Build | `STATIC=1` | `-DSTATIC=1`|
  | Reduced Size Build | default | `-DSTRIP=1` |
  | Build Without Crypto Functions | `NO_CRYPTO=1` | `-DNO_CRYPTO=1` |
  | Build W Specific Mbedtls Library | `CFLAGS="-I<path>/include" LDFLAGS="-L<path>/library"` | `-DCUSTOM_MBEDTLS=<path>` |
  | Build for Coverage Tests | `make [options] secvarctl-cov` | `-DCMAKE_BUILD_TYPE=Coverage` |
+ | Build W Debug Symbols | `make DEBUG=1` | default |
  | Install    | `make install`        | `cmake --install .`|
  
 
