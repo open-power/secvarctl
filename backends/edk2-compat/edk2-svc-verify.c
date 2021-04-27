@@ -296,7 +296,11 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 			prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 			return ALLOC_FAIL;
 		}
-		getCurrentVars(currentVars, &currCount, path);	
+		// unlikely fail, if alloc fails
+		if (getCurrentVars(currentVars, &currCount, path)) {
+			prlog(PR_ERR, "Could not get current variables from path %s\n", path);
+			return INVALID_FILE;
+		}
 	}
 
 	// once here, strings should be ready, it is time to fill banks
