@@ -495,7 +495,7 @@ static int getCurrentVars(char *newCurr[], int *size, const char* path)
  */
 static void printBanks(struct list_head *variable_bank,struct list_head *update_bank)
 {
-	struct secvar *var;
+	struct secvar *var = NULL;
 	printf("----CONTENTS OF UPDATE BANK----\n");
 	list_for_each(update_bank, var,link) {
 		printf("SecVar for %s contains %zd bytes of data\n", var->key, var->data_size);
@@ -516,7 +516,7 @@ static void printBanks(struct list_head *variable_bank,struct list_head *update_
 static int commitUpdateBank(struct list_head *update_bank, const char *path)
 {
 	int rc = INVALID_FILE;
-	struct secvar *var;
+	struct secvar *var = NULL;
 	list_for_each(update_bank, var, link) {
 		prlog(PR_INFO, "Writing new %s with %zd bytes of data to %s%s/update\n",var->key, var->data_size, path, var->key);
 		rc = updateVar(path, var->key, (unsigned char *)var->data, var->data_size);
