@@ -2,7 +2,7 @@
 /* Copyright 2021 IBM Corp.*/
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>	// strerror
+#include <errno.h> // strerror
 #include <stdlib.h>
 #include <fcntl.h> // O_WRONLY
 #include <unistd.h> // has read/open funcitons
@@ -16,7 +16,7 @@
  *@param path , full path wih file name
  *@return SUCCESS if it exists, error otherwise
  */
-int isFile(const char* path)
+int isFile(const char *path)
 {
 	int fptr;
 
@@ -29,18 +29,18 @@ int isFile(const char* path)
 	return SUCCESS;
 }
 
-size_t getLeadingWhitespace(unsigned char* data, size_t dataSize) 
+size_t getLeadingWhitespace(unsigned char *data, size_t dataSize)
 {
 	size_t whiteSpaceSize = 0;
 
-	while ((whiteSpaceSize < dataSize) && data[whiteSpaceSize] == 0x00) 
+	while ((whiteSpaceSize < dataSize) && data[whiteSpaceSize] == 0x00)
 		whiteSpaceSize++;
 
 	return whiteSpaceSize;
 }
-void printHex(unsigned char* data, size_t length)
+void printHex(unsigned char *data, size_t length)
 {
-	for (int i = 0; i < length; i++) 
+	for (int i = 0; i < length; i++)
 		printf("/%02x", data[i]);
 	printf("\n");
 }
@@ -50,13 +50,12 @@ void printHex(unsigned char* data, size_t length)
  *@param c pointer to buffer
  *@param size length of buffer
  */
-void printRaw(const char* c, size_t size) 
+void printRaw(const char *c, size_t size)
 {
 	for (int i = 0; i < size; i++)
 		printf("%c", *(c + i));
 	printf("\n\n");
 }
-
 
 /**
  *This Function returns a pointer to allocated memory that holds the data from the file 
@@ -66,38 +65,42 @@ void printRaw(const char* c, size_t size)
  *@return char* to allocted data of file with one extra '\0' for good measure
  *NOTE:REMEMBER TO UNALLOCATE RETURNED DATA
  **/
-char* getDataFromFile(const char* fullPath, size_t *size) 
+char *getDataFromFile(const char *fullPath, size_t *size)
 {
 	int fptr;
 	char *c = NULL;
 	struct stat fileInfo;
 	ssize_t read_size;
-	fptr = open(fullPath, O_RDONLY);			
+	fptr = open(fullPath, O_RDONLY);
 	if (fptr < 0) {
-		prlog(PR_WARNING,"----opening %s failed : %s----\n", fullPath, strerror(errno));
+		prlog(PR_WARNING, "----opening %s failed : %s----\n", fullPath,
+		      strerror(errno));
 		return NULL;
 	}
 	if (fstat(fptr, &fileInfo) < 0) {
 		goto out;
 	}
-	if(fileInfo.st_size <= 0){
+	if (fileInfo.st_size <= 0) {
 		prlog(PR_WARNING, "WARNING: file %s is empty\n", fullPath);
 	}
-	prlog(PR_NOTICE,"----opening %s is success: reading %ld bytes----\n", fullPath, fileInfo.st_size);
-	c = malloc(fileInfo.st_size); 
-	if (!c){
+	prlog(PR_NOTICE, "----opening %s is success: reading %ld bytes----\n",
+	      fullPath, fileInfo.st_size);
+	c = malloc(fileInfo.st_size);
+	if (!c) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 		goto out;
 	}
 	read_size = read(fptr, c, fileInfo.st_size);
 	if (read_size != fileInfo.st_size) {
-		prlog(PR_ERR, "ERROR: failed to read whole contents of %s in one go\n", fullPath);
+		prlog(PR_ERR,
+		      "ERROR: failed to read whole contents of %s in one go\n",
+		      fullPath);
 		free(c);
 		c = NULL;
 		goto out;
 	}
 	*size = fileInfo.st_size;
-out:	
+out:
 	close(fptr);
 
 	return c;
@@ -111,23 +114,26 @@ out:
  *@return negative int, error if opening/writing to .../update file
  *@return 0 for success or error number
  */
-int writeData(const char * file, const char * buff, size_t size)
+int writeData(const char *file, const char *buff, size_t size)
 {
-
-	int rc, fptr = open(file, O_WRONLY|O_TRUNC);
+	int rc, fptr = open(file, O_WRONLY | O_TRUNC);
 	if (fptr == -1) {
-		prlog(PR_ERR, "ERROR: Opening %s failed: %s\n", file, strerror(errno));
+		prlog(PR_ERR, "ERROR: Opening %s failed: %s\n", file,
+		      strerror(errno));
 		return INVALID_FILE;
 	}
 	rc = write(fptr, buff, size);
 	if (rc < 0) {
-		prlog(PR_ERR,"ERROR: Writing data to %s failed\n", file);
+		prlog(PR_ERR, "ERROR: Writing data to %s failed\n", file);
 		return FILE_WRITE_FAIL;
-	}
-	else if (rc == 0) {
-		prlog(PR_WARNING,"End of file reached, not all of file was written to %s\n", file);	
-	}
-	else prlog(PR_NOTICE,"%d/%zd bytes successfully written from file to %s\n", rc, size, file);
+	} else if (rc == 0) {
+		prlog(PR_WARNING,
+		      "End of file reached, not all of file was written to %s\n",
+		      file);
+	} else
+		prlog(PR_NOTICE,
+		      "%d/%zd bytes successfully written from file to %s\n", rc,
+		      size, file);
 	close(fptr);
 
 	return SUCCESS;
@@ -141,24 +147,30 @@ int writeData(const char * file, const char * buff, size_t size)
  *@return negative int, error if opening/writing to .../update file
  *@return 0 for success or error number
  */
-int createFile(const char * file, const char * buff, size_t size)
+int createFile(const char *file, const char *buff, size_t size)
 {
 	int rc;
 	// create and set permissions
-	int fptr = open(file, O_WRONLY|O_TRUNC|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); 
+	int fptr = open(file, O_WRONLY | O_TRUNC | O_CREAT,
+			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fptr == -1) {
-		prlog(PR_ERR, "ERROR: Opening %s failed: %s\n", file, strerror(errno));
+		prlog(PR_ERR, "ERROR: Opening %s failed: %s\n", file,
+		      strerror(errno));
 		return INVALID_FILE;
 	}
 	rc = write(fptr, buff, size);
 	if (rc < 0) {
-		prlog(PR_ERR,"ERROR: Writing data to %s failed: %s\n", file, strerror(errno));
+		prlog(PR_ERR, "ERROR: Writing data to %s failed: %s\n", file,
+		      strerror(errno));
 		return FILE_WRITE_FAIL;
-	}
-	else if (rc == 0) {
-		prlog(PR_WARNING,"End of file reached, not all of file was written to %s\n", file);	
-	}
-	else prlog(PR_NOTICE,"%d/%zd bytes successfully written from file to %s\n", rc, size, file);
+	} else if (rc == 0) {
+		prlog(PR_WARNING,
+		      "End of file reached, not all of file was written to %s\n",
+		      file);
+	} else
+		prlog(PR_NOTICE,
+		      "%d/%zd bytes successfully written from file to %s\n", rc,
+		      size, file);
 	close(fptr);
 
 	return SUCCESS;
@@ -179,10 +191,11 @@ int reallocArray(void **arr, size_t new_length, size_t size_each)
 	old_arr = *arr;
 	//check if requested size is too big
 	if (__builtin_mul_overflow(new_length, size_each, &new_size)) {
-		prlog(PR_ERR, "ERROR: Invalid size to alloc %zd * %zd\n", new_length, size_each);
+		prlog(PR_ERR, "ERROR: Invalid size to alloc %zd * %zd\n",
+		      new_length, size_each);
 		goto out;
 	}
-	*arr = realloc(*arr, size_each*new_length);
+	*arr = realloc(*arr, size_each * new_length);
 	if (*arr == NULL)
 		goto out;
 
@@ -190,5 +203,5 @@ int reallocArray(void **arr, size_t new_length, size_t size_each)
 
 out:
 	free(old_arr);
-  	return ALLOC_FAIL;
+	return ALLOC_FAIL;
 }

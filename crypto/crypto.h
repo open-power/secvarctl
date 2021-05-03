@@ -12,7 +12,7 @@
 
 #define CRYPTO_MD_SHA1 NID_sha1
 #define CRYPTO_MD_SHA224 NID_sha224
-#define CRYPTO_MD_SHA256 NID_sha256 
+#define CRYPTO_MD_SHA256 NID_sha256
 #define CRYPTO_MD_SHA384 NID_sha384
 #define CRYPTO_MD_SHA512 NID_sha512
 
@@ -20,18 +20,17 @@ typedef PKCS7 crypto_pkcs7;
 typedef X509 crypto_x509;
 typedef EVP_MD_CTX crypto_md_ctx;
 
-
 #elif defined MBEDTLS
 
 #include <mbedtls/md.h>
 #include "external/extraMbedtls/include/pkcs7.h"
 #define CRYPTO_MD_SHA1 MBEDTLS_MD_SHA1
 #define CRYPTO_MD_SHA224 MBEDTLS_MD_SHA224
-#define CRYPTO_MD_SHA256 MBEDTLS_MD_SHA256 
+#define CRYPTO_MD_SHA256 MBEDTLS_MD_SHA256
 #define CRYPTO_MD_SHA384 MBEDTLS_MD_SHA384
-#define CRYPTO_MD_SHA512  MBEDTLS_MD_SHA512
+#define CRYPTO_MD_SHA512 MBEDTLS_MD_SHA512
 
-typedef struct mbedtls_pkcs7  crypto_pkcs7;
+typedef struct mbedtls_pkcs7 crypto_pkcs7;
 typedef mbedtls_x509_crt crypto_x509;
 typedef mbedtls_md_context_t crypto_md_ctx;
 #endif
@@ -57,7 +56,8 @@ void crypto_pkcs7_free(crypto_pkcs7 *pkcs7);
  *@return if successful, a void pointer to either an openssl or mbedtls pkcs7 struct. else returns NULL
  *NOTE: if successful (returns not NULL), remember to call crypto_free_pkcs7 to unalloc. 
  */
-crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen);
+crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf,
+				     const int buflen);
 
 /*
  *returns one signing ceritficate from the PKKCS7 signing certificate chain
@@ -76,7 +76,8 @@ crypto_x509 *crypto_pkcs7_get_signing_cert(crypto_pkcs7 *pkcs7, int cert_num);
  *@param hash_len , the length of expected hash (ex: SHA256 = 32), if 0 then asssumptions are made based on md in pkcs7
  *@return SUCCESS or error number if resulting hashes are not equal
  */
-int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509, unsigned char *hash, int hash_len);
+int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
+				    unsigned char *hash, int hash_len);
 
 /*
  *generates a PKCS7 and create signature with private and public keys
@@ -90,8 +91,11 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509, unsi
  *@param hashFunct, hash function to use in digest, see crypto_hash_funct for values 
  *@return SUCCESS or err number 
  */
-int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
-    const char** crtFiles, const char** keyFiles,  int keyPairs, int hashFunct);
+int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
+				      const unsigned char *newData,
+				      size_t newDataSize, const char **crtFiles,
+				      const char **keyFiles, int keyPairs,
+				      int hashFunct);
 
 /*
  *generates a PKCS7 with given signed data
@@ -105,9 +109,10 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size, 
  *@param hashFunct, hash function to use in digest, see crypto_hash_funct for values
  *@return SUCCESS or err number 
  */
-int crypto_pkcs7_generate_w_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
-    const char** crtFiles, const char** sigFiles,  int keyPairs, int hashFunct);
-
+int crypto_pkcs7_generate_w_already_signed_data(
+	unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData,
+	size_t newDataSize, const char **crtFiles, const char **sigFiles,
+	int keyPairs, int hashFunct);
 
 /**====================X509 Functions ====================**/
 int crypto_x509_get_der_len(crypto_x509 *x509);
@@ -130,7 +135,8 @@ int crypto_x509_is_RSA(crypto_x509 *x509);
  *@param short_desc ,  already alloc'd pointer to output string
  *@param max_len   , number of bytes allocated to short_desc arg
  */
-void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc, size_t max_len);
+void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc,
+				size_t max_len);
 
 /*
  *parses the x509 struct into a human readable informational string
@@ -140,7 +146,8 @@ void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc, size_t max_
  *@param x509 ,  a pointer to either an openssl or mbedtls x509 struct
  *@return number of bytes written to x509_info
  */
-int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim, crypto_x509 *x509);
+int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim,
+			      crypto_x509 *x509);
 
 /*
  *parses a data buffer into an x509 struct 
@@ -163,7 +170,6 @@ crypto_x509 *crypto_x509_parse_der(const unsigned char *data, size_t data_len);
  */
 void crypto_x509_free(crypto_x509 *x509);
 
-
 /**====================General Functions ====================**/
 /*
  *attempts to convert PEM data buffer into DER data buffer
@@ -174,7 +180,8 @@ void crypto_x509_free(crypto_x509 *x509);
  *@return SUCCESS or errno if conversion failed
  *Note: Remember to unallocate the output data!
  */
-int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen, unsigned char **output, size_t *olen);
+int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
+			      unsigned char **output, size_t *olen);
 
 /*
  *accepts an error code from either mbedtls or openssl and returns a string describing it
@@ -183,7 +190,6 @@ int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen, unsigned 
  *@out_max_len , the number of bytes allocated to out_str
  */
 void crypto_strerror(int rc, char *out_str, size_t out_max_len);
-
 
 /**====================Hashing Functions ====================**/
 /*
@@ -201,7 +207,8 @@ int crypto_md_ctx_init(crypto_md_ctx **ctx, int md_id);
  *@param data_len , length of data to be hashed
  *@return SUCCESS or err if additional data could not be added to context
  */
-int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data, size_t data_len);
+int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data,
+		     size_t data_len);
 
 /*
  *runs the hash over the supplied data (given with crypto_md_update) and returns it in hash
@@ -215,7 +222,7 @@ int crypto_md_finish(crypto_md_ctx *ctx, unsigned char *hash);
  *frees the memory alloacted for the hashing context
  *@param ctx , a pointer to either an mbedtls or openssl hashing context
  */
-void crypto_md_free(crypto_md_ctx *ctx); 
+void crypto_md_free(crypto_md_ctx *ctx);
 
 /*
  *given a data buffer it generates the desired hash 
@@ -227,5 +234,7 @@ void crypto_md_free(crypto_md_ctx *ctx);
  *@return SUCCESS or err number 
  *NOTE: outHash is allocated inside this funtion and must be unallocated sometime after calling
  */
-int crypto_md_generate_hash(const unsigned char* data, size_t size, int hashFunct, unsigned char** outHash, size_t* outHashSize);
+int crypto_md_generate_hash(const unsigned char *data, size_t size,
+			    int hashFunct, unsigned char **outHash,
+			    size_t *outHashSize);
 #endif

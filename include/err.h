@@ -2,7 +2,7 @@
 /* Copyright 2021 IBM Corp.*/
 #ifndef ERR_H
 #define ERR_H
-enum errors{
+enum errors {
 	SUCCESS = 0,
 	AUTH_FAIL = -1,
 	PKCS7_FAIL = -2,
