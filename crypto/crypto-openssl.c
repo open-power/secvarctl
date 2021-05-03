@@ -4,7 +4,7 @@
 // ^extra precaution to not compile with openssl unless specified
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>// for exit
+#include <stdlib.h> // for exit
 #include "crypto.h"
 #include "include/prlog.h"
 #include "include/err.h"
@@ -19,604 +19,660 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 
-crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen) 
+crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen)
 {
-    int rc, i, num_signers;
-    PKCS7* pkcs7;
-    PKCS7_ISSUER_AND_SERIAL * issuer;
-    PKCS7_SIGNER_INFO *signer_info;
-    pkcs7 = d2i_PKCS7(NULL, &buf, buflen);
-    if (!pkcs7) {
-        prlog(PR_ERR, "ERROR: parsing PKCS7 with Openssl failed\n");
-        rc = PKCS7_FAIL;
-        goto out;
-    }
+	int rc, i, num_signers;
+	PKCS7 *pkcs7;
+	PKCS7_ISSUER_AND_SERIAL *issuer;
+	PKCS7_SIGNER_INFO *signer_info;
+	pkcs7 = d2i_PKCS7(NULL, &buf, buflen);
+	if (!pkcs7) {
+		prlog(PR_ERR, "ERROR: parsing PKCS7 with Openssl failed\n");
+		rc = PKCS7_FAIL;
+		goto out;
+	}
 
-    //make sure it contains signed data, openssl supports other types
-    //returns 1 if successful
-    rc = PKCS7_type_is_signed(pkcs7);
-    if (!rc) {
-        prlog(PR_ERR, "ERROR: PKCS7 does not contain signed data\n");
-        rc = PKCS7_FAIL;
-        crypto_pkcs7_free(pkcs7);
-        goto out;
-    }
-    //mbedtls prints signer serial number when parsing, trying to stay as close to mbedtls output as possible
-    //only prints anything if verbose is set
-    num_signers = sk_PKCS7_SIGNER_INFO_num(PKCS7_get_signer_info(pkcs7));
-    for (int s = 0; s < num_signers; s++) {
-        signer_info = sk_PKCS7_SIGNER_INFO_value(PKCS7_get_signer_info(pkcs7), s);
-        // issuer = PKCS7_get_issuer_and_serial(pkcs7, 0);
-        if (!signer_info) {
-            prlog(PR_ERR, "ERROR: Could not get PKCS7 signer information\n");
-            rc = PKCS7_FAIL;
-            goto out;
-        }
-        else {
-            issuer = signer_info->issuer_and_serial;
-            prlog(PR_INFO, "\tpkcs7 message signer serial: ");
-            for (i = 0; i < (ssize_t)issuer->serial->length - 1; i++)
-                prlog(PR_INFO, "%02x:", issuer->serial->data[i]);
-             prlog(PR_INFO, "%02x\n", issuer->serial->data[i]);
-        }
-    }
+	//make sure it contains signed data, openssl supports other types
+	//returns 1 if successful
+	rc = PKCS7_type_is_signed(pkcs7);
+	if (!rc) {
+		prlog(PR_ERR, "ERROR: PKCS7 does not contain signed data\n");
+		rc = PKCS7_FAIL;
+		crypto_pkcs7_free(pkcs7);
+		goto out;
+	}
+	//mbedtls prints signer serial number when parsing, trying to stay as close to mbedtls output as possible
+	//only prints anything if verbose is set
+	num_signers = sk_PKCS7_SIGNER_INFO_num(PKCS7_get_signer_info(pkcs7));
+	for (int s = 0; s < num_signers; s++) {
+		signer_info = sk_PKCS7_SIGNER_INFO_value(
+			PKCS7_get_signer_info(pkcs7), s);
+		// issuer = PKCS7_get_issuer_and_serial(pkcs7, 0);
+		if (!signer_info) {
+			prlog(PR_ERR,
+			      "ERROR: Could not get PKCS7 signer information\n");
+			rc = PKCS7_FAIL;
+			goto out;
+		} else {
+			issuer = signer_info->issuer_and_serial;
+			prlog(PR_INFO, "\tpkcs7 message signer serial: ");
+			for (i = 0; i < (ssize_t)issuer->serial->length - 1;
+			     i++)
+				prlog(PR_INFO,
+				      "%02x:", issuer->serial->data[i]);
+			prlog(PR_INFO, "%02x\n", issuer->serial->data[i]);
+		}
+	}
 
-    //if parsing made it to here then parsing was successful
-    rc = SUCCESS;
+	//if parsing made it to here then parsing was successful
+	rc = SUCCESS;
 out:
-    if (rc)
-        return NULL;
+	if (rc)
+		return NULL;
 
-    return pkcs7; 
+	return pkcs7;
 }
 
 int crypto_pkcs7_md_is_sha256(crypto_pkcs7 *pkcs7)
 {
-    X509_ALGOR *alg;
-    //extract signer algorithms from pkcs7
-    alg = sk_X509_ALGOR_value(pkcs7->d.sign->md_algs, 0);
-    if (!alg) {
-        prlog(PR_ERR, "ERROR: Could not extract message digest identifiers from PKCS7\n");
-        return PKCS7_FAIL;
-    }
-    //extract nid from algorithms and ensure it is the same nid as SHA256
-    if (OBJ_obj2nid(alg->algorithm) == NID_sha256 ) 
-        return SUCCESS;
-    else
-        return PKCS7_FAIL;
+	X509_ALGOR *alg;
+	//extract signer algorithms from pkcs7
+	alg = sk_X509_ALGOR_value(pkcs7->d.sign->md_algs, 0);
+	if (!alg) {
+		prlog(PR_ERR,
+		      "ERROR: Could not extract message digest identifiers from PKCS7\n");
+		return PKCS7_FAIL;
+	}
+	//extract nid from algorithms and ensure it is the same nid as SHA256
+	if (OBJ_obj2nid(alg->algorithm) == NID_sha256)
+		return SUCCESS;
+	else
+		return PKCS7_FAIL;
 }
 
-void crypto_pkcs7_free(crypto_pkcs7 *pkcs7) 
+void crypto_pkcs7_free(crypto_pkcs7 *pkcs7)
 {
-    PKCS7_free(pkcs7);
+	PKCS7_free(pkcs7);
 }
 
 crypto_x509 *crypto_pkcs7_get_signing_cert(crypto_pkcs7 *pkcs7, int cert_num)
 {
-    X509 *pkcs7_cert = NULL;
+	X509 *pkcs7_cert = NULL;
 
-    pkcs7_cert = sk_X509_value(pkcs7->d.sign->cert, cert_num);
+	pkcs7_cert = sk_X509_value(pkcs7->d.sign->cert, cert_num);
 
-    return pkcs7_cert;
-
+	return pkcs7_cert;
 }
 
-int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509, unsigned char *hash, int hash_len)
+int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
+				    unsigned char *hash, int hash_len)
 {
-    //currently this function works and the mbedtls version currently perform the following steps
-    //  1. the hash, md context and given x509 are used to generated a signature
-    //  2. all of the signatures in the pkcs7 are compared to the signature generated by the x509
-    //  3. if any of the signatures in the pkcs7 match the genrated signature then return SUCCESS
-    int rc, exp_size, md_nid, num_signers;
-    unsigned char * exp_sig;
-    EVP_PKEY *pk;
-    EVP_PKEY_CTX *pk_ctx;
-    X509_ALGOR *alg;
-    const EVP_MD *evp_md;
-    PKCS7_SIGNER_INFO *signer_info;
+	//currently this function works and the mbedtls version currently perform the following steps
+	//  1. the hash, md context and given x509 are used to generated a signature
+	//  2. all of the signatures in the pkcs7 are compared to the signature generated by the x509
+	//  3. if any of the signatures in the pkcs7 match the genrated signature then return SUCCESS
+	int rc, exp_size, md_nid, num_signers;
+	unsigned char *exp_sig;
+	EVP_PKEY *pk;
+	EVP_PKEY_CTX *pk_ctx;
+	X509_ALGOR *alg;
+	const EVP_MD *evp_md;
+	PKCS7_SIGNER_INFO *signer_info;
 
-    //generate a signature with the x509
-    pk = X509_get_pubkey(x509);
-    pk_ctx = EVP_PKEY_CTX_new(pk, NULL);
-    if (pk == NULL || pk_ctx == NULL) {
-        prlog(PR_ERR, "ERROR: Failed to create public key context from x509\n");
-        return CERT_FAIL;       
-    }
-    if (EVP_PKEY_verify_init(pk_ctx) <= 0) {
-        prlog(PR_ERR, "ERROR: Failed to initialize pk context for x509 pk \n");
-        rc = CERT_FAIL;
-        goto out;
-    }
-    if (EVP_PKEY_CTX_set_rsa_padding(pk_ctx, RSA_PKCS1_PADDING) <= 0) {
-        prlog(PR_ERR, "ERROR: Failed to setup pk context with RSA padding\n");
-        rc = CERT_FAIL;
-        goto out;
-    }
-      //extract signer algorithms from pkcs7
-    alg = sk_X509_ALGOR_value(pkcs7->d.sign->md_algs, 0);
-    if (!alg) {
-        prlog(PR_ERR, "ERROR: Could not extract message digest identifiers from PKCS7\n");
-        rc = PKCS7_FAIL;
-        goto out;        
-    }
-    //extract nid from algorithms
-    md_nid = OBJ_obj2nid(alg->algorithm);
-    //set signature md depending on md in pkcs7
-    evp_md = EVP_get_digestbynid(md_nid);
-    if (!evp_md) {
-        prlog(PR_ERR, "ERROR: Unknown NID (%d) for MD found in PKCS7\n", md_nid);
-        rc = PKCS7_FAIL;
-        goto out;
-    }
+	//generate a signature with the x509
+	pk = X509_get_pubkey(x509);
+	pk_ctx = EVP_PKEY_CTX_new(pk, NULL);
+	if (pk == NULL || pk_ctx == NULL) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to create public key context from x509\n");
+		return CERT_FAIL;
+	}
+	if (EVP_PKEY_verify_init(pk_ctx) <= 0) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to initialize pk context for x509 pk \n");
+		rc = CERT_FAIL;
+		goto out;
+	}
+	if (EVP_PKEY_CTX_set_rsa_padding(pk_ctx, RSA_PKCS1_PADDING) <= 0) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to setup pk context with RSA padding\n");
+		rc = CERT_FAIL;
+		goto out;
+	}
+	//extract signer algorithms from pkcs7
+	alg = sk_X509_ALGOR_value(pkcs7->d.sign->md_algs, 0);
+	if (!alg) {
+		prlog(PR_ERR,
+		      "ERROR: Could not extract message digest identifiers from PKCS7\n");
+		rc = PKCS7_FAIL;
+		goto out;
+	}
+	//extract nid from algorithms
+	md_nid = OBJ_obj2nid(alg->algorithm);
+	//set signature md depending on md in pkcs7
+	evp_md = EVP_get_digestbynid(md_nid);
+	if (!evp_md) {
+		prlog(PR_ERR, "ERROR: Unknown NID (%d) for MD found in PKCS7\n",
+		      md_nid);
+		rc = PKCS7_FAIL;
+		goto out;
+	}
 
-    if (EVP_PKEY_CTX_set_signature_md(pk_ctx, evp_md) <= 0) {
-        prlog(PR_ERR, "ERROR: Failed to set signature md for pk ctx\n");
-        rc = CERT_FAIL;
-        goto out;
-    }
-    //assume hash length if none given
-    if (hash_len == 0) {
-        hash_len = EVP_MD_size(evp_md);
-    }
+	if (EVP_PKEY_CTX_set_signature_md(pk_ctx, evp_md) <= 0) {
+		prlog(PR_ERR, "ERROR: Failed to set signature md for pk ctx\n");
+		rc = CERT_FAIL;
+		goto out;
+	}
+	//assume hash length if none given
+	if (hash_len == 0) {
+		hash_len = EVP_MD_size(evp_md);
+	}
 
-    //verify on all signatures in pkcs7
-    num_signers = sk_PKCS7_SIGNER_INFO_num(PKCS7_get_signer_info(pkcs7));
-    for (int s = 0; s < num_signers; s++) {
-       //make sure we can get the signature data
-        signer_info = sk_PKCS7_SIGNER_INFO_value(PKCS7_get_signer_info(pkcs7), s);
-        // issuer = PKCS7_get_issuer_and_serial(pkcs7, 0);
-        if (!signer_info) {
-            prlog(PR_ERR, "ERROR: Could not get PKCS7 signer information\n");
-            rc = PKCS7_FAIL;
-            goto out;
-        }
+	//verify on all signatures in pkcs7
+	num_signers = sk_PKCS7_SIGNER_INFO_num(PKCS7_get_signer_info(pkcs7));
+	for (int s = 0; s < num_signers; s++) {
+		//make sure we can get the signature data
+		signer_info = sk_PKCS7_SIGNER_INFO_value(
+			PKCS7_get_signer_info(pkcs7), s);
+		// issuer = PKCS7_get_issuer_and_serial(pkcs7, 0);
+		if (!signer_info) {
+			prlog(PR_ERR,
+			      "ERROR: Could not get PKCS7 signer information\n");
+			rc = PKCS7_FAIL;
+			goto out;
+		}
 
-        exp_size = signer_info->enc_digest->length;
-        exp_sig = signer_info->enc_digest->data;
+		exp_size = signer_info->enc_digest->length;
+		exp_sig = signer_info->enc_digest->data;
 
-        if (exp_size <= 0 || !exp_sig) {
-            prlog(PR_ERR, "ERROR: No data found in PKCS7\n");
-            rc = PKCS7_FAIL;
-            goto out;
-        }
-        rc = EVP_PKEY_verify(pk_ctx, exp_sig, exp_size, hash, hash_len);
-        //returns 1 on success
-        //if successfull then exit
-        if (rc == 1)
-            goto out;
-    }
+		if (exp_size <= 0 || !exp_sig) {
+			prlog(PR_ERR, "ERROR: No data found in PKCS7\n");
+			rc = PKCS7_FAIL;
+			goto out;
+		}
+		rc = EVP_PKEY_verify(pk_ctx, exp_sig, exp_size, hash, hash_len);
+		//returns 1 on success
+		//if successfull then exit
+		if (rc == 1)
+			goto out;
+	}
 out:
-    EVP_PKEY_free(pk);
-    EVP_PKEY_CTX_free(pk_ctx);
+	EVP_PKEY_free(pk);
+	EVP_PKEY_CTX_free(pk_ctx);
 
-    if (rc == 1) 
-        return SUCCESS; 
-    return PKCS7_FAIL;
+	if (rc == 1)
+		return SUCCESS;
+	return PKCS7_FAIL;
 }
 
-int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
-    const char** crtFiles, const char** keyFiles,  int keyPairs, int hashFunct)
+int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
+				      const unsigned char *newData,
+				      size_t newDataSize, const char **crtFiles,
+				      const char **keyFiles, int keyPairs,
+				      int hashFunct)
 {
-    int rc;
-    PKCS7 *gen_pkcs7_struct = NULL;
-    BIO *bio = NULL, *out_bio = NULL;
-    EVP_PKEY *evp_pkey = NULL;
-    const EVP_MD *evp_md = NULL;
-    crypto_x509 *x509 = NULL;
-    size_t pkcs7_out_len;
-    unsigned char *keyPEM = NULL, *key = NULL, *keyTmp, *crtPEM = NULL, *crt = NULL, *out_bio_der = NULL;
-    size_t keySizePEM, keySize, crtSizePEM, crtSize;
-    
-    if (keyPairs == 0) {
-        prlog(PR_ERR, "ERROR: No signers given, cannot generate PKCS7\n");
-        return PKCS7_FAIL;
-    }
+	int rc;
+	PKCS7 *gen_pkcs7_struct = NULL;
+	BIO *bio = NULL, *out_bio = NULL;
+	EVP_PKEY *evp_pkey = NULL;
+	const EVP_MD *evp_md = NULL;
+	crypto_x509 *x509 = NULL;
+	size_t pkcs7_out_len;
+	unsigned char *keyPEM = NULL, *key = NULL, *keyTmp, *crtPEM = NULL,
+		      *crt = NULL, *out_bio_der = NULL;
+	size_t keySizePEM, keySize, crtSizePEM, crtSize;
 
-    evp_md = EVP_get_digestbynid(hashFunct);
-    if (!evp_md) {
-        prlog(PR_ERR, "ERROR: Unknown NID (%d) for MD found in PKCS7\n", hashFunct);
-        return PKCS7_FAIL;
-    }
+	if (keyPairs == 0) {
+		prlog(PR_ERR,
+		      "ERROR: No signers given, cannot generate PKCS7\n");
+		return PKCS7_FAIL;
+	}
 
-    bio = BIO_new_mem_buf(newData, newDataSize);
-    if (!bio) {
-        prlog(PR_ERR, "ERROR: Failed to initialize new data BIO structure\n");
-        rc = PKCS7_FAIL;
-        goto out;
-    }
+	evp_md = EVP_get_digestbynid(hashFunct);
+	if (!evp_md) {
+		prlog(PR_ERR, "ERROR: Unknown NID (%d) for MD found in PKCS7\n",
+		      hashFunct);
+		return PKCS7_FAIL;
+	}
 
-    gen_pkcs7_struct = PKCS7_sign(NULL, NULL, NULL, bio, PKCS7_PARTIAL | PKCS7_DETACHED);
-    if (!gen_pkcs7_struct){
-        prlog(PR_ERR, "ERROR: Failed to initialize pkcs7 structure\n");
-        rc = PKCS7_FAIL;
-        goto out;
-    }
-    //for every key pair get the data and add the signer to the pkcs7
-    for (int i = 0; i < keyPairs; i++) {
-        // get data of private keys
-        keyPEM = (unsigned char *)getDataFromFile(keyFiles[i], &keySizePEM);
-        if (!keyPEM) {
-            prlog(PR_ERR, "ERROR: failed to get data from priv key file %s\n", keyFiles[i]);
-            rc = INVALID_FILE;
-            goto out;
-        }
-        rc = crypto_convert_pem_to_der(keyPEM, keySizePEM, (unsigned char **) &key, &keySize);
-        if (rc) {
-            prlog(PR_ERR, "Conversion for %s from PEM to DER failed\n", keyFiles[i]);
-            goto out;
-        }
-        //get data from crt
-        crtPEM = (unsigned char *)getDataFromFile(crtFiles[i], &crtSizePEM);
-        if (!keyPEM) {
-            prlog(PR_ERR, "ERROR: failed to get data from cert file %s\n", crtFiles[i]);
-            rc = INVALID_FILE;
-            goto out;
-        }
-        rc = crypto_convert_pem_to_der(crtPEM, crtSizePEM, (unsigned char **) &crt, &crtSize);
-        if (rc) {
-            prlog(PR_ERR, "Conversion for %s from PEM to DER failed\n", crtFiles[i]);
-            goto out;
-        }
-        //get private key from private key DER buff
-        keyTmp = key;
-        evp_pkey = d2i_AutoPrivateKey(NULL, (const unsigned char **)&keyTmp, keySize);
-        if (!evp_pkey) {
-            prlog(PR_ERR, "ERROR: Failed to parse private key into EVP_PKEY openssl struct\n");
-            rc = INVALID_FILE;
-            goto out;
-        }
-        //get x509 from cert DER buff
-        x509 = crypto_x509_parse_der(crt, crtSize);
-        if (!x509) {
-            prlog(PR_ERR, "ERROR: Failed to parse certificate into x509 openssl struct\n");
-            rc = INVALID_FILE;
-            goto out;
-        }
-        //add the signature to the pkcs7
-        //returns NULL is failure
-        if (!PKCS7_sign_add_signer(gen_pkcs7_struct, x509, evp_pkey, evp_md, PKCS7_NOATTR)) {
-            prlog(PR_ERR, "ERROR: Failed to add signer to the pkcs7 structure\n");
-            rc = PKCS7_FAIL;
-            goto out;
-        }
-        //reset mem
-        free(keyPEM);
-        keyPEM = NULL;
-        free(key);
-        key = NULL;
-        free(crtPEM);
-        crtPEM = NULL;
-        EVP_PKEY_free(evp_pkey);
-        evp_pkey = NULL;
-        free(crt);
-        crt = NULL;
-        crypto_x509_free(x509);
-        x509 = NULL;
-    }
-    //finalize the struct, runs hashing and signatures
-    rc = PKCS7_final(gen_pkcs7_struct, bio, PKCS7_BINARY);
-    if (rc != 1) {
-        prlog(PR_ERR, "ERROR: Failed to finalize openssl pkcs7 struct\n");
-        rc = PKCS7_FAIL;
-        goto out;
-    }
-    //convert to DER
-    out_bio = BIO_new(BIO_s_mem());
-    if (!out_bio) {
-        prlog(PR_ERR, "ERROR: Failed to initialize openssl BIO \n");
-        rc = ALLOC_FAIL;
-        goto out;
-    }
-    //returns 1 for success
-    rc = i2d_PKCS7_bio(out_bio, gen_pkcs7_struct);
-    if (!rc) {
-        prlog(PR_ERR, "ERROR: Failed to convert PKCS7 Struct to DER\n");
-        rc = PKCS7_FAIL;
-        goto out;
-    }
-    //get data out of BIO and into return values
-    pkcs7_out_len = BIO_get_mem_data(out_bio, &out_bio_der);
-    //returns number of bytes decoded or error
-    if (pkcs7_out_len <= 0) {
-        prlog(PR_ERR, "ERROR: Failed to extract PKCS7 DER data from openssl BIO\n");
-        rc = PKCS7_FAIL;
-        goto out;
-    }
-    *pkcs7 = malloc(pkcs7_out_len);
-    if (!*pkcs7) {
-        prlog(PR_ERR, "ERROR: Failed to allocate memory\n");
-        rc = ALLOC_FAIL;
-        goto out;
-    }
-    *pkcs7Size = pkcs7_out_len;
-    //copy memory over so it is persistent
-    memcpy(*pkcs7, out_bio_der, *pkcs7Size);
-    //if here then successfull generation
-    rc = SUCCESS;
+	bio = BIO_new_mem_buf(newData, newDataSize);
+	if (!bio) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to initialize new data BIO structure\n");
+		rc = PKCS7_FAIL;
+		goto out;
+	}
+
+	gen_pkcs7_struct = PKCS7_sign(NULL, NULL, NULL, bio,
+				      PKCS7_PARTIAL | PKCS7_DETACHED);
+	if (!gen_pkcs7_struct) {
+		prlog(PR_ERR, "ERROR: Failed to initialize pkcs7 structure\n");
+		rc = PKCS7_FAIL;
+		goto out;
+	}
+	//for every key pair get the data and add the signer to the pkcs7
+	for (int i = 0; i < keyPairs; i++) {
+		// get data of private keys
+		keyPEM = (unsigned char *)getDataFromFile(keyFiles[i],
+							  &keySizePEM);
+		if (!keyPEM) {
+			prlog(PR_ERR,
+			      "ERROR: failed to get data from priv key file %s\n",
+			      keyFiles[i]);
+			rc = INVALID_FILE;
+			goto out;
+		}
+		rc = crypto_convert_pem_to_der(
+			keyPEM, keySizePEM, (unsigned char **)&key, &keySize);
+		if (rc) {
+			prlog(PR_ERR,
+			      "Conversion for %s from PEM to DER failed\n",
+			      keyFiles[i]);
+			goto out;
+		}
+		//get data from crt
+		crtPEM = (unsigned char *)getDataFromFile(crtFiles[i],
+							  &crtSizePEM);
+		if (!keyPEM) {
+			prlog(PR_ERR,
+			      "ERROR: failed to get data from cert file %s\n",
+			      crtFiles[i]);
+			rc = INVALID_FILE;
+			goto out;
+		}
+		rc = crypto_convert_pem_to_der(
+			crtPEM, crtSizePEM, (unsigned char **)&crt, &crtSize);
+		if (rc) {
+			prlog(PR_ERR,
+			      "Conversion for %s from PEM to DER failed\n",
+			      crtFiles[i]);
+			goto out;
+		}
+		//get private key from private key DER buff
+		keyTmp = key;
+		evp_pkey = d2i_AutoPrivateKey(
+			NULL, (const unsigned char **)&keyTmp, keySize);
+		if (!evp_pkey) {
+			prlog(PR_ERR,
+			      "ERROR: Failed to parse private key into EVP_PKEY openssl struct\n");
+			rc = INVALID_FILE;
+			goto out;
+		}
+		//get x509 from cert DER buff
+		x509 = crypto_x509_parse_der(crt, crtSize);
+		if (!x509) {
+			prlog(PR_ERR,
+			      "ERROR: Failed to parse certificate into x509 openssl struct\n");
+			rc = INVALID_FILE;
+			goto out;
+		}
+		//add the signature to the pkcs7
+		//returns NULL is failure
+		if (!PKCS7_sign_add_signer(gen_pkcs7_struct, x509, evp_pkey,
+					   evp_md, PKCS7_NOATTR)) {
+			prlog(PR_ERR,
+			      "ERROR: Failed to add signer to the pkcs7 structure\n");
+			rc = PKCS7_FAIL;
+			goto out;
+		}
+		//reset mem
+		free(keyPEM);
+		keyPEM = NULL;
+		free(key);
+		key = NULL;
+		free(crtPEM);
+		crtPEM = NULL;
+		EVP_PKEY_free(evp_pkey);
+		evp_pkey = NULL;
+		free(crt);
+		crt = NULL;
+		crypto_x509_free(x509);
+		x509 = NULL;
+	}
+	//finalize the struct, runs hashing and signatures
+	rc = PKCS7_final(gen_pkcs7_struct, bio, PKCS7_BINARY);
+	if (rc != 1) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to finalize openssl pkcs7 struct\n");
+		rc = PKCS7_FAIL;
+		goto out;
+	}
+	//convert to DER
+	out_bio = BIO_new(BIO_s_mem());
+	if (!out_bio) {
+		prlog(PR_ERR, "ERROR: Failed to initialize openssl BIO \n");
+		rc = ALLOC_FAIL;
+		goto out;
+	}
+	//returns 1 for success
+	rc = i2d_PKCS7_bio(out_bio, gen_pkcs7_struct);
+	if (!rc) {
+		prlog(PR_ERR, "ERROR: Failed to convert PKCS7 Struct to DER\n");
+		rc = PKCS7_FAIL;
+		goto out;
+	}
+	//get data out of BIO and into return values
+	pkcs7_out_len = BIO_get_mem_data(out_bio, &out_bio_der);
+	//returns number of bytes decoded or error
+	if (pkcs7_out_len <= 0) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to extract PKCS7 DER data from openssl BIO\n");
+		rc = PKCS7_FAIL;
+		goto out;
+	}
+	*pkcs7 = malloc(pkcs7_out_len);
+	if (!*pkcs7) {
+		prlog(PR_ERR, "ERROR: Failed to allocate memory\n");
+		rc = ALLOC_FAIL;
+		goto out;
+	}
+	*pkcs7Size = pkcs7_out_len;
+	//copy memory over so it is persistent
+	memcpy(*pkcs7, out_bio_der, *pkcs7Size);
+	//if here then successfull generation
+	rc = SUCCESS;
 
 out:
-    if (keyPEM)
-        free(keyPEM);
-    if (key)
-        free(key);
-    if (crtPEM)
-        free(crtPEM);
-    if (crt)
-        free(crt);
-    if (evp_pkey)
-        EVP_PKEY_free(evp_pkey);
-    if (x509)
-        crypto_x509_free(x509);
-    if (gen_pkcs7_struct)
-        PKCS7_free(gen_pkcs7_struct);
-    BIO_free(bio);
-    BIO_free(out_bio);
+	if (keyPEM)
+		free(keyPEM);
+	if (key)
+		free(key);
+	if (crtPEM)
+		free(crtPEM);
+	if (crt)
+		free(crt);
+	if (evp_pkey)
+		EVP_PKEY_free(evp_pkey);
+	if (x509)
+		crypto_x509_free(x509);
+	if (gen_pkcs7_struct)
+		PKCS7_free(gen_pkcs7_struct);
+	BIO_free(bio);
+	BIO_free(out_bio);
 
-    return rc;
+	return rc;
 }
 
-int crypto_pkcs7_generate_w_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
-    const char** crtFiles, const char** sigFiles,  int keyPairs, int hashFunct)
+int crypto_pkcs7_generate_w_already_signed_data(
+	unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData,
+	size_t newDataSize, const char **crtFiles, const char **sigFiles,
+	int keyPairs, int hashFunct)
 {
-    prlog(PR_ERR, "ERROR: Currently unable to support generation of PKCS7 with externally generated signatures when compiling with OpenSSL\n");
-    return PKCS7_FAIL;
+	prlog(PR_ERR,
+	      "ERROR: Currently unable to support generation of PKCS7 with externally generated signatures when compiling with OpenSSL\n");
+	return PKCS7_FAIL;
 }
 
-int crypto_x509_get_der_len(crypto_x509 *x509) 
+int crypto_x509_get_der_len(crypto_x509 *x509)
 {
-    return i2d_X509(x509, NULL); 
+	return i2d_X509(x509, NULL);
 }
 
-int crypto_x509_get_tbs_der_len(crypto_x509 *x509) 
+int crypto_x509_get_tbs_der_len(crypto_x509 *x509)
 {
-    return i2d_re_X509_tbs(x509, NULL); 
+	return i2d_re_X509_tbs(x509, NULL);
 }
 
-int crypto_x509_get_version(crypto_x509 *x509) 
+int crypto_x509_get_version(crypto_x509 *x509)
 {
-    //add one because function return one less than actual certificate version, see https://www.openssl.org/docs/man1.1.0/man3/X509_get_version.html
-    return X509_get_version( x509) + 1;
+	//add one because function return one less than actual certificate version, see https://www.openssl.org/docs/man1.1.0/man3/X509_get_version.html
+	return X509_get_version(x509) + 1;
 }
 
 int crypto_x509_is_RSA(crypto_x509 *x509)
 {
-    int pk_type;
-    pk_type = X509_get_signature_type(x509);
-    if (pk_type != EVP_PK_RSA)
-        return pk_type;
-    else 
-        return SUCCESS;
+	int pk_type;
+	pk_type = X509_get_signature_type(x509);
+	if (pk_type != EVP_PK_RSA)
+		return pk_type;
+	else
+		return SUCCESS;
 }
 
 int crypto_x509_get_sig_len(crypto_x509 *x509)
 {
-    ASN1_BIT_STRING *sig;
-    sig = X509_get0_pubkey_bitstr( x509);
-    if (!sig) {
-        prlog( PR_ERR, "ERROR: Could not extract signature length from x509\n");
-        return CERT_FAIL;
-    }
-    //returns 270 instead of 256 for RSA2048, probably because other struct attributes are included see ASN1_BIT_STRING definition
-    return sig->length;
+	ASN1_BIT_STRING *sig;
+	sig = X509_get0_pubkey_bitstr(x509);
+	if (!sig) {
+		prlog(PR_ERR,
+		      "ERROR: Could not extract signature length from x509\n");
+		return CERT_FAIL;
+	}
+	//returns 270 instead of 256 for RSA2048, probably because other struct attributes are included see ASN1_BIT_STRING definition
+	return sig->length;
 }
 
 int crypto_x509_md_is_sha256(crypto_x509 *x509)
 {
-    const X509_ALGOR *alg = NULL;
-    alg = X509_get0_tbs_sigalg(x509);
-    if (!alg) {
-        prlog(PR_ERR, "ERROR: Could not extract algorithm from X509\n");
-        return CERT_FAIL;
-    }
+	const X509_ALGOR *alg = NULL;
+	alg = X509_get0_tbs_sigalg(x509);
+	if (!alg) {
+		prlog(PR_ERR, "ERROR: Could not extract algorithm from X509\n");
+		return CERT_FAIL;
+	}
 
-    //extract nid from algorithms and ensure it is the same nid as SHA256
-    if (OBJ_obj2nid(alg->algorithm) == NID_sha256WithRSAEncryption ) 
-        return SUCCESS;
-    else {
-        prlog(PR_ERR, "ERROR: Certificate NID is not SHA256, expected %d found %d\n",NID_sha256, OBJ_obj2nid(alg->algorithm) );
-        return CERT_FAIL;
-    }
+	//extract nid from algorithms and ensure it is the same nid as SHA256
+	if (OBJ_obj2nid(alg->algorithm) == NID_sha256WithRSAEncryption)
+		return SUCCESS;
+	else {
+		prlog(PR_ERR,
+		      "ERROR: Certificate NID is not SHA256, expected %d found %d\n",
+		      NID_sha256, OBJ_obj2nid(alg->algorithm));
+		return CERT_FAIL;
+	}
 }
 
 int crypto_x509_oid_is_pkcs1_sha256(crypto_x509 *x509)
 {
-    const X509_ALGOR *alg = NULL;
+	const X509_ALGOR *alg = NULL;
 
-    alg = X509_get0_tbs_sigalg(x509);
-    if (!alg) {
-        prlog(PR_ERR, "ERROR: Could not extract algorithm from X509\n");
-        return CERT_FAIL;
-    }
+	alg = X509_get0_tbs_sigalg(x509);
+	if (!alg) {
+		prlog(PR_ERR, "ERROR: Could not extract algorithm from X509\n");
+		return CERT_FAIL;
+	}
 
-    if (OBJ_obj2nid(alg->algorithm) != NID_sha256WithRSAEncryption)
-        return CERT_FAIL;
-    return SUCCESS; 
+	if (OBJ_obj2nid(alg->algorithm) != NID_sha256WithRSAEncryption)
+		return CERT_FAIL;
+	return SUCCESS;
 }
-
 
 int crypto_x509_get_pk_bit_len(crypto_x509 *x509)
 {
-    EVP_PKEY * pub = NULL;
-    RSA *rsa = NULL;
-    int length;
-    
-    pub = X509_get_pubkey(x509);
-    if (!pub) {
-        prlog( PR_ERR, "ERROR: Failed to extract public key from x509\n");
-        return CERT_FAIL;
-    }
-    rsa = EVP_PKEY_get1_RSA(pub);
-    if (!rsa) {
-        prlog( PR_ERR, "ERROR: Failed to extract RSA information from public key of x509\n");
-        return CERT_FAIL;
-    }
-    length = RSA_bits(rsa);
-    RSA_free(rsa);
-    EVP_PKEY_free(pub);
-    return length;
+	EVP_PKEY *pub = NULL;
+	RSA *rsa = NULL;
+	int length;
+
+	pub = X509_get_pubkey(x509);
+	if (!pub) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to extract public key from x509\n");
+		return CERT_FAIL;
+	}
+	rsa = EVP_PKEY_get1_RSA(pub);
+	if (!rsa) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to extract RSA information from public key of x509\n");
+		return CERT_FAIL;
+	}
+	length = RSA_bits(rsa);
+	RSA_free(rsa);
+	EVP_PKEY_free(pub);
+	return length;
 }
 
-void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc, size_t max_len)
+void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc,
+				size_t max_len)
 {
-    const X509_ALGOR *alg = NULL;
-    alg = X509_get0_tbs_sigalg(x509);
-    //unlikely failure
-    if (!alg) {
-        prlog(PR_ERR, "ERROR: Could not extract algorithm from X509\n");
-        return;
-    }
-    //last arg set as ZERO to get short description in string
-    OBJ_obj2txt(short_desc, max_len, alg->algorithm, 0);
-
+	const X509_ALGOR *alg = NULL;
+	alg = X509_get0_tbs_sigalg(x509);
+	//unlikely failure
+	if (!alg) {
+		prlog(PR_ERR, "ERROR: Could not extract algorithm from X509\n");
+		return;
+	}
+	//last arg set as ZERO to get short description in string
+	OBJ_obj2txt(short_desc, max_len, alg->algorithm, 0);
 }
 
-int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim, crypto_x509 *x509)
+int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim,
+			      crypto_x509 *x509)
 {
-    int rc;
-    long actual_mem_len;
-    BIO *bio = BIO_new(BIO_s_mem());
-    char *tmp = NULL;
-    rc = X509_print_ex(bio, x509, XN_FLAG_MULTILINE, X509_FLAG_COMPAT | X509_FLAG_NO_PUBKEY | X509_FLAG_NO_SIGDUMP);
-    if (rc < 0){
-        prlog(PR_ERR, "ERROR: could not get BIO data on X509, openssl err#%d\n",rc);
-        return rc;
-    }
-    //returns total data avialable
-    actual_mem_len = BIO_get_mem_data(bio, &tmp);
-    // check to make sure we do not overflow the allocated mem
-    actual_mem_len  = max_len > actual_mem_len ? actual_mem_len : max_len - 1;
-    memcpy(x509_info, tmp, actual_mem_len);
-    BIO_free(bio);
-    return actual_mem_len;
+	int rc;
+	long actual_mem_len;
+	BIO *bio = BIO_new(BIO_s_mem());
+	char *tmp = NULL;
+	rc = X509_print_ex(bio, x509, XN_FLAG_MULTILINE,
+			   X509_FLAG_COMPAT | X509_FLAG_NO_PUBKEY |
+				   X509_FLAG_NO_SIGDUMP);
+	if (rc < 0) {
+		prlog(PR_ERR,
+		      "ERROR: could not get BIO data on X509, openssl err#%d\n",
+		      rc);
+		return rc;
+	}
+	//returns total data avialable
+	actual_mem_len = BIO_get_mem_data(bio, &tmp);
+	// check to make sure we do not overflow the allocated mem
+	actual_mem_len =
+		max_len > actual_mem_len ? actual_mem_len : max_len - 1;
+	memcpy(x509_info, tmp, actual_mem_len);
+	BIO_free(bio);
+	return actual_mem_len;
 }
 
 crypto_x509 *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
 {
-    X509* x509;
-    x509 = d2i_X509(NULL, &data, data_len);
-    
-    if (!x509)
-        return NULL;
+	X509 *x509;
+	x509 = d2i_X509(NULL, &data, data_len);
 
-    return x509; 
+	if (!x509)
+		return NULL;
+
+	return x509;
 }
 
 void crypto_x509_free(crypto_x509 *x509)
 {
-    X509_free(x509);
+	X509_free(x509);
 }
 
-int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen, unsigned char **output, size_t *olen)
+int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
+			      unsigned char **output, size_t *olen)
 {
-    int rc;
-    BIO *bio;
-    bio = BIO_new_mem_buf(input, ilen);
-    //these variables are not needed on return, just needed to properly call the function
-    char *header = NULL, *name = NULL;
-    //returns 0 for fail and 1 on success
-    rc = !PEM_read_bio(bio, &name, &header, output, (long int *)olen);
-    if (header) free(header);
-    if (name) free(name);
-    BIO_free(bio);
-    return rc;
+	int rc;
+	BIO *bio;
+	bio = BIO_new_mem_buf(input, ilen);
+	//these variables are not needed on return, just needed to properly call the function
+	char *header = NULL, *name = NULL;
+	//returns 0 for fail and 1 on success
+	rc = !PEM_read_bio(bio, &name, &header, output, (long int *)olen);
+	if (header)
+		free(header);
+	if (name)
+		free(name);
+	BIO_free(bio);
+	return rc;
 }
 
-void crypto_strerror(int rc, char *out_str, size_t out_max_len) 
+void crypto_strerror(int rc, char *out_str, size_t out_max_len)
 {
-    ERR_error_string_n(rc, out_str, out_max_len);
+	ERR_error_string_n(rc, out_str, out_max_len);
 }
 
-int crypto_md_ctx_init(crypto_md_ctx **ctx, int md_id) 
+int crypto_md_ctx_init(crypto_md_ctx **ctx, int md_id)
 {
-    const EVP_MD *md;
-    md = EVP_get_digestbynid(md_id);
-    if (!md) {
-        prlog(PR_ERR, "ERROR: Invalid MD NID\n");
-        return HASH_FAIL;
-    }
-    *ctx = EVP_MD_CTX_new();
-    if (!*ctx) {
-        prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-        return ALLOC_FAIL;
-    }
-    return !EVP_DigestInit_ex((EVP_MD_CTX *)*ctx, md, NULL);
-    
+	const EVP_MD *md;
+	md = EVP_get_digestbynid(md_id);
+	if (!md) {
+		prlog(PR_ERR, "ERROR: Invalid MD NID\n");
+		return HASH_FAIL;
+	}
+	*ctx = EVP_MD_CTX_new();
+	if (!*ctx) {
+		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+		return ALLOC_FAIL;
+	}
+	return !EVP_DigestInit_ex((EVP_MD_CTX *)*ctx, md, NULL);
 }
 
-int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data, size_t data_len)
+int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data,
+		     size_t data_len)
 {
-    //returns 1 on success and 0 for fail
-    return !EVP_DigestUpdate(ctx, data, data_len);    
+	//returns 1 on success and 0 for fail
+	return !EVP_DigestUpdate(ctx, data, data_len);
 }
 
-int crypto_md_finish(crypto_md_ctx *ctx, unsigned char *hash) 
+int crypto_md_finish(crypto_md_ctx *ctx, unsigned char *hash)
 {
-    return !EVP_DigestFinal_ex(ctx, hash, NULL);
+	return !EVP_DigestFinal_ex(ctx, hash, NULL);
 }
 
-void crypto_md_free(crypto_md_ctx *ctx) 
+void crypto_md_free(crypto_md_ctx *ctx)
 {
-    EVP_MD_CTX_free(ctx);
+	EVP_MD_CTX_free(ctx);
 }
 
-int crypto_md_generate_hash(const unsigned char* data, size_t size, int hashFunct, unsigned char** outHash, size_t* outHashSize)
+int crypto_md_generate_hash(const unsigned char *data, size_t size,
+			    int hashFunct, unsigned char **outHash,
+			    size_t *outHashSize)
 {
-    int rc;
-    crypto_md_ctx *ctx;
-    size_t hash_len;
-    rc = crypto_md_ctx_init(&ctx, hashFunct);
-    if (rc)
-        return rc;
+	int rc;
+	crypto_md_ctx *ctx;
+	size_t hash_len;
+	rc = crypto_md_ctx_init(&ctx, hashFunct);
+	if (rc)
+		return rc;
 
-    rc = crypto_md_update(ctx, data, size);
-    if (rc)
-        goto out;
-    //get hashlen
-   switch (hashFunct) {
-        case CRYPTO_MD_SHA1:
-            hash_len = SHA_DIGEST_LENGTH;
-            break;
-        case CRYPTO_MD_SHA224:
-            hash_len = SHA224_DIGEST_LENGTH;
-            break;
-        case CRYPTO_MD_SHA256:
-            hash_len = SHA256_DIGEST_LENGTH;
-            break;
-        case CRYPTO_MD_SHA384:
-            hash_len = SHA384_DIGEST_LENGTH;
-            break;
-        case CRYPTO_MD_SHA512:
-            hash_len = SHA512_DIGEST_LENGTH;
-            break;
-        default:
-            prlog(PR_ERR, "ERROR: Unknown NID (%d)\n", hashFunct);
-            rc = HASH_FAIL;
-            goto out;
-    }
+	rc = crypto_md_update(ctx, data, size);
+	if (rc)
+		goto out;
+	//get hashlen
+	switch (hashFunct) {
+	case CRYPTO_MD_SHA1:
+		hash_len = SHA_DIGEST_LENGTH;
+		break;
+	case CRYPTO_MD_SHA224:
+		hash_len = SHA224_DIGEST_LENGTH;
+		break;
+	case CRYPTO_MD_SHA256:
+		hash_len = SHA256_DIGEST_LENGTH;
+		break;
+	case CRYPTO_MD_SHA384:
+		hash_len = SHA384_DIGEST_LENGTH;
+		break;
+	case CRYPTO_MD_SHA512:
+		hash_len = SHA512_DIGEST_LENGTH;
+		break;
+	default:
+		prlog(PR_ERR, "ERROR: Unknown NID (%d)\n", hashFunct);
+		rc = HASH_FAIL;
+		goto out;
+	}
 
-    *outHash = malloc(hash_len);
-    if (!*outHash) {
-        prlog(PR_ERR, "ERROR: Failed to allocate data\n");
-        rc = ALLOC_FAIL;
-        goto out;
-    }
-    rc = crypto_md_finish(ctx, *outHash);
-    if (rc) {
-        free(*outHash);
-        *outHash = NULL;
-        goto out;
-    }
-    *outHashSize = hash_len;
+	*outHash = malloc(hash_len);
+	if (!*outHash) {
+		prlog(PR_ERR, "ERROR: Failed to allocate data\n");
+		rc = ALLOC_FAIL;
+		goto out;
+	}
+	rc = crypto_md_finish(ctx, *outHash);
+	if (rc) {
+		free(*outHash);
+		*outHash = NULL;
+		goto out;
+	}
+	*outHashSize = hash_len;
 
-    if (verbose) { 
-        printf("Hash generation successful, %s: ", OBJ_nid2sn(hashFunct) );
-        printHex(*outHash, *outHashSize);
-    }
+	if (verbose) {
+		printf("Hash generation successful, %s: ",
+		       OBJ_nid2sn(hashFunct));
+		printHex(*outHash, *outHashSize);
+	}
 
 out:
-    crypto_md_free(ctx);
-    return rc;
-
+	crypto_md_free(ctx);
+	return rc;
 }
 
 #endif

@@ -5,20 +5,19 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <stdlib.h>// for exit
+#include <stdlib.h> // for exit
 #include <argp.h>
 #include "secvarctl.h"
-#include "backends/edk2-compat/include/edk2-svc.h"// import last!!
+#include "backends/edk2-compat/include/edk2-svc.h" // import last!!
 
-
-static int updateSecVar(const char *var, const char *authFile, const char *path, int force);
+static int updateSecVar(const char *var, const char *authFile, const char *path,
+			int force);
 
 struct Arguments {
 	int helpFlag, inpValid;
 	const char *pathToSecVars, *varName, *inFile;
-}; 
+};
 static int parse_opt(int key, char *arg, struct argp_state *state);
-
 
 /*
  *called from main()
@@ -27,28 +26,32 @@ static int parse_opt(int key, char *arg, struct argp_state *state);
  *@param arv, array of params
  *@return SUCCESS or err number
 */
-int performWriteCommand(int argc, char* argv[])
+int performWriteCommand(int argc, char *argv[])
 {
 	int rc;
-	struct Arguments args = {	
-		.helpFlag = 0, .inpValid = 0, 
-		.pathToSecVars = NULL, .inFile = NULL, .varName = NULL
-	};
+	struct Arguments args = { .helpFlag = 0,
+				  .inpValid = 0,
+				  .pathToSecVars = NULL,
+				  .inFile = NULL,
+				  .varName = NULL };
 	// combine command and subcommand for usage/help messages
 	argv[0] = "secvarctl write";
 
-	struct argp_option options[] = 
-	{
-		{"verbose", 'v', 0, 0, "print more verbose process information"},
-		{"force", 'f', 0, 0, "force update, skips validation of file"},
-		{"path", 'p', "PATH" ,0, "looks for .../<var>/update file in PATH, default is " SECVARPATH},
-		{"help", '?', 0, 0, "Give this help list", 1},
-		{"usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
-		{0}
+	struct argp_option options[] = {
+		{ "verbose", 'v', 0, 0,
+		  "print more verbose process information" },
+		{ "force", 'f', 0, 0,
+		  "force update, skips validation of file" },
+		{ "path", 'p', "PATH", 0,
+		  "looks for .../<var>/update file in PATH, default is " SECVARPATH },
+		{ "help", '?', 0, 0, "Give this help list", 1 },
+		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0,
+		  "Give a short usage message", -1 },
+		{ 0 }
 	};
 
 	struct argp argp = {
-		options, parse_opt, "<VARIABLE> <AUTH_FILE>", 
+		options, parse_opt, "<VARIABLE> <AUTH_FILE>",
 		"This command updates a given secure variable with a new key contained in an auth file"
 		" It is recommended that 'secvarctl verify' is tried on the update file before submitting."
 		" This will ensure that the submission will be successful upon reboot."
@@ -56,20 +59,20 @@ int performWriteCommand(int argc, char* argv[])
 		"<AUTH_FILE> must be a properly generated authenticated variable file"
 	};
 
-	rc = argp_parse( &argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
+	rc = argp_parse(&argp, argc, argv,
+			ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
 	if (rc || args.helpFlag)
 		goto out;
 
-
-	rc = updateSecVar(args.varName, args.inFile, args.pathToSecVars, args.inpValid);
+	rc = updateSecVar(args.varName, args.inFile, args.pathToSecVars,
+			  args.inpValid);
 
 out:
-	if (!args.helpFlag) 
+	if (!args.helpFlag)
 		printf("RESULT: %s\n", rc ? "FAILURE" : "SUCCESS");
 
-	return rc;	
+	return rc;
 }
-
 
 /**
  *@param key , every option that is parsed has a value to identify it
@@ -77,55 +80,60 @@ out:
  *@param state,  argp_state struct that contains useful information about the current parsing state 
  *@return success or errno
  */
-static int parse_opt(int key, char *arg, struct argp_state *state) 
+static int parse_opt(int key, char *arg, struct argp_state *state)
 {
 	struct Arguments *args = state->input;
 	int rc = SUCCESS;
 
 	switch (key) {
-		case '?':
-			args->helpFlag = 1;
-			argp_state_help(state, stdout, ARGP_HELP_STD_HELP);
+	case '?':
+		args->helpFlag = 1;
+		argp_state_help(state, stdout, ARGP_HELP_STD_HELP);
+		break;
+	case ARGP_OPT_USAGE_KEY:
+		args->helpFlag = 1;
+		argp_state_help(state, stdout, ARGP_HELP_USAGE);
+		break;
+	case 'p':
+		args->pathToSecVars = arg;
+		break;
+	case 'f':
+		args->inpValid = 1;
+		break;
+	case 'v':
+		verbose = PR_DEBUG;
+		break;
+	case ARGP_KEY_ARG:
+		if (args->varName == NULL)
+			args->varName = arg;
+		else if (args->inFile == NULL)
+			args->inFile = arg;
+		break;
+	case ARGP_KEY_SUCCESS:
+		// check that all essential args are given and valid
+		if (args->helpFlag)
 			break;
-		case ARGP_OPT_USAGE_KEY:
-			args->helpFlag = 1;
-			argp_state_help(state, stdout, ARGP_HELP_USAGE);
+		if (!args->varName)
+			prlog(PR_ERR,
+			      "ERROR: missing variable, see usage...\n");
+		else if (!args->inFile)
+			prlog(PR_ERR,
+			      "ERROR: missing input file, see usage...\n");
+		else if (isVariable(args->varName))
+			prlog(PR_ERR,
+			      "ERROR: Unrecognized variable name %s, see usage...\n",
+			      args->varName);
+		else if (strcmp(args->varName, "TS") == 0)
+			prlog(PR_ERR,
+			      "ERROR: Cannot update TimeStamp (TS) variable, see usage...\n");
+		else
 			break;
-		case 'p':
-			args->pathToSecVars = arg;
-			break;
-		case 'f':
-			args->inpValid = 1;
-			break;
-		case 'v':
-			verbose = PR_DEBUG;
-			break;
-		case ARGP_KEY_ARG:
-			if (args->varName == NULL)
-				args->varName = arg;
-			else if (args->inFile == NULL)
-				args->inFile = arg;
-			break;
-		case ARGP_KEY_SUCCESS:
-			// check that all essential args are given and valid
-			if (args->helpFlag)
-				break;
-			if(!args->varName) 
-				prlog(PR_ERR, "ERROR: missing variable, see usage...\n");
-			else if (!args->inFile) 
-				prlog(PR_ERR, "ERROR: missing input file, see usage...\n");
-			else if (isVariable(args->varName)) 
-				prlog(PR_ERR, "ERROR: Unrecognized variable name %s, see usage...\n", args->varName);
-			else if (strcmp(args->varName, "TS") == 0) 
-				prlog(PR_ERR, "ERROR: Cannot update TimeStamp (TS) variable, see usage...\n");
-			else 
-				break;
-			argp_usage(state);
-			rc = args->inFile ? INVALID_VAR_NAME : ARG_PARSE_FAIL;
-			break;
+		argp_usage(state);
+		rc = args->inFile ? INVALID_VAR_NAME : ARG_PARSE_FAIL;
+		break;
 	}
 
-	if (rc) 
+	if (rc)
 		prlog(PR_ERR, "Failed during argument parsing\n");
 
 	return rc;
@@ -136,10 +144,10 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
  *@param var variable name
  *@return SUCCESS or error code
  */
-int isVariable(const char * var)
+int isVariable(const char *var)
 {
 	for (int i = 0; i < ARRAY_SIZE(variables); i++) {
-		if (strcmp(var,variables[i]) == 0)
+		if (strcmp(var, variables[i]) == 0)
 			return SUCCESS;
 	}
 
@@ -154,31 +162,34 @@ int isVariable(const char * var)
  *@param force 1 for no validation of auth, 0 for validate
  *@return error if variable given is unknown, or issue validating or writing
  */
-static int updateSecVar(const char *varName, const char *authFile, const char *path, int force)
-{	
+static int updateSecVar(const char *varName, const char *authFile,
+			const char *path, int force)
+{
 	int rc;
 	unsigned char *buff = NULL;
 	size_t size;
-		
+
 	if (!path) {
 		path = SECVARPATH;
-	} 
+	}
 
 	// get data to write, if force flag then validate the data is an auth file
-	buff = (unsigned char *)getDataFromFile(authFile, &size); 
+	buff = (unsigned char *)getDataFromFile(authFile, &size);
 	// if we are validating and validating fails, quit
-	if (!force) { 
+	if (!force) {
 		rc = validateAuth(buff, size, varName);
 		if (rc) {
-			prlog(PR_ERR, "ERROR: validating update file (Signed Auth) failed, not updating\n");
+			prlog(PR_ERR,
+			      "ERROR: validating update file (Signed Auth) failed, not updating\n");
 			free(buff);
 			return rc;
 		}
 	}
 	rc = updateVar(path, varName, buff, size);
 
-	if (rc) 
-		prlog(PR_ERR, "ERROR: issue writing to file: %s\n", strerror(errno));
+	if (rc)
+		prlog(PR_ERR, "ERROR: issue writing to file: %s\n",
+		      strerror(errno));
 	free(buff);
 
 	return rc;
@@ -192,14 +203,15 @@ static int updateSecVar(const char *varName, const char *authFile, const char *p
  *@param size , size of buff
  *@return whatever returned by writeData, SUCCESS or errno
  */
-int updateVar(const char *path, const char *var, const unsigned char *buff, size_t size)
-{	
-	int commandLength, rc; 
+int updateVar(const char *path, const char *var, const unsigned char *buff,
+	      size_t size)
+{
+	int commandLength, rc;
 	char *fullPathWithCommand = NULL;
 
 	commandLength = strlen(path) + strlen(var) + strlen("/update ");
 	fullPathWithCommand = malloc(commandLength);
-	if (!fullPathWithCommand) { 
+	if (!fullPathWithCommand) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 		return ALLOC_FAIL;
 	}
@@ -212,7 +224,4 @@ int updateVar(const char *path, const char *var, const unsigned char *buff, size
 	free(fullPathWithCommand);
 
 	return rc;
-
 }
-
-

@@ -7,11 +7,7 @@
 #include "prlog.h"
 #include "backends/edk2-compat/include/edk2-svc.h"
 
-
-enum backends {
-	UNKNOWN_BACKEND = 0,
-	EDK2_COMPAT
-};
+enum backends { UNKNOWN_BACKEND = 0, EDK2_COMPAT };
 
 struct backend {
 	char name[32];
@@ -20,6 +16,5 @@ struct backend {
 };
 
 extern int verbose;
-
 
 #endif
