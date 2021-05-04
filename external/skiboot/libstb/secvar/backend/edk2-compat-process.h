@@ -77,4 +77,32 @@ int process_update(const struct secvar *update, char **newesl,
 		   int *neweslsize, struct efi_time *timestamp,
 		   struct list_head *bank, char *last_timestamp);
 
+
+/* Functions used by external secvarctl */
+
+/**
+ * Parse a buffer into a EFI_SIGNATURE_LIST structure
+ * @param buf pointer to a buffer containing an ESL
+ * @param buflen length of buffer
+ * @return NULL if buflen is smaller than size of sig list struct or if buf is NULL
+ * @return EFI_SIGNATURE_LIST struct
+ */
+EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen);
+
+/**
+ * Copies the certificate from the ESL into cert buffer and returns the size
+ * of the certificate.
+ * @param c Buffer containing an EFI Signature List
+ * @param size size of buffer c
+ * @param cert pointer to destination. Memory will be allocated for the certificate
+ * @return size of memory allocated to cert or negative number if allocation fails
+ */
+int get_esl_cert(const char *buf, const size_t buflen, char **cert);
+
+/*
+ * Extracts size of the PKCS7 signed data embedded in the
+ * struct Authentication 2 Descriptor Header.
+ */
+size_t get_pkcs7_len(const struct efi_variable_authentication_2 *auth);
+
 #endif
