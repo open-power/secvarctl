@@ -388,7 +388,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 		eslsize = sigList->SignatureListSize;
 		printESLInfo(sigList);
 		// puts sig data in cert
-		cert_size = get_esl_cert(c + offset, sigList, (char **)&cert);
+		cert_size = get_esl_cert(c + offset, eslvarsize, (char **)&cert);
 		if (cert_size <= 0) {
 			prlog(PR_ERR, "\tERROR: Signature Size was too small, no data \n");
 			break;
@@ -488,29 +488,6 @@ static int readTS(const char *data, size_t size)
 	}
 
 	return SUCCESS;
-}
-
-/** 
- *inspired by secvar/backend/edk2-compat-process.c by Nayna Jain
- *@param c  pointer to start of esl file
- *@param cert empty buffer 
- *@param list current siglist
- *@return size of memory allocated to cert or negative number if allocation fails
- */
-ssize_t get_esl_cert(const char *c, EFI_SIGNATURE_LIST *list, char **cert)
-{
-	ssize_t size, dataOffset;
-	size = list->SignatureSize - sizeof(uuid_t);
-	dataOffset = sizeof(EFI_SIGNATURE_LIST) + list->SignatureHeaderSize + 16 * sizeof(uint8_t);
-	*cert = malloc(size);
-	if (!*cert) {
-		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		return ALLOC_FAIL;
-	}
-	// copies size bytes from eslfile-headerstuff and guid into cert
-	memcpy(*cert, c + dataOffset, size);
-
-	return size;
 }
 
 /**

@@ -69,7 +69,6 @@ void printESLInfo(EFI_SIGNATURE_LIST *sigList);
 void printTimestamp(struct efi_time t);
 void printGuidSig(const void *sig);
 
-ssize_t get_esl_cert(const char *c, EFI_SIGNATURE_LIST *list, char **cert);
 size_t get_pkcs7_len(const struct efi_variable_authentication_2 *auth);
 int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen);
 const char *getSigType(const uuid_t);

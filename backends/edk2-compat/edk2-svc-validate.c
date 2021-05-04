@@ -429,7 +429,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 		return ESL_FAIL;
 	}
 	// get certificate
-	cert_size = get_esl_cert((const char *)esl, sigList,
+	cert_size = get_esl_cert((const char *)esl, eslvarsize,
 				 (char **)&cert); // puts sig data in cert
 	if (cert_size <= 0) {
 		prlog(PR_ERR, "\tERROR: Signature Size was too small, no data \n");
