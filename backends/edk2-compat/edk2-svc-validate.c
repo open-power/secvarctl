@@ -240,26 +240,6 @@ int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key)
 	return rc;
 }
 
-// inspired by secvar/backend/edk2-compat-process.c by Nayna Jain
-/**
- *returns only size of auth->auth_info.hdr.cert_data
- *auth->auth_info.hdr.dw_length is size of .cert_data and .hdr so we remove .hdr sizes
- */
-size_t get_pkcs7_len(const struct efi_variable_authentication_2 *auth)
-{
-	uint32_t dw_length;
-	size_t size;
-	if (auth == NULL) {
-		return 0;
-	}
-	dw_length = auth->auth_info.hdr.dw_length;
-	size = dw_length -
-	       (sizeof(auth->auth_info.hdr.dw_length) + sizeof(auth->auth_info.hdr.w_revision) +
-		sizeof(auth->auth_info.hdr.w_certificate_type) + sizeof(auth->auth_info.cert_type));
-
-	return size;
-}
-
 /**
  *calls Nayna Jain's pkcs7 functions to validate the pkcs7 inside of the given auth struct
  *@param auth, pointer to auth struct data containing the pkcs7 in auth->auth_info.hdr.cert_data
