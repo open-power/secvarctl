@@ -18,7 +18,7 @@
 #include <mbedtls/x509_crt.h>
 #include "generic.h"
 
-#include "external/skiboot/include/edk2-compat-process.h" //  work on factoring this out
+#include "external/skiboot/libstb/secvar/backend/edk2-compat-process.h" //  work on factoring this out
 
 extern int verbose;
 /* STRUCTURE OF PKCS7 AND CORRESPONDING FUNCTIONS THAT HANDLE THEM:

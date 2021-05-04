@@ -41,7 +41,7 @@
 
 #ifndef __EDK2_H__
 #define __EDK2_H__
-#include "short_types.h" //added by Nick Child
+#include "external/skiboot/include/short_types.h" //added by Nick Child, dja
 #define UUID_SIZE 16
 
 typedef struct {
