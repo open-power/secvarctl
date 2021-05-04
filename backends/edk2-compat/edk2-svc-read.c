@@ -548,25 +548,6 @@ void printGuidSig(const void *sig)
 	printf("\n");
 }
 
-/**
- *parses buffer into a EFI_SIG_LIST
- *@param buf pointer to sig list buffer
- *@param buflen length of buffer
- *@return NULL if buflen is smaller than size of sig list stuct or if buff is empty
- *@return EFI_SIG_LIST struct
- */
-EFI_SIGNATURE_LIST *get_esl_signature_list(const char *buf, size_t buflen)
-{
-	EFI_SIGNATURE_LIST *list = NULL;
-	if (buflen < sizeof(EFI_SIGNATURE_LIST) || !buf) {
-		prlog(PR_ERR, "ERROR: SigList does not have enough data to be valid\n");
-		return NULL;
-	}
-	list = (EFI_SIGNATURE_LIST *)buf;
-
-	return list;
-}
-
 /*
  *gets the integer value from the ascii file "size"
  *@param size, the returned size of size file

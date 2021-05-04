@@ -10,6 +10,7 @@
 #include "generic.h"
 #include "libstb/secvar/crypto/crypto.h"
 #include "external/skiboot/libstb/secvar/backend/edk2.h"
+#include "external/skiboot/libstb/secvar/backend/edk2-compat-process.h"
 
 // all argp options must have a single character option
 // so we set --usage to have a single character option that is out of range
@@ -68,7 +69,6 @@ void printESLInfo(EFI_SIGNATURE_LIST *sigList);
 void printTimestamp(struct efi_time t);
 void printGuidSig(const void *sig);
 
-EFI_SIGNATURE_LIST *get_esl_signature_list(const char *buf, size_t buflen);
 ssize_t get_esl_cert(const char *c, EFI_SIGNATURE_LIST *list, char **cert);
 size_t get_pkcs7_len(const struct efi_variable_authentication_2 *auth);
 int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen);
