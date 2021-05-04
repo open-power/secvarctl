@@ -95,12 +95,14 @@ static void get_key_authority(const char *ret[3], const char *key)
 	ret[i] = NULL;
 }
 
-static EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen)
+EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen)
 {
 	EFI_SIGNATURE_LIST *list = NULL;
 
-	if (buflen < sizeof(EFI_SIGNATURE_LIST) || !buf)
+	if (buflen < sizeof(EFI_SIGNATURE_LIST) || !buf) {
+		prlog(PR_ERR, "ERROR: SigList does not have enough data to be valid\n");
 		return NULL;
+	}
 
 	list = (EFI_SIGNATURE_LIST *)buf;
 
@@ -125,7 +127,7 @@ static int32_t get_esl_signature_list_size(const char *buf, const size_t buflen)
  * Copies the certificate from the ESL into cert buffer and returns the size
  * of the certificate
  */
-static int get_esl_cert(const char *buf, const size_t buflen, char **cert)
+int get_esl_cert(const char *buf, const size_t buflen, char **cert)
 {
 	size_t sig_data_offset;
 	size_t size;
@@ -166,7 +168,7 @@ static int get_esl_cert(const char *buf, const size_t buflen, char **cert)
  * Extracts size of the PKCS7 signed data embedded in the
  * struct Authentication 2 Descriptor Header.
  */
-static size_t get_pkcs7_len(const struct efi_variable_authentication_2 *auth)
+size_t get_pkcs7_len(const struct efi_variable_authentication_2 *auth)
 {
 	uint32_t dw_length;
 	size_t size;
