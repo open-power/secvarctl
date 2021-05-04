@@ -11,7 +11,7 @@
 #include "crypto/crypto.h"
 #include "external/skiboot/include/endian.h"
 #include "backends/edk2-compat/include/edk2-svc.h"
-#include "external/skiboot/include/edk2-compat-process.h" // work on factoring this out
+#include "external/skiboot/libstb/secvar/backend/edk2-compat-process.h" // work on factoring this out
 
 enum pkcs7_generation_method {
 	// for -k <key> option

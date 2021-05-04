@@ -14,8 +14,8 @@ list( TRANSFORM EDK2SRC PREPEND ${EDK2SRCDIR} )
 list( APPEND SRC ${EDK2SRC} )
 
 #sources for borrowed skiboot code
-set ( SKIBOOTSRC secvar_util.c edk2-compat.c edk2-compat-process.c )
-set ( SKIBOOTSRCDIR external/skiboot/ )
+set ( SKIBOOTSRC secvar_util.c backend/edk2-compat.c backend/edk2-compat-process.c )
+set ( SKIBOOTSRCDIR external/skiboot/libstb/secvar/ )
 list( TRANSFORM SKIBOOTSRC PREPEND ${SKIBOOTSRCDIR} )
 list( APPEND SRC ${SKIBOOTSRC} )
 

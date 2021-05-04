@@ -14,16 +14,16 @@
 /*#include <device.h>
 #include <assert.h>*/
 /*#include "libstb/crypto/pkcs7/pkcs7.h"*/
-/*#include "external/skiboot/include/edk2.h"*/
+/*#include "edk2.h"*/
 /*#include "../secvar.h"*/
-#include "external/skiboot/include/edk2-compat-process.h"
+#include "edk2-compat-process.h"
 
 //nick stuff added 
 //#include "external/extraMbedtls/include/pkcs7.h"
 #include <stdlib.h>
 #include "prlog.h"
 #include "crypto/crypto.h"
-#include "external/skiboot/include/edk2.h"
+#include "edk2.h"
 
 
 

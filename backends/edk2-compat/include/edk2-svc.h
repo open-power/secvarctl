@@ -9,7 +9,7 @@
 #include "prlog.h"
 #include "generic.h"
 #include "crypto/crypto.h"
-#include "external/skiboot/include/edk2.h" // include last or else problems from pragma pack(1)
+#include "external/skiboot/libstb/secvar/backend/edk2.h" // include last or else problems from pragma pack(1)
 
 // all argp options must have a single character option
 // so we set --usage to have a single character option that is out of range
