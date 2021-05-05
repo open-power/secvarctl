@@ -8,7 +8,7 @@
 #include <stdlib.h> // for exit
 #include <argp.h>
 #include "secvarctl.h"
-#include "backends/edk2-compat/include/edk2-svc.h" // import last!!
+#include "backends/edk2-compat/include/edk2-svc.h"
 
 static int updateSecVar(const char *var, const char *authFile, const char *path, int force);
 

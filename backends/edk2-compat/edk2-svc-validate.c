@@ -5,7 +5,7 @@
 #include <stdlib.h> // for exit
 #include <argp.h>
 #include "libstb/secvar/crypto/crypto.h"
-#include "include/edk2-svc.h" // import last!!
+#include "include/edk2-svc.h"
 
 struct Arguments {
 	int helpFlag;
