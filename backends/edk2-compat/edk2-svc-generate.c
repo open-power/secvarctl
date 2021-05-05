@@ -9,7 +9,7 @@
 #include <ctype.h> // for isspace
 #include <argp.h>
 #include "crypto/crypto.h"
-#include "external/skiboot/include/endian.h"
+#include <ccan/endian/endian.h>
 #include "backends/edk2-compat/include/edk2-svc.h"
 #include "external/skiboot/libstb/secvar/backend/edk2-compat-process.h" // work on factoring this out
 

@@ -9,7 +9,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdint.h>
-/*#include <ccan/endian/endian.h>*/
+#include <ccan/endian/endian.h>
 // #include <mbedtls/error.h>
 /*#include <device.h>
 #include <assert.h>*/

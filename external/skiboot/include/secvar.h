@@ -3,8 +3,7 @@
 
 #ifndef _SECVAR_H_
 #define _SECVAR_H_
-#include "list.h"
-/*#include <ccan/list/list.h>*/
+#include <ccan/list/list.h>
 #include <stdint.h>
 /*#include <secvar.h>*/
 
