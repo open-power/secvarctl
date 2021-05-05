@@ -11,7 +11,7 @@
 #include <argp.h>
 #include "libstb/secvar/crypto/crypto.h"
 #include "external/skiboot/libstb/secvar/secvar.h" // for secvar struct
-#include "backends/edk2-compat/include/edk2-svc.h" // include last, pragma pack(1) issue
+#include "backends/edk2-compat/include/edk2-svc.h"
 
 static int readFiles(const char *var, const char *file, int hrFlag, const char *path);
 static int printReadable(const char *c, size_t size, const char *key);
