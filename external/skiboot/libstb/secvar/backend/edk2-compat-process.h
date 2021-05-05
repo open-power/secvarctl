@@ -27,8 +27,7 @@
 #include "external/skiboot/include/opal-api.h"
 //#include "external/extraMbedtls/include/pkcs7.h"
 #include "external/skiboot/libstb/secvar/backend/edk2.h"
-
-#define __unused		__attribute__((unused)) //ADDED BY NICK CHILD
+#include <compiler.h>
 
 //ADDED BY NICK CHILD
 #define PR_ERR		3
