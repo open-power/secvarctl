@@ -22,7 +22,8 @@ list( APPEND SRC ${SKIBOOTSRC} )
 # include paths:
 #  - include/
 #  - the root directory so that we can e.g. #include "{external,backends}/..."
-include_directories(include ${CMAKE_CURRENT_SOURCE_DIR})
+#  - skiboot, so we can do <ccan/whatever/whatever.h>
+include_directories(include ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/external/skiboot )
 
 #User specified options 
 

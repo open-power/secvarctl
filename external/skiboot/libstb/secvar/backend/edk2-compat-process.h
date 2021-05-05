@@ -13,8 +13,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdint.h>
-/*#include <ccan/endian/endian.h>
-#include <mbedtls/error.h>
+#include <ccan/endian/endian.h>
+/*#include <mbedtls/error.h>
 #include <device.h>
 #include "libstb/crypto/pkcs7/pkcs7.h"
 #include "external/skiboot/libstb/secvar/backend/edk2.h"
@@ -22,13 +22,12 @@
 #include "../secvar.h"
 #include "../secvar_devtree.h"*/
 
-//added by nick child
-#include "external/skiboot/include/short_types.h"
+//added by nick child/dja
+#include <ccan/short_types/short_types.h>
 #include "external/skiboot/include/opal-api.h"
 //#include "external/extraMbedtls/include/pkcs7.h"
 #include "external/skiboot/include/secvar.h"
 #include "external/skiboot/libstb/secvar/backend/edk2.h"
-#include "external/skiboot/include/endian.h"
 
 #define __unused		__attribute__((unused)) //ADDED BY NICK CHILD
 

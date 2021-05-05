@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <stdint.h>
 /*#include <skiboot.h>*/
-/*#include <ccan/endian/endian.h>*/
+#include <ccan/endian/endian.h>
 /*#include <mbedtls/error.h>*/
 /*#include "libstb/crypto/pkcs7/pkcs7.h"*/
 /*#include "external/skiboot/libstb/secvar/backend/edk2.h"*/
