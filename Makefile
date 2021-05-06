@@ -67,8 +67,9 @@ secvarctl: $(OBJ)
 %.o: %.c
 	$(CC) $(CFLAGS) $(_CFLAGS) -c  $< -o $@
 
+clean:OBJ += crypto/crypto-openssl.o
 clean:
-	rm -f $(OBJ) secvarctl 
+	rm -f $(OBJ) secvarctl
 	rm -f $(OBJ:.o=.d)
 	rm -f ./*/*.cov.* secvarctl-cov ./*.cov.* ./backends/*/*.cov.* ./external/*/*.cov.* ./html*
 
