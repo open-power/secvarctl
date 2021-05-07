@@ -4,7 +4,7 @@
 #define EDK2_SVC_SKIBOOT_H
 
 #include <stdint.h> // for uint_16 stuff like that
-#include "external/skiboot/include/secvar.h" // for secvar struct
+#include "external/skiboot/libstb/secvar/secvar.h" // for secvar struct
 #include "err.h"
 #include "prlog.h"
 #include "generic.h"

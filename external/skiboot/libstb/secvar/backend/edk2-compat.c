@@ -14,7 +14,7 @@
 /*#include <mbedtls/error.h>*/
 /*#include "libstb/crypto/pkcs7/pkcs7.h"*/
 /*#include "external/skiboot/libstb/secvar/backend/edk2.h"*/
-/*#include "../secvar.h"*/
+#include "../secvar.h"
 #include "edk2-compat-process.h"
 /*#include "edk2-compat-reset.h"*/
 
@@ -22,7 +22,6 @@
 //added by Nick Child, not official
 #include "edk2.h"
 #include "prlog.h"
-#include "external/skiboot/include/secvar.h"
 #include <stdlib.h>
 
 

@@ -9,7 +9,7 @@
 #include <string.h>
 /*#include <skiboot.h>*/
 /*#include <opal.h>*/
-#include "external/skiboot/include/secvar.h"
+#include "secvar.h"
 //ADDED BY NICK
 #include "external/skiboot/include/opal-api.h"
 #define zalloc(...) calloc(1,__VA_ARGS__)
