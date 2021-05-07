@@ -68,9 +68,9 @@ secvarctl: $(OBJ)
 	$(CC) $(CFLAGS) $(_CFLAGS) -c  $< -o $@
 
 clean:
-	rm -f $(OBJ) secvarctl 
-	rm -f $(OBJ:.o=.d)
-	rm -f ./*/*.cov.* secvarctl-cov ./*.cov.* ./backends/*/*.cov.* ./external/*/*.cov.* ./html*
+	find . -name "*.[od]" -delete
+	find . -name "*.cov.*" -delete
+	rm -f secvarctl secvarctl-cov ./html*
 
 %.cov.o: %.c
 	$(CC) $(CFLAGS) $(_CFLAGS) -c  --coverage $< -o $@
