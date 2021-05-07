@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h> // for exit
 #include <argp.h>
-#include "crypto/crypto.h"
+#include "libstb/secvar/crypto/crypto.h"
 #include "include/edk2-svc.h" // import last!!
 
 struct Arguments {

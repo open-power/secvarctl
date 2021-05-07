@@ -18,6 +18,8 @@ set ( SKIBOOTSRC secvar_util.c backend/edk2-compat.c backend/edk2-compat-process
 set ( SKIBOOTSRCDIR external/skiboot/libstb/secvar/ )
 list( TRANSFORM SKIBOOTSRC PREPEND ${SKIBOOTSRCDIR} )
 list( APPEND SRC ${SKIBOOTSRC} )
+#directory where mbedtls/openssl crypto functions live
+set( CRYPTOSRCDIR ${SKIBOOTSRCDIR}/crypto/ )
 
 # include paths:
 #  - include/
@@ -34,7 +36,6 @@ option( OPENSSL "Compile with OpenSSL as crypto library, default mbedtls")
 if ( OPENSSL )
   #sources for crypto function implemented w
   set( CRYPTOSRC crypto-openssl.c )
-  set( CRYPTOSRCDIR crypto/ )
   list( TRANSFORM CRYPTOSRC PREPEND ${CRYPTOSRCDIR} )
 else ()
   #sources/dependencies for extra mbedtls functions
@@ -48,7 +49,6 @@ else ()
   list( APPEND SRC ${EXTRAMBEDTLSSRC} )
   #sources for crypto function implemented w secvarctl
   set( CRYPTOSRC crypto-mbedtls.c )
-  set( CRYPTOSRCDIR crypto/ )
   list( TRANSFORM CRYPTOSRC PREPEND ${CRYPTOSRCDIR} )
 endif()
 list ( APPEND SRC ${CRYPTOSRC} )

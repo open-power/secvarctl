@@ -22,7 +22,7 @@
 //#include "external/extraMbedtls/include/pkcs7.h"
 #include <stdlib.h>
 #include "prlog.h"
-#include "crypto/crypto.h"
+#include "libstb/secvar/crypto/crypto.h"
 #include "edk2.h"
 
 
