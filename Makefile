@@ -46,7 +46,7 @@ OPENSSL = 0
 ifeq ($(OPENSSL),1)
 	_LDFLAGS += -lcrypto
 	_CFLAGS += -DOPENSSL
-	CRYPTO_OBJ = crypto/crypto-openssl.o
+	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-openssl.o
 else
 	_LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
 	_CFLAGS += -DMBEDTLS
@@ -56,7 +56,7 @@ else
 	EXTRAMBEDTLS = $(patsubst %,$(EXTRAMBEDTLSDIR)/%, $(_EXTRAMBEDTLS))
 	OBJ += $(EXTRAMBEDTLS)
 
-	CRYPTO_OBJ = crypto/crypto-mbedtls.o
+	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-mbedtls.o
 
 endif
 
@@ -89,7 +89,7 @@ install: secvarctl
 CLANG_FORMAT ?= clang-format
 format:
 	cp external/linux/.clang-format .
-	$(CLANG_FORMAT) --style=file -i *.c include/*.h crypto/*.c crypto/*.h backends/*/*.c backends/*/*/*.h
+	$(CLANG_FORMAT) --style=file -i *.c include/*.h backends/*/*.c backends/*/*/*.h
 	rm .clang-format
 
 -include $(OBJ:.o=.d)

@@ -8,7 +8,7 @@
 #include <time.h> // for timestamp
 #include <ctype.h> // for isspace
 #include <argp.h>
-#include "crypto/crypto.h"
+#include "libstb/secvar/crypto/crypto.h"
 #include <ccan/endian/endian.h>
 #include "backends/edk2-compat/include/edk2-svc.h"
 #include "external/skiboot/libstb/secvar/backend/edk2-compat-process.h" // work on factoring this out

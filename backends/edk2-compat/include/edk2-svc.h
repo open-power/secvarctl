@@ -8,7 +8,7 @@
 #include "err.h"
 #include "prlog.h"
 #include "generic.h"
-#include "crypto/crypto.h"
+#include "libstb/secvar/crypto/crypto.h"
 #include "external/skiboot/libstb/secvar/backend/edk2.h" // include last or else problems from pragma pack(1)
 
 // all argp options must have a single character option
