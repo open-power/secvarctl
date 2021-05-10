@@ -13,22 +13,10 @@
 #include "backends/edk2-compat/include/edk2-svc.h"
 #include "external/skiboot/libstb/secvar/backend/edk2-compat-process.h" // work on factoring this out
 
-enum pkcs7_generation_method {
-	// for -k <key> option
-	W_PRIVATE_KEYS = 0,
-	// for -s <sig> option
-	W_EXTERNAL_GEN_SIG,
-	// default, when not generating a pkcs7/auth
-	NO_PKCS7_GEN_METHOD
-};
-
 struct Arguments {
-	// the pkcs7_gen_meth is to determine if signKeys stores a private key file(0) or signed data (1)
-	int helpFlag, inpValid, signKeyCount, signCertCount;
-	const char *inFile, *outFile, **signCerts, **signKeys, *inForm, *outForm, *varName,
-		*hashAlg;
-	struct efi_time *time;
-	enum pkcs7_generation_method pkcs7_gen_meth;
+	int helpFlag, inpValid;
+	const char *inFile, *outFile, *inForm, *outForm, *hashAlg;
+	struct Auth_specific_args auth_args;
 };
 
 static int parse_opt(int key, char *arg, struct argp_state *state);
@@ -38,9 +26,10 @@ static int validateHashAndAlg(size_t size, const struct hash_funct *alg);
 static int toESL(const unsigned char *data, size_t size, const uuid_t guid, unsigned char **outESL,
 		 size_t *outESLSize);
 static int getHashFunction(const char *name, struct hash_funct **returnFunct);
-static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize, struct Arguments *args,
-			    int hashFunct, unsigned char **outBuff, size_t *outBuffSize);
-static int toAuth(const unsigned char *newESL, size_t eslSize, struct Arguments *args,
+static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize,
+			    struct Auth_specific_args *args, int hashFunct, unsigned char **outBuff,
+			    size_t *outBuffSize);
+static int toAuth(const unsigned char *newESL, size_t eslSize, struct Auth_specific_args *args,
 		  int hashFunct, unsigned char **outBuff, size_t *outBuffSize);
 static int generateESL(const unsigned char *buff, size_t size, struct Arguments *args,
 		       const struct hash_funct *hashFunct, unsigned char **outBuff,
@@ -53,12 +42,127 @@ static int getOutputData(const unsigned char *buff, size_t size, struct Argument
 			 const struct hash_funct *hashFunction, unsigned char **outBuff,
 			 size_t *outBuffSize);
 static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out, size_t *outSize);
-static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size, struct Arguments *args,
-				  unsigned char **outBuff, size_t *outBuffSize);
+static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size,
+				  struct Auth_specific_args *args, unsigned char **outBuff,
+				  size_t *outBuffSize);
 static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const unsigned char *ESL,
-			       size_t ESL_size, struct Arguments *args);
+			       size_t ESL_size, struct Auth_specific_args *args);
 static int parseCustomTimestamp(struct efi_time *strct, const char *str);
 static void convert_tm_to_efi_time(struct efi_time *efi_t, struct tm *tm_t);
+
+// setup generate auth/pkcs7 argp structs/functions
+static struct argp_option auth_specific_argp_options[] = {
+	{ "var", 'n', "VAR_NAME", 0,
+	  "name of a secure boot variable, used when generating an PKCS7/Auth file."
+	  " Also used when determining how to validate input data"
+	  " currently accepted values: {'PK','KEK','db','dbx'}."
+	  " REQUIRED for Auth/PKCS7 generation" },
+	{ "key", 'k', "FILE", 0,
+	  "private RSA key (PEM) for signing new data"
+	  " must have a corresponding '-c FILE' ."
+	  " you can also use multiple signers by declaring several '-k <> -c <>' pairs."
+	  " REQUIRED at least one'-k' or '-s' arg for Auth/PKCS7 generation" },
+	{ "signature", 's', "FILE", 0,
+	  "raw signed data, alternative to using private keys"
+	  " files, must have a corresponding '-c <crtFile>' ."
+	  " you can also use multiple signers by declaring several '-s <> -c <>' pairs."
+	  " for valid secure variable auth files, this data should be generated with"
+	  " `secvarctl generate c:x ...` and then signed externally into FILE, remember to use the"
+	  " same '-t <timestamp>' argument for both commands" },
+	{ "cert", 'c', "FILE", 0,
+	  "x509 cetificate (PEM), used when signing new data for PKCS7/Auth files."
+	  " REQUIRED at least one for Auth/PKCS7 generation" },
+	{ "time", 't', "<YYYY-MM-DDThh:mm:ss>", 0,
+	  "set custom timestamp in UTC to use for signing and auth file metadata"
+	  "digest, default is currrent time in UTC, format defined by ISO 8601, note 'T' is literally in the string, see manpage for value info/ranges" },
+	{ 0 }
+};
+
+/**
+ *subset of argument parsers for secvarctl generate, this is flags only for generating an auth/pkcs7
+ *by making a subset, we can use this parser information for other subcommands that also use thes arguments
+ *see parse_opt for function parameteter and return value info
+ */
+static int auth_specific_parse_opt(int key, char *arg, struct argp_state *state)
+{
+	struct Auth_specific_args *args = state->input;
+	int rc = SUCCESS;
+	switch (key) {
+	case 'k':
+		// if already storing signed data, then don't allow for private keys
+		if (args->pkcs7_gen_meth == W_EXTERNAL_GEN_SIG) {
+			prlog(PR_ERR,
+			      "ERROR: Cannot have both signed data files and private keys for signing\n");
+			rc = ARG_PARSE_FAIL;
+			break;
+		}
+		args->pkcs7_gen_meth = W_PRIVATE_KEYS;
+		args->signKeyCount++;
+		rc = reallocArray((void **)&args->signKeys, args->signKeyCount,
+				  sizeof(*args->signKeys));
+		if (rc) {
+			prlog(PR_ERR, "Failed to realloc private key (-k <>) array\n");
+			break;
+		}
+		args->signKeys[args->signKeyCount - 1] = arg;
+		break;
+	case 'c':
+		args->signCertCount++;
+		rc = reallocArray((void **)&args->signCerts, args->signCertCount,
+				  sizeof(*args->signCerts));
+		if (rc) {
+			prlog(PR_ERR, "Failed to realloc certificate (-c <>) array\n");
+			break;
+		}
+		args->signCerts[args->signCertCount - 1] = arg;
+		break;
+	case 't':
+		args->time = calloc(1, sizeof(*args->time));
+		if (!args->time) {
+			prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+			rc = ALLOC_FAIL;
+			break;
+		}
+		if (parseCustomTimestamp(args->time, arg)) {
+			prlog(PR_ERR,
+			      "ERROR: Could not parse given timestamp %s, make sure it is in format YYYY-MM-DDThh:mm:ss\n",
+			      arg);
+			rc = ARG_PARSE_FAIL;
+		}
+		break;
+	case 's':
+		// if already storing private keys, then don't allow for signed data
+		if (args->pkcs7_gen_meth == W_PRIVATE_KEYS) {
+			prlog(PR_ERR,
+			      "ERROR: Cannot have both signed data files and private keys for signing");
+			rc = ARG_PARSE_FAIL;
+			break;
+		}
+		args->pkcs7_gen_meth = W_EXTERNAL_GEN_SIG;
+		args->signKeyCount++;
+		rc = reallocArray((void **)&args->signKeys, args->signKeyCount,
+				  sizeof(*args->signKeys));
+		if (rc) {
+			prlog(PR_ERR, "Failed to realloc signature (-s <>) array\n");
+			break;
+		}
+		args->signKeys[args->signKeyCount - 1] = arg;
+		break;
+	case 'n':
+		args->varName = arg;
+		break;
+	}
+
+	return rc;
+}
+
+struct argp gen_auth_specific_argp = { auth_specific_argp_options, auth_specific_parse_opt, 0, 0,
+				       0 };
+struct argp_child gen_auth_specific_child_parsers[] = {
+	{ &gen_auth_specific_argp, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP,
+	  "Generating Auth/PKCS7 Options:", 7 },
+	{ 0 }
+};
 /*
  *called from main()
  *handles argument parsing for generate command
@@ -74,46 +178,26 @@ int performGenerateCommand(int argc, char *argv[])
 	unsigned char *buff = NULL, *outBuff = NULL;
 	struct Arguments args = { .helpFlag = 0,
 				  .inpValid = 0,
-				  .signKeyCount = 0,
-				  .signCertCount = 0,
 				  .inFile = NULL,
 				  .outFile = NULL,
-				  .signCerts = NULL,
-				  .signKeys = NULL,
 				  .inForm = NULL,
 				  .outForm = NULL,
-				  .varName = NULL,
 				  .hashAlg = NULL,
-				  .time = NULL,
-				  .pkcs7_gen_meth = NO_PKCS7_GEN_METHOD };
+				  .auth_args = { .signKeyCount = 0,
+						 .signCertCount = 0,
+						 .signCerts = NULL,
+						 .signKeys = NULL,
+						 .varName = NULL,
+						 .time = NULL,
+						 .pkcs7_gen_meth = NO_PKCS7_GEN_METHOD } };
 	// combine command and subcommand for usage/help messages
 	argv[0] = "secvarctl generate";
 
 	struct argp_option options[] = {
-		{ "var", 'n', "VAR_NAME", 0,
-		  "name of a secure boot variable, used when generating an PKCS7/Auth file."
-		  " Also, when an ESL or Auth file contains hashed data use '-n dbx'."
-		  " currently accepted values: {'PK','KEK','db','dbx'}" },
 		{ "alg", 'h', "HASH_ALG", 0,
 		  "hash function, use when '[h]ash' is input/output format."
 		  " currently accepted values: {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}, Default is 'SHA256'" },
 		{ "verbose", 'v', 0, 0, "print more verbose process information" },
-		{ "key", 'k', "FILE", 0,
-		  "private RSA key (PEM), used when signing data for PKCS7/Auth files"
-		  " must have a corresponding '-c FILE' ."
-		  " you can also use multiple signers by declaring several '-k <> -c <>' pairs" },
-		{ "signature", 's', "FILE", 0,
-		  "raw signed data, alternative to using private keys when generating PKCS7/Auth"
-		  " files, must have a corresponding '-c <crtFile>' ."
-		  " you can also use multiple signers by declaring several '-s <> -c <>' pairs."
-		  " for valid secure variable auth files, this data should be generated with"
-		  " `secvarctl generate c:x ...` and then signed externally into FILE, remember to use the"
-		  " same '-t <timestamp>' argument for both commands" },
-		{ "cert", 'c', "FILE", 0,
-		  "x509 cetificate (PEM), used when signing data for PKCS7/Auth files" },
-		{ "time", 't', "<YYYY-MM-DDThh:mm:ss>", 0,
-		  "set custom timestamp in UTC when generating PKCS7/Auth/presigned "
-		  "digest, default is currrent time in UTC, format defined by ISO 8601, note 'T' is literally in the string, see manpage for value info/ranges" },
 		{ "force", 'f', 0, 0,
 		  "does not do prevalidation on the input file, assumes format is correct" },
 		// these are hidden because they are mandatory and are described in the help message instead of in the options
@@ -126,24 +210,24 @@ int performGenerateCommand(int argc, char *argv[])
 
 	struct argp argp = {
 		options, parse_opt,
-		"<inputFormat>:<outputFormat> -i <inputFile> -o <outputFile>\nreset -i <inputFile> -o <outputFile>",
+		"<inFormat>:<outFormat> -i <inFile> -o <outFile>\nreset -i <inFile> -o <outFile>",
 		"This command generates various files related to updating secure boot variables"
-		" It requires an input file that is formatted according to <inputFormat> (see below)"
-		" and produces an output file that is formatted according to <outputFormat> (see below).\v"
-		"Accepted <inputFormat>:"
+		" It requires an input file that is formatted according to <inFormat> (see below)"
+		" and produces an output file that is formatted according to <outFormat> (see below).\v"
+		"Accepted <inFormat>:"
 		"\n\t[h]ash\tA file containing only hashed data\n"
 		"\t[c]ert\tAn x509 certificate (PEM format)\n"
 		"\t[e]sl\tAn EFI Signature List, if dbx must specify '-n dbx'\n"
 		"\t[p]kcs7\tA PKCS7 file\n"
 		"\t[a]uth\ta properly generated authenticated variable fileI\n"
 		"\t[f]ile\tAny file type, Warning: no format validation will be done\n\n"
-		"Accepted <outputFormat>:\n"
+		"Accepted <outFormat>:\n"
 		"\t[h]ash\tA file containing only hashed data\n"
 		"\t[e]sl\tAn EFI Signature List\n"
 		"\t[p]kcs7\tA PKCS7 file containing signed data\n"
 		"\t[a]uth\ta properly generated authenticated variable file\n"
 		"\t[x]\tA valid secure variable presigned digest.\n\n"
-		"Using with `reset` instead of `<inputFormat>:<outputFormat>' generates a valid variable reset file."
+		"Using with `reset` instead of `<inFormat>:<outFormat>' generates a valid variable reset file."
 		" this file is just an auth file with an empty ESL. `reset` requires arguments: output file, signer"
 		" crt/key pair and variable name, no input file is required. use this flag to delete a variable.\n\n"
 		"Typical commands:\n"
@@ -164,7 +248,8 @@ int performGenerateCommand(int argc, char *argv[])
 		"  -create an auth file using an external signing framework:\n"
 		"\t'... c:x -n <varName> -t <y-m-dTh:m:s> -i <file> -o <file>'\n"
 		"\tthen user gets output signed through server (<sigFile>):\n"
-		"\t'... c:a -n <> -t <sameTime!> -s <sigFile> -c <crtfile> -i <file> -o <file>\n"
+		"\t'... c:a -n <> -t <sameTime!> -s <sigFile> -c <crtfile> -i <file> -o <file>\n",
+		gen_auth_specific_child_parsers
 
 	};
 
@@ -173,15 +258,15 @@ int performGenerateCommand(int argc, char *argv[])
 		goto out;
 
 	// if signing each signer needs a certificate
-	if (args.signCertCount != args.signKeyCount) {
-		if (args.pkcs7_gen_meth == W_EXTERNAL_GEN_SIG)
+	if (args.auth_args.signCertCount != args.auth_args.signKeyCount) {
+		if (args.auth_args.pkcs7_gen_meth == W_EXTERNAL_GEN_SIG)
 			prlog(PR_ERR,
 			      "ERROR: Number of certificates does not equal number of signature files, %d != %d\n",
-			      args.signCertCount, args.signKeyCount);
+			      args.auth_args.signCertCount, args.auth_args.signKeyCount);
 		else
 			prlog(PR_ERR,
 			      "ERROR: Number of certificates does not equal number of keys, %d != %d\n",
-			      args.signCertCount, args.signKeyCount);
+			      args.auth_args.signCertCount, args.auth_args.signKeyCount);
 		rc = ARG_PARSE_FAIL;
 		goto out;
 	}
@@ -226,12 +311,12 @@ out:
 		free(buff);
 	if (outBuff)
 		free(outBuff);
-	if (args.signKeys)
-		free(args.signKeys);
-	if (args.signCerts)
-		free(args.signCerts);
-	if (args.time)
-		free(args.time);
+	if (args.auth_args.signKeys)
+		free(args.auth_args.signKeys);
+	if (args.auth_args.signCerts)
+		free(args.auth_args.signCerts);
+	if (args.auth_args.time)
+		free(args.auth_args.time);
 	if (!args.helpFlag)
 		printf("RESULT: %s\n", rc ? "FAILURE" : "SUCCESS");
 
@@ -258,57 +343,11 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		args->helpFlag = 1;
 		argp_state_help(state, stdout, ARGP_HELP_USAGE);
 		break;
-	case 'k':
-		// if already storing signed data, then don't allow for private keys
-		if (args->pkcs7_gen_meth == W_EXTERNAL_GEN_SIG) {
-			prlog(PR_ERR,
-			      "ERROR: Cannot have both signed data files and private keys for signing\n");
-			rc = ARG_PARSE_FAIL;
-			break;
-		}
-		args->pkcs7_gen_meth = W_PRIVATE_KEYS;
-		args->signKeyCount++;
-		rc = reallocArray((void **)&args->signKeys, args->signKeyCount,
-				  sizeof(*args->signKeys));
-		if (rc) {
-			prlog(PR_ERR, "Failed to realloc private key (-k <>) array\n");
-			break;
-		}
-		args->signKeys[args->signKeyCount - 1] = arg;
-		break;
-	case 'c':
-		args->signCertCount++;
-		rc = reallocArray((void **)&args->signCerts, args->signCertCount,
-				  sizeof(*args->signCerts));
-		if (rc) {
-			prlog(PR_ERR, "Failed to realloc certificate (-c <>) array\n");
-			break;
-		}
-		args->signCerts[args->signCertCount - 1] = arg;
-		break;
 	case 'f':
 		args->inpValid = 1;
 		break;
 	case 'v':
 		verbose = PR_DEBUG;
-		break;
-	case 's':
-		// if already storing private keys, then don't allow for signed data
-		if (args->pkcs7_gen_meth == W_PRIVATE_KEYS) {
-			prlog(PR_ERR,
-			      "ERROR: Cannot have both signed data files and private keys for signing");
-			rc = ARG_PARSE_FAIL;
-			break;
-		}
-		args->pkcs7_gen_meth = W_EXTERNAL_GEN_SIG;
-		args->signKeyCount++;
-		rc = reallocArray((void **)&args->signKeys, args->signKeyCount,
-				  sizeof(*args->signKeys));
-		if (rc) {
-			prlog(PR_ERR, "Failed to realloc signature (-s <>) array\n");
-			break;
-		}
-		args->signKeys[args->signKeyCount - 1] = arg;
 		break;
 	case 'i':
 		args->inFile = arg;
@@ -318,23 +357,6 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		break;
 	case 'h':
 		args->hashAlg = arg;
-		break;
-	case 'n':
-		args->varName = arg;
-		break;
-	case 't':
-		args->time = calloc(1, sizeof(*args->time));
-		if (!args->time) {
-			prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-			rc = ALLOC_FAIL;
-			break;
-		}
-		if (parseCustomTimestamp(args->time, arg)) {
-			prlog(PR_ERR,
-			      "ERROR: Could not parse given timestamp %s, make sure it is in format YYYY-MM-DDThh:mm:ss\n",
-			      arg);
-			rc = ARG_PARSE_FAIL;
-		}
 		break;
 	case ARGP_KEY_ARG:
 		// check if reset key is desired
@@ -348,6 +370,10 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		args->inForm = strtok(arg, ":");
 		args->outForm = strtok(NULL, ":");
 		break;
+	case ARGP_KEY_INIT:
+		// for first loop around argp requires us to specify which data struct to use for child parsers
+		state->child_inputs[0] = &(args->auth_args);
+		break;
 	case ARGP_KEY_SUCCESS:
 		// check that all essential args are given and valid
 		if (args->helpFlag)
@@ -355,13 +381,14 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		else if (args->inForm == NULL || args->outForm == NULL)
 			prlog(PR_ERR,
 			      "ERROR: Incorrect '<inputFormat>:<outputFormat>', see usage...\n");
-		else if (args->time && validateTime(args->time))
+		else if (args->auth_args.time && validateTime(args->auth_args.time))
 			prlog(PR_ERR,
 			      "Invalid timestamp flag '-t YYYY-MM-DDThh:mm:ss' , see usage...\n");
 		else if (args->inForm[0] != 'r' && (args->inFile == NULL || isFile(args->inFile)))
 			prlog(PR_ERR, "ERROR: Input File is invalid, see usage below...\n");
-		else if (args->varName && isVariable(args->varName))
-			prlog(PR_ERR, "ERROR: %s is not a valid variable name\n", args->varName);
+		else if (args->auth_args.varName && isVariable(args->auth_args.varName))
+			prlog(PR_ERR, "ERROR: %s is not a valid variable name\n",
+			      args->auth_args.varName);
 		else if (args->outFile == NULL)
 			prlog(PR_ERR, "ERROR: No output file given, see usage below...\n");
 		else
@@ -428,14 +455,14 @@ static int getOutputData(const unsigned char *buff, size_t size, struct Argument
 		// intentional flow into pkcs7
 	case 'p':
 		// if no time is given then get curent time
-		if (!args->time) {
-			args->time = calloc(1, sizeof(*args->time));
-			if (!args->time) {
+		if (!args->auth_args.time) {
+			args->auth_args.time = calloc(1, sizeof(*args->auth_args.time));
+			if (!args->auth_args.time) {
 				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 				rc = ALLOC_FAIL;
 				goto out;
 			}
-			rc = getTimestamp(args->time);
+			rc = getTimestamp(args->auth_args.time);
 			if (rc)
 				goto out;
 		}
@@ -490,7 +517,7 @@ static int generateAuthOrPKCS7(const unsigned char *buff, size_t size, struct Ar
 	case 'e':
 		// if data is known to be valid than do not validate
 		if (!args->inpValid) {
-			rc = validateESL(*inpPtr, inpSize, args->varName);
+			rc = validateESL(*inpPtr, inpSize, args->auth_args.varName);
 			if (rc) {
 				prlog(PR_ERR, "ERROR: Could not validate ESL\n");
 				break;
@@ -519,13 +546,14 @@ static int generateAuthOrPKCS7(const unsigned char *buff, size_t size, struct Ar
 	}
 
 	if (args->outForm[0] == 'a')
-		rc = toAuth(*inpPtr, inpSize, args, hashFunct->crypto_md_funct, outBuff,
+		rc = toAuth(*inpPtr, inpSize, &args->auth_args, hashFunct->crypto_md_funct, outBuff,
 			    outBuffSize);
 	else if (args->outForm[0] == 'x')
-		rc = toHashForSecVarSigning(*inpPtr, inpSize, args, outBuff, outBuffSize);
+		rc = toHashForSecVarSigning(*inpPtr, inpSize, &args->auth_args, outBuff,
+					    outBuffSize);
 	else
-		rc = toPKCS7ForSecVar(*inpPtr, inpSize, args, hashFunct->crypto_md_funct, outBuff,
-				      outBuffSize);
+		rc = toPKCS7ForSecVar(*inpPtr, inpSize, &args->auth_args,
+				      hashFunct->crypto_md_funct, outBuff, outBuffSize);
 
 	if (rc) {
 		prlog(PR_ERR, "Failed to generate %s file, use `--help` for more info\n",
@@ -594,7 +622,8 @@ static int generateESL(const unsigned char *buff, size_t size, struct Arguments 
 			break;
 		}
 		if (!args->inpValid) {
-			rc = validateCert(intermediateBuff, intermediateBuffSize, args->varName);
+			rc = validateCert(intermediateBuff, intermediateBuffSize,
+					  args->auth_args.varName);
 			if (rc) {
 				prlog(PR_ERR, "ERROR: Could not validate certificate\n");
 				break;
@@ -608,7 +637,7 @@ static int generateESL(const unsigned char *buff, size_t size, struct Arguments 
 		break;
 	case 'a':
 		if (!args->inpValid) {
-			rc = validateAuth(buff, size, args->varName);
+			rc = validateAuth(buff, size, args->auth_args.varName);
 			if (rc) {
 				prlog(PR_ERR, "ERROR: Could not validate signed auth file\n");
 				break;
@@ -663,16 +692,16 @@ static int generateHash(const unsigned char *data, size_t size, struct Arguments
 			rc = SUCCESS;
 			break;
 		case 'c':
-			rc = validateCert(data, size, args->varName);
+			rc = validateCert(data, size, args->auth_args.varName);
 			break;
 		case 'e':
-			rc = validateESL(data, size, args->varName);
+			rc = validateESL(data, size, args->auth_args.varName);
 			break;
 		case 'p':
 			rc = validatePKCS7(data, size);
 			break;
 		case 'a':
-			rc = validateAuth(data, size, args->varName);
+			rc = validateAuth(data, size, args->auth_args.varName);
 			break;
 		default:
 			prlog(PR_ERR,
@@ -879,13 +908,14 @@ static int getTimestamp(struct efi_time *ts)
  *generates presigned hashed data, this accepts an ESL and all metadata, it performs a SHA hash
  *@param ESL, ESL data buffer
  *@param ESL_size , length of ESL
- *@param args, struct containing command line info and lots of other important information
+ *@param args, struct containing information on generating a valid hash w secvar metadata (timestamp, var name)
  *@param outBuff, the resulting hashed data, NOTE: REMEMBER TO UNALLOC THIS MEMORY
  *@param outBuffSize, the length of hashed data (should be 32 bytes)
  *@return SUCCESS or err number 
  */
-static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size, struct Arguments *args,
-				  unsigned char **outBuff, size_t *outBuffSize)
+static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size,
+				  struct Auth_specific_args *args, unsigned char **outBuff,
+				  size_t *outBuffSize)
 {
 	int rc;
 	unsigned char *preHash = NULL;
@@ -943,11 +973,11 @@ static char *char_to_wchar(const char *key, const size_t keylen)
  *@param outSize, length of output data
  *@param ESL, the new ESL data 
  *@param ESL_size, length of ESL buffer
- *@param args, struct containing imprtant metadata info
+ *@param args, struct containing important metadata info
  *@return, success or error number
  */
 static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const unsigned char *ESL,
-			       size_t ESL_size, struct Arguments *args)
+			       size_t ESL_size, struct Auth_specific_args *args)
 {
 	int rc = SUCCESS;
 	unsigned char *ptr = NULL;
@@ -1010,14 +1040,15 @@ out:
  *generates a PKCS7 that is compatable with Secure variables AKA the data to be hashed will be keyname + timestamp +attr etc. etc ... + newData 
  *@param newData, data to be added to be used in digest
  *@param dataSize , length of newData
- *@param args,  struct containing important information for generation
+ *@param args,  struct containing important information for generating and signing hash in PKCS7
  *@param hashFunct, digest to use, NOTE: hashFucnt doesn't matter currently, it will always use SHA256 until edk2-compat-process.c supports different digest algorithms
  *@param outBuff, the resulting PKCS7, newData not appended, NOTE: REMEMBER TO UNALLOC THIS MEMORY
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize, struct Arguments *args,
-			    int hashFunct, unsigned char **outBuff, size_t *outBuffSize)
+static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize,
+			    struct Auth_specific_args *args, int hashFunct, unsigned char **outBuff,
+			    size_t *outBuffSize)
 {
 	int rc;
 	size_t totalSize;
@@ -1056,13 +1087,13 @@ out:
  *generate an auth file and its size and return a SUCCESS or negative number (ERROR)
  *@param newESL, data to be added to auth, it must be of the same type as specified by inform
  *@param eslSize , length of newESL
- *@param args, struct containing important command line info
+ *@param args, struct containing important info for auth generation
  *@param hashFunct, array of hash function information to use for signing NOTE: NOT CURRENTLY DOING ANYTING SEE toPKCS7ForSecVar
  *@param outBuff, the resulting auth File, NOTE: REMEMBER TO UNALLOC THIS MEMORY
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int toAuth(const unsigned char *newESL, size_t eslSize, struct Arguments *args,
+static int toAuth(const unsigned char *newESL, size_t eslSize, struct Auth_specific_args *args,
 		  int hashFunct, unsigned char **outBuff, size_t *outBuffSize)
 {
 	int rc;

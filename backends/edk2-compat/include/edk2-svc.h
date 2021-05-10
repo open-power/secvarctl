@@ -11,6 +11,7 @@
 #include "libstb/secvar/crypto/crypto.h"
 #include "external/skiboot/libstb/secvar/backend/edk2.h"
 #include "external/skiboot/libstb/secvar/backend/edk2-compat-process.h"
+#include "argp.h"
 
 // all argp options must have a single character option
 // so we set --usage to have a single character option that is out of range
@@ -84,4 +85,22 @@ int validateTS(const unsigned char *data, size_t size);
 int validateTime(struct efi_time *time);
 
 extern struct command edk2_compat_command_table[5];
+
+// below is for arg parsing for any type of generate signed data (auth/pkcs7) command
+extern struct argp gen_auth_specific_argp;
+enum pkcs7_generation_method {
+	// for -k <key> option
+	W_PRIVATE_KEYS = 0,
+	// for -s <sig> option
+	W_EXTERNAL_GEN_SIG,
+	// default, when not generating a pkcs7/auth
+	NO_PKCS7_GEN_METHOD
+};
+struct Auth_specific_args {
+	// the pkcs7_gen_meth is to determine if signKeys stores a private key file(0) or signed data (1)
+	int signKeyCount, signCertCount;
+	const char **signCerts, **signKeys, *varName;
+	struct efi_time *time;
+	enum pkcs7_generation_method pkcs7_gen_meth;
+};
 #endif
