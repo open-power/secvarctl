@@ -14,7 +14,6 @@
 #include "external/extraMbedtls/include/pkcs7.h"
 #include "external/extraMbedtls/include/generate-pkcs7.h"
 #include <mbedtls/platform.h>
-#include "generic.h"
 
 crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen)
 {

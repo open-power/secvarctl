@@ -8,7 +8,6 @@
 #include "crypto.h"
 #include "include/prlog.h"
 #include "include/err.h"
-#include "generic.h"
 
 #include <openssl/pkcs7.h>
 #include <openssl/x509.h>
@@ -214,13 +213,14 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 	int rc;
 	PKCS7 *gen_pkcs7_struct = NULL;
 	BIO *bio = NULL, *out_bio = NULL;
+	FILE *fp;
 	EVP_PKEY *evp_pkey = NULL;
 	const EVP_MD *evp_md = NULL;
 	crypto_x509 *x509 = NULL;
 	size_t pkcs7_out_len;
-	unsigned char *keyPEM = NULL, *key = NULL, *keyTmp, *crtPEM = NULL,
-		      *crt = NULL, *out_bio_der = NULL;
-	size_t keySizePEM, keySize, crtSizePEM, crtSize;
+	unsigned char *key = NULL, *keyTmp, *crt = NULL, *out_bio_der = NULL;
+	char *unnecessary_hdr = NULL, *unnecessary_name = NULL;
+	long int keySize, crtSize;
 
 	if (keyPairs == 0) {
 		prlog(PR_ERR,
@@ -253,39 +253,45 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 	//for every key pair get the data and add the signer to the pkcs7
 	for (int i = 0; i < keyPairs; i++) {
 		// get data of private keys
-		keyPEM = (unsigned char *)getDataFromFile(keyFiles[i],
-							  &keySizePEM);
-		if (!keyPEM) {
+		fp = fopen(keyFiles[i], "r");
+		if (fp == NULL) {
+			prlog(PR_ERR, "ERROR: failed to open file %s: %s\n",
+			      keyFiles[i], strerror(errno));
+			rc = INVALID_FILE;
+			goto out;
+		}
+		rc = PEM_read(fp, &unnecessary_name, &unnecessary_hdr, &key,
+			      &keySize);
+		OPENSSL_free(unnecessary_name);
+		OPENSSL_free(unnecessary_hdr);
+		fclose(fp);
+		//returns 1 on success
+		if (rc != 1) {
 			prlog(PR_ERR,
 			      "ERROR: failed to get data from priv key file %s\n",
 			      keyFiles[i]);
 			rc = INVALID_FILE;
 			goto out;
 		}
-		rc = crypto_convert_pem_to_der(
-			keyPEM, keySizePEM, (unsigned char **)&key, &keySize);
-		if (rc) {
-			prlog(PR_ERR,
-			      "Conversion for %s from PEM to DER failed\n",
-			      keyFiles[i]);
+		//get data from crt
+		fp = fopen(crtFiles[i], "r");
+		if (fp == NULL) {
+			prlog(PR_ERR, "ERROR: failed to open file %s: %s\n",
+			      keyFiles[i], strerror(errno));
+			rc = INVALID_FILE;
 			goto out;
 		}
-		//get data from crt
-		crtPEM = (unsigned char *)getDataFromFile(crtFiles[i],
-							  &crtSizePEM);
-		if (!keyPEM) {
+		rc = PEM_read(fp, &unnecessary_name, &unnecessary_hdr, &crt,
+			      &crtSize);
+		OPENSSL_free(unnecessary_name);
+		OPENSSL_free(unnecessary_hdr);
+		fclose(fp);
+		//returns 1 on success
+		if (rc != 1) {
 			prlog(PR_ERR,
 			      "ERROR: failed to get data from cert file %s\n",
 			      crtFiles[i]);
 			rc = INVALID_FILE;
-			goto out;
-		}
-		rc = crypto_convert_pem_to_der(
-			crtPEM, crtSizePEM, (unsigned char **)&crt, &crtSize);
-		if (rc) {
-			prlog(PR_ERR,
-			      "Conversion for %s from PEM to DER failed\n",
-			      crtFiles[i]);
 			goto out;
 		}
 		//get private key from private key DER buff
@@ -316,12 +322,8 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 			goto out;
 		}
 		//reset mem
-		free(keyPEM);
-		keyPEM = NULL;
 		free(key);
 		key = NULL;
-		free(crtPEM);
-		crtPEM = NULL;
 		EVP_PKEY_free(evp_pkey);
 		evp_pkey = NULL;
 		free(crt);
@@ -373,12 +375,8 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 	rc = SUCCESS;
 
 out:
-	if (keyPEM)
-		free(keyPEM);
 	if (key)
 		free(key);
-	if (crtPEM)
-		free(crtPEM);
 	if (crt)
 		free(crt);
 	if (evp_pkey)
@@ -617,7 +615,7 @@ int crypto_md_generate_hash(const unsigned char *data, size_t size,
 			    int hashFunct, unsigned char **outHash,
 			    size_t *outHashSize)
 {
-	int rc;
+	int rc, i;
 	crypto_md_ctx *ctx;
 	size_t hash_len;
 	rc = crypto_md_ctx_init(&ctx, hashFunct);
@@ -667,7 +665,9 @@ int crypto_md_generate_hash(const unsigned char *data, size_t size,
 	if (verbose) {
 		printf("Hash generation successful, %s: ",
 		       OBJ_nid2sn(hashFunct));
-		printHex(*outHash, *outHashSize);
+		for (i = 0; i < *outHashSize - 1; i++)
+			printf("%02x:", (*outHash)[i]);
+		printf("%02x\n", (*outHash)[i]);
 	}
 
 out:

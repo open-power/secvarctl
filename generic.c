@@ -40,9 +40,10 @@ size_t getLeadingWhitespace(unsigned char *data, size_t dataSize)
 }
 void printHex(unsigned char *data, size_t length)
 {
-	for (int i = 0; i < length; i++)
-		printf("/%02x", data[i]);
-	printf("\n");
+	int i;
+	for (i = 0; i < length - 1; i++)
+		printf("%02x:", data[i]);
+	printf("%02x\n", data[i]);
 }
 
 /**
