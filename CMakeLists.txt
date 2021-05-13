@@ -38,14 +38,10 @@ if ( OPENSSL )
   set( CRYPTOSRC crypto-openssl.c )
   list( TRANSFORM CRYPTOSRC PREPEND ${CRYPTOSRCDIR} )
 else ()
-  #sources/dependencies for extra mbedtls functions
-  set( EXTRAMBEDTLSDEP generate-pkcs7.h pkcs7.h )
-  set( EXTRAMBEDTLSDEPDIR external/extraMbedtls/include/ )
-  list( TRANSFORM EXTRAMBEDTLSDEP PREPEND ${EXTRAMBEDTLSDEPDIR} )
-  set ( EXTRAMBEDTLSSRC generate-pkcs7.c pkcs7.c )
+  #sources for extra mbedtls functions
+  set ( EXTRAMBEDTLSSRC pkcs7_write.c pkcs7.c )
   set ( EXTRAMBEDTLSSRCDIR  external/extraMbedtls/ )
   list( TRANSFORM EXTRAMBEDTLSSRC PREPEND ${EXTRAMBEDTLSSRCDIR} )
-  list( APPEND DEPEN ${EXTRAMBEDTLSDEP} )
   list( APPEND SRC ${EXTRAMBEDTLSSRC} )
   #sources for crypto function implemented w secvarctl
   set( CRYPTOSRC crypto-mbedtls.c )
