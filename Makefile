@@ -52,7 +52,7 @@ else
 	_CFLAGS += -DMBEDTLS
 
 	EXTRAMBEDTLSDIR = external/extraMbedtls
-	_EXTRAMBEDTLS = generate-pkcs7.o pkcs7.o 
+	_EXTRAMBEDTLS = pkcs7_write.o pkcs7.o 
 	EXTRAMBEDTLS = $(patsubst %,$(EXTRAMBEDTLSDIR)/%, $(_EXTRAMBEDTLS))
 	OBJ += $(EXTRAMBEDTLS)
 

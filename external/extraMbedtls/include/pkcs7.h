@@ -39,16 +39,18 @@
  * \name PKCS7 Error codes
  * \{
  */
-#define MBEDTLS_ERR_PKCS7_FEATURE_UNAVAILABLE              -0x8080  /**< Unavailable feature, e.g. anything other than signed data. */
-#define MBEDTLS_ERR_PKCS7_INVALID_FORMAT                   -0x8100  /**< The CRT/CRL format is invalid, e.g. different type expected. */
-#define MBEDTLS_ERR_PKCS7_INVALID_VERSION                  -0x8180  /**< The PKCS7 version element is invalid or cannot be parsed. */
-#define MBEDTLS_ERR_PKCS7_INVALID_CONTENT_INFO             -0x8200  /**< The PKCS7 content info invalid or cannot be parsed. */
-#define MBEDTLS_ERR_PKCS7_INVALID_ALG                      -0x8280  /**< The algorithm tag or value is invalid or cannot be parsed. */
-#define MBEDTLS_ERR_PKCS7_INVALID_SIGNATURE                -0x8300  /**< Error parsing the signature */
-#define MBEDTLS_ERR_PKCS7_INVALID_SIGNER_INFO              -0x8380  /**< Error parsing the signer's info */
-#define MBEDTLS_ERR_PKCS7_BAD_INPUT_DATA                   -0x8400  /**< Input invalid. */
-#define MBEDTLS_ERR_PKCS7_ALLOC_FAILED                     -0x8480  /**< Allocation of memory failed. */
-#define MBEDTLS_ERR_PKCS7_FILE_IO_ERROR                    -0x8500  /**< File Read/Write Error */
+#define MBEDTLS_ERR_PKCS7_INVALID_FORMAT                   -0x5300  /**< The format is invalid, e.g. different type expected. */
+#define MBEDTLS_ERR_PKCS7_FEATURE_UNAVAILABLE              -0x53F0  /**< Unavailable feature, e.g. anything other than signed data. */
+#define MBEDTLS_ERR_PKCS7_INVALID_VERSION                  -0x5400  /**< The PKCS7 version element is invalid or cannot be parsed. */
+#define MBEDTLS_ERR_PKCS7_INVALID_CONTENT_INFO             -0x54F0  /**< The PKCS7 content info invalid or cannot be parsed. */
+#define MBEDTLS_ERR_PKCS7_INVALID_ALG                      -0x5500  /**< The algorithm tag or value is invalid or cannot be parsed. */
+#define MBEDTLS_ERR_PKCS7_INVALID_CERT                     -0x55F0  /**< The certificate tag or value is invalid or cannot be parsed. */
+#define MBEDTLS_ERR_PKCS7_INVALID_SIGNATURE                -0x5600  /**< Error parsing the signature */
+#define MBEDTLS_ERR_PKCS7_INVALID_SIGNER_INFO              -0x56F0  /**< Error parsing the signer's info */
+#define MBEDTLS_ERR_PKCS7_BAD_INPUT_DATA                   -0x5700  /**< Input invalid. */
+#define MBEDTLS_ERR_PKCS7_ALLOC_FAILED                     -0x57F0  /**< Allocation of memory failed. */
+#define MBEDTLS_ERR_PKCS7_FILE_IO_ERROR                    -0x5800  /**< File Read/Write Error */
+#define MBEDTLS_ERR_PKCS7_VERIFY_FAIL                      -0x58F0  /**< Verification Failed */
 /* \} name */
 
 /**

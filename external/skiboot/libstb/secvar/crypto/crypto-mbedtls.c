@@ -11,8 +11,10 @@
 
 #include <mbedtls/pk_internal.h> // for validating cert pk data
 #include <mbedtls/error.h>
+#include <mbedtls/md_internal.h>
+#include <mbedtls/oid.h>
 #include "external/extraMbedtls/include/pkcs7.h"
-#include "external/extraMbedtls/include/generate-pkcs7.h"
+#include "external/extraMbedtls/include/pkcs7_write.h"
 #include <mbedtls/platform.h>
 
 crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen)
@@ -77,9 +79,71 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 				      const char **keyFiles, int keyPairs,
 				      int hashFunct)
 {
-	return to_pkcs7_generate_signature(pkcs7, pkcs7Size, newData,
-					   newDataSize, crtFiles, keyFiles,
-					   keyPairs, hashFunct);
+	unsigned char *crtPEM = NULL,**crts = NULL, *keyPEM = NULL, **keys = NULL;
+	size_t *keySizes = NULL, crtSizePEM, *crtSizes = NULL;
+	int rc;
+	// if no keys given
+	if (keyPairs == 0) {
+		prlog(PR_ERR, "ERROR: missing private key / certificate... use -k <privateKeyFile> -c <certificateFile>\n");
+		rc = ARG_PARSE_FAIL;
+		goto out;
+	}
+	keys = calloc(1, sizeof(unsigned char*) * keyPairs);
+	keySizes = calloc(1, sizeof(size_t) * keyPairs);
+	if (!keys || !keySizes) {
+		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+		rc = ALLOC_FAIL;
+		goto out;	
+	}
+	crts = calloc (1, sizeof(unsigned char*) * keyPairs);
+	crtSizes = calloc(1, sizeof(size_t) * keyPairs);
+	if (!crts || !crtSizes) {
+		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+		rc = ALLOC_FAIL;
+		goto out;
+	}
+	for (int i = 0; i < keyPairs; i++) {
+		// get data of private keys
+		rc = mbedtls_pk_load_file(keyFiles[i], &keys[i], &keySizes[i]);
+		if (rc) {
+			prlog(PR_ERR, "ERROR: failed to get data from priv key file %s\n", keyFiles[i]);
+			rc = INVALID_FILE;
+			goto out;
+		}
+		if (keyPEM) free(keyPEM);
+		keyPEM = NULL;
+		// get data from x509
+		// this function just gets data from file, its not PKCS7 specific
+		rc = mbedtls_pkcs7_load_file(crtFiles[i], &crtPEM, &crtSizePEM);
+		if (rc) {
+			prlog(PR_ERR, "ERROR: failed to get data from x509 file %s\n", crtFiles[i]);
+			rc = INVALID_FILE;
+			goto out;
+		}
+		// get der format of that crt
+		rc = mbedtls_convert_pem_to_der(crtPEM, crtSizePEM, (unsigned char **) &crts[i], &crtSizes[i]);
+		if (rc) {
+			prlog(PR_ERR, "Conversion for %s from PEM to DER failed\n", crtFiles[i]);
+		 	goto out;
+		}
+		if (crtPEM) free(crtPEM);
+		crtPEM = NULL;
+	}
+	rc = mbedtls_pkcs7_create(pkcs7, pkcs7Size, newData,
+					    newDataSize, (const unsigned char **)crts, (const unsigned char **)keys, crtSizes, keySizes,
+					    keyPairs, hashFunct, 0);
+out:
+	if (crtPEM) free(crtPEM);
+	if (keyPEM) free(keyPEM);
+	for (int i = 0; i < keyPairs; i++) {
+		if (keys[i]) free(keys[i]);
+		if (crts[i]) free(crts[i]);
+	}
+	if (keys) free (keys);
+	if (crts) free(crts);
+	if (keySizes) free(keySizes);
+	if (crtSizes) free(crtSizes);
+	return rc;
 }
 
 int crypto_pkcs7_generate_w_already_signed_data(
@@ -87,9 +151,70 @@ int crypto_pkcs7_generate_w_already_signed_data(
 	size_t newDataSize, const char **crtFiles, const char **sigFiles,
 	int keyPairs, int hashFunct)
 {
-	return to_pkcs7_already_signed_data(pkcs7, pkcs7Size, newData,
-					    newDataSize, crtFiles, sigFiles,
-					    keyPairs, hashFunct);
+	unsigned char *crtPEM = NULL,**crts = NULL, **sigs = NULL;
+	size_t  *sigSizes = NULL, crtSizePEM,*crtSizes = NULL;
+	int rc;
+	// if no keys given
+	if (keyPairs == 0) {
+		prlog(PR_ERR, "ERROR: missing signature / certificate pairs... use -s <signedDataFile> -c <certificateFile>\n");
+		rc = ARG_PARSE_FAIL;
+		goto out;
+	}
+	sigs = calloc(1, sizeof(unsigned char*) * keyPairs);
+	sigSizes = calloc(1, sizeof(size_t) * keyPairs);
+	if (!sigs || !sigSizes) {
+		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+		rc = ALLOC_FAIL;
+		goto out;	
+	}
+	crts = calloc (1, sizeof(unsigned char*) * keyPairs);
+	crtSizes = calloc(1, sizeof(size_t) * keyPairs);
+	if (!crts || !crtSizes) {
+		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+		rc = ALLOC_FAIL;
+		goto out;
+	}
+	for (int i = 0; i < keyPairs; i++) {
+		// get data from signature files
+		// this function just gets data from file, its not PKCS7 specifc
+		rc = mbedtls_pkcs7_load_file(sigFiles[i], &sigs[i], &sigSizes[i]);
+		if (!sigs[i]) {
+			prlog(PR_ERR, "ERROR: failed to get data from signature file %s\n", sigFiles[i]);
+			rc = INVALID_FILE;
+			goto out;
+		}
+		// get data from x509
+		// this function just gets data from file, its not PKCS7 specific
+		rc = mbedtls_pkcs7_load_file(crtFiles[i], &crtPEM, &crtSizePEM);
+		if (rc) {
+			prlog(PR_ERR, "ERROR: failed to get data from x509 file %s\n", crtFiles[i]);
+			rc = INVALID_FILE;
+			goto out;
+		}
+		// get der format of that crt
+		rc = mbedtls_convert_pem_to_der(crtPEM, crtSizePEM, (unsigned char **) &crts[i], &crtSizes[i]);
+		if (rc) {
+			prlog(PR_ERR, "Conversion for %s from PEM to DER failed\n", crtFiles[i]);
+		 	goto out;
+		}
+		if (crtPEM) free(crtPEM);
+		crtPEM = NULL;
+	}
+
+	rc =  mbedtls_pkcs7_create(pkcs7, pkcs7Size, newData,
+					    newDataSize, (const unsigned char **)crts, (const unsigned char **)sigs, crtSizes, sigSizes,
+					    keyPairs, hashFunct, 1);
+out:
+	if (crtPEM) free(crtPEM);
+	for (int i = 0; i < keyPairs; i++) {
+		if (sigs[i]) free(sigs[i]);
+		if (crts[i]) free(crts[i]);
+	}
+	if (sigs) free (sigs);
+	if (crts) free(crts);
+	if (sigSizes) free(sigSizes);
+	if (crtSizes) free(crtSizes);
+	return rc;
 }
 
 int crypto_x509_get_der_len(crypto_x509 *x509)
@@ -184,7 +309,7 @@ void crypto_x509_free(crypto_x509 *x509)
 int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
 			      unsigned char **output, size_t *olen)
 {
-	return convert_pem_to_der(input, ilen, output, olen);
+	return mbedtls_convert_pem_to_der(input, ilen, output, olen);
 }
 
 void crypto_strerror(int rc, char *out_str, size_t out_max_len)
@@ -231,8 +356,38 @@ int crypto_md_generate_hash(const unsigned char *data, size_t size,
 			    int hashFunct, unsigned char **outHash,
 			    size_t *outHashSize)
 {
-	//calls function in generate-pkcs7 (mbedtls specific)
-	return toHash(data, size, hashFunct, outHash, outHashSize);
+	const mbedtls_md_info_t *md_info;
+    int rc;
+    size_t i;
+
+    md_info = mbedtls_md_info_from_type( hashFunct );
+    if( md_info == NULL ) {
+        prlog(PR_ERR,  "ERROR: Invalid hash function %u, see mbedtls_md_type_t\n",
+                        hashFunct );
+        rc = PKCS7_FAIL;
+        goto out;
+    }
+    *outHash = calloc( 1, md_info->size );
+    if( *outHash == NULL ) {
+        rc = ALLOC_FAIL;
+        goto out;
+    }
+    rc = mbedtls_md( md_info, data, size, *outHash );
+    if( rc ) {
+        mbedtls_free( *outHash );
+        *outHash = NULL;
+        goto out;
+    }
+
+    *outHashSize = md_info->size;
+    mbedtls_printf( "Hash generation successful, %s: ", md_info->name );
+    for (i = 0; i < *outHashSize - 1; i++)
+        mbedtls_printf("%02x:", (*outHash)[i]);
+    mbedtls_printf("%02x\n", (*outHash)[i]);
+    rc = 0;
+
+out:
+    return ( rc );
 }
 
 #endif
