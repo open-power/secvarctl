@@ -35,21 +35,21 @@ else
 	STATICFLAG=
 endif
 
-#use NO_CRYPTO for smaller executable but limited functionality
+#use SECVAR_CRYPTO_WRITE_FUNC for smaller executable but limited functionality
 NO_CRYPTO = 0 
-ifeq ($(NO_CRYPTO),1)
-	_CFLAGS+=-DNO_CRYPTO
+ifeq ($(strip $(NO_CRYPTO)), 0)
+	_CFLAGS+=-DSECVAR_CRYPTO_WRITE_FUNC
 endif
 
 #Build with crypto library = openssl rather than mbedtls
 OPENSSL = 0
 ifeq ($(OPENSSL),1)
 	_LDFLAGS += -lcrypto
-	_CFLAGS += -DOPENSSL
+	_CFLAGS += -DSECVAR_CRYPTO_OPENSSL
 	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-openssl.o
 else
 	_LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
-	_CFLAGS += -DMBEDTLS
+	_CFLAGS += -DSECVAR_CRYPTO_MBEDTLS
 
 	EXTRAMBEDTLSDIR = external/extraMbedtls
 	_EXTRAMBEDTLS = pkcs7_write.o pkcs7.o 

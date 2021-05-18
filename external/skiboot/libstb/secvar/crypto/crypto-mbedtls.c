@@ -1,20 +1,34 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 /* Copyright 2021 IBM Corp.*/
-#ifdef MBEDTLS
+#ifdef SECVAR_CRYPTO_MBEDTLS
 // ^extra precaution to not compile with mbedtls unless specified
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h> // for exit
 #include "crypto.h"
-#include "include/prlog.h"
-#include "include/err.h"
+// commented out by Nick Child
+// #include <skiboot.h> // for prlog
+
+// added by Nick Child
+#include "prlog.h"
+// commented out by Nick Child
+//#include "secvar_crypto_err.h" // for err codes
+// added by Nick Child
+#include "err.h"
 
 #include <mbedtls/pk_internal.h> // for validating cert pk data
 #include <mbedtls/error.h>
 #include <mbedtls/md_internal.h>
 #include <mbedtls/oid.h>
+// Nick Child edited paths below
+// #include "libstb/crypto/pkcs7/pkcs7.h"
+// #ifdef SECVAR_CRYPTO_WRITE_FUNC
+// #include "libstb/crypto/pkcs7/pkcs7_write.h"
+// #endif
 #include "external/extraMbedtls/include/pkcs7.h"
+#ifdef SECVAR_CRYPTO_WRITE_FUNC
 #include "external/extraMbedtls/include/pkcs7_write.h"
+#endif
 #include <mbedtls/platform.h>
 
 crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen)
@@ -73,6 +87,7 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 	return mbedtls_pkcs7_signed_hash_verify(pkcs7, x509, hash, hash_len);
 }
 
+#ifdef SECVAR_CRYPTO_WRITE_FUNC
 int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 				      const unsigned char *newData,
 				      size_t newDataSize, const char **crtFiles,
@@ -217,6 +232,12 @@ out:
 	return rc;
 }
 
+int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
+			      unsigned char **output, size_t *olen)
+{
+	return mbedtls_convert_pem_to_der(input, ilen, output, olen);
+}
+#endif
 int crypto_x509_get_der_len(crypto_x509 *x509)
 {
 	return x509->raw.len;
@@ -275,7 +296,7 @@ void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc,
 				  x509->sig_pk, x509->sig_md, x509->sig_opts);
 }
 
-int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim,
+int crypto_x509_get_long_desc(char *x509_info, size_t max_len, const char *delim,
 			      crypto_x509 *x509)
 {
 	return mbedtls_x509_crt_info(x509_info, max_len, delim, x509);
@@ -304,12 +325,6 @@ void crypto_x509_free(crypto_x509 *x509)
 {
 	mbedtls_x509_crt_free(x509);
 	free(x509);
-}
-
-int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
-			      unsigned char **output, size_t *olen)
-{
-	return mbedtls_convert_pem_to_der(input, ilen, output, olen);
 }
 
 void crypto_strerror(int rc, char *out_str, size_t out_max_len)

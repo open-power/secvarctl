@@ -28,7 +28,7 @@ void usage()
 	       "use 'secvarctl validate --usage/help' for more information\n\t"
 	       "verify\t\tcompares proposed variable to the current variables,\n\t\t\t"
 	       "use 'secvarctl verify --usage/help' for more information\n"
-#ifndef NO_CRYPTO
+#ifdef SECVAR_CRYPTO_WRITE_FUNC
 	       "\tgenerate\tcreates relevant files for secure variable management,\n\t\t\t"
 	       "use 'secvarctl generate --usage/help' for more information\n"
 #endif
@@ -43,7 +43,7 @@ void help()
 	       "write - update the given variable's key value, committed upon reboot\n\t\t"
 	       "validate  -  checks format requirements are met for the given file type\n\t\t"
 	       "verify - checks that the given files are correctly signed by the current variables\n"
-#ifndef NO_CRYPTO
+#ifdef SECVAR_CRYPTO_WRITE_FUNC
 	       "\t\tgenerate - create files that are relevant to the secure variable management process\n"
 #endif
 	);

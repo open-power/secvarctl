@@ -1,9 +1,9 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 /* Copyright 2021 IBM Corp.*/
-#ifndef SECVARCTL_CRYPTO_H
-#define SECVARCTL_CRYPTO_H
+#ifndef SECVAR_CRYPTO_H
+#define SECVAR_CRYPTO_H
 
-#ifdef OPENSSL
+#ifdef SECVAR_CRYPTO_OPENSSL
 
 #include <openssl/obj_mac.h>
 #include <openssl/pkcs7.h>
@@ -20,10 +20,13 @@ typedef PKCS7 crypto_pkcs7;
 typedef X509 crypto_x509;
 typedef EVP_MD_CTX crypto_md_ctx;
 
-#elif defined MBEDTLS
+#elif defined SECVAR_CRYPTO_MBEDTLS
 
 #include <mbedtls/md.h>
+// NICK CHILD was here
+//#include "libstb/crypto/pkcs7/pkcs7.h"
 #include "external/extraMbedtls/include/pkcs7.h"
+
 #define CRYPTO_MD_SHA1 MBEDTLS_MD_SHA1
 #define CRYPTO_MD_SHA224 MBEDTLS_MD_SHA224
 #define CRYPTO_MD_SHA256 MBEDTLS_MD_SHA256
@@ -80,6 +83,13 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 				    unsigned char *hash, int hash_len);
 
 /*
+ * The following protects against compilation failure due to custom mbedtls config
+ * These SECVAR_CRYPTO_WRITE_FUNC should only be set if
+ * Mbedtls has been built with MBEDTLS_FS_IO and MBEDTLS_PKCS7_WRITE_C
+ * defined
+ */
+#ifdef SECVAR_CRYPTO_WRITE_FUNC
+/*
  *generates a PKCS7 and create signature with private and public keys
  *@param pkcs7, the resulting PKCS7 DER buff, newData not appended, NOTE: REMEMBER TO UNALLOC THIS MEMORY
  *@param pkcs7Size, the length of pkcs7
@@ -88,8 +98,8 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
  *@param crtFiles, array of file paths to public keys to sign with(PEM)
  *@param keyFiles, array of file paths to private keys to sign with
  *@param keyPairs, array length of key/crtFiles
- *@param hashFunct, hash function to use in digest, see crypto_hash_funct for values 
- *@return SUCCESS or err number 
+ *@param hashFunct, hash function to use in digest, see crypto_hash_funct for values
+ *@return SUCCESS or err number
  */
 int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 				      const unsigned char *newData,
@@ -104,16 +114,28 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
  *@param newData, data to be added to be used in digest
  *@param dataSize , length of newData
  *@param crtFiles, array of file paths to public keys that were used in signing with(PEM)
- *@param sigFiles, array of file paths to raw signed data files 
+ *@param sigFiles, array of file paths to raw signed data files
  *@param keyPairs, array length of crt/signatures
  *@param hashFunct, hash function to use in digest, see crypto_hash_funct for values
- *@return SUCCESS or err number 
+ *@return SUCCESS or err number
  */
 int crypto_pkcs7_generate_w_already_signed_data(
 	unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData,
 	size_t newDataSize, const char **crtFiles, const char **sigFiles,
 	int keyPairs, int hashFunct);
 
+/*
+ *attempts to convert PEM data buffer into DER data buffer
+ *@param input , PEM data buffer
+ *@param ilen , length of input data
+ *@param output , pointer to output DER data, not yet allocated
+ *@param olen , pointer to length of output data
+ *@return SUCCESS or errno if conversion failed
+ *Note: Remember to unallocate the output data!
+ */
+int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
+			      unsigned char **output, size_t *olen);
+#endif
 /**====================X509 Functions ====================**/
 int crypto_x509_get_der_len(crypto_x509 *x509);
 int crypto_x509_get_tbs_der_len(crypto_x509 *x509);
@@ -146,7 +168,7 @@ void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc,
  *@param x509 ,  a pointer to either an openssl or mbedtls x509 struct
  *@return number of bytes written to x509_info
  */
-int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim,
+int crypto_x509_get_long_desc(char *x509_info, size_t max_len, const char *delim,
 			      crypto_x509 *x509);
 
 /*
@@ -171,17 +193,6 @@ crypto_x509 *crypto_x509_parse_der(const unsigned char *data, size_t data_len);
 void crypto_x509_free(crypto_x509 *x509);
 
 /**====================General Functions ====================**/
-/*
- *attempts to convert PEM data buffer into DER data buffer
- *@param input , PEM data buffer
- *@param ilen , length of input data
- *@param output , pointer to output DER data, not yet allocated
- *@param olen , pointer to length of output data
- *@return SUCCESS or errno if conversion failed
- *Note: Remember to unallocate the output data!
- */
-int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
-			      unsigned char **output, size_t *olen);
 
 /*
  *accepts an error code from either mbedtls or openssl and returns a string describing it

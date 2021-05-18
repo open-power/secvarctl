@@ -68,8 +68,8 @@ add_executable( secvarctl ${SRC} )
 
 #no crypto means don't compile the generate command = smaller executable
 option( NO_CRYPTO "Build without crypto functions for smaller executable, some functionality lost" OFF )
-if ( NO_CRYPTO )
-  target_compile_definitions( secvarctl PRIVATE  NO_CRYPTO )
+if ( NOT NO_CRYPTO )
+  target_compile_definitions( secvarctl PRIVATE  SECVAR_CRYPTO_WRITE_FUNC )
 endif(  )
 
 #append possible extensions for library
@@ -79,7 +79,7 @@ LIST( APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.0" ".a" ".so" )
 if (OPENSSL)
   find_package(OpenSSL REQUIRED)
   target_link_libraries(secvarctl OpenSSL::SSL)
-  target_compile_definitions( secvarctl PRIVATE  OPENSSL )
+  target_compile_definitions( secvarctl PRIVATE  SECVAR_CRYPTO_OPENSSL )
 #else get mbedtls libraries
 else()
   #get mbedtls if custom path defined
@@ -94,7 +94,7 @@ else()
       find_library( MBEDTLS mbedtls HINTS ENV PATH REQUIRED )
   endif (  )
   target_link_libraries( secvarctl ${MBEDTLS} ${MBEDX509} ${MBEDCRYPTO} ${PTHREAD} )
-  target_compile_definitions( secvarctl PRIVATE  MBEDTLS ) 
+  target_compile_definitions( secvarctl PRIVATE  SECVAR_CRYPTO_MBEDTLS )
 endif()
 
 
