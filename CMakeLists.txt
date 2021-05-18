@@ -67,8 +67,8 @@ endif(  )
 add_executable( secvarctl ${SRC} )
 
 #no crypto means don't compile the generate command = smaller executable
-option( NO_CRYPTO "Build without crypto functions for smaller executable, some functionality lost" OFF )
-if ( NOT NO_CRYPTO )
+option( CRYPTO_READ_ONLY "Build without crypto write functions for smaller executable, some functionality lost" OFF )
+if ( NOT CRYPTO_READ_ONLY )
   target_compile_definitions( secvarctl PRIVATE  SECVAR_CRYPTO_WRITE_FUNC )
 endif(  )
 
