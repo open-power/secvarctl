@@ -567,6 +567,30 @@ static int validateCertStruct(crypto_x509 *x509, const char *varName)
 	return SUCCESS;
 }
 
+#ifdef SECVAR_CRYPTO_WRITE_FUNC
+/*
+ *This function is just an extension of parseX509
+ *It allows us to declare new variables at the start of the function rather than the middle
+ *It is dependent on crypto_convert_pem_to_der which is dependent on SECVAR_CRYPTO_WRITE_FUNC
+ */
+static crypto_x509 *parseX509_PEM(const unsigned char *data_pem, size_t data_len)
+{
+	unsigned char *generatedDER = NULL;
+	size_t generatedDERSize;
+	crypto_x509 *x509 = NULL;
+	if (crypto_convert_pem_to_der(data_pem, data_len, &generatedDER, &generatedDERSize)) {
+		prlog(PR_ERR, "ERROR: Failed to parse file from is DER to PEM\n");
+		return NULL;
+	}
+	// if success then try to parse into x509 struct again
+	x509 = crypto_x509_parse_der(generatedDER, generatedDERSize);
+	if (generatedDER)
+		free(generatedDER);
+
+	return x509;
+}
+#endif
+
 /**
  *parses x509 certficate buffer (PEM or DER) into certificate struct
  *@param x509, returned pointer to address of x509,
@@ -578,33 +602,32 @@ static int validateCertStruct(crypto_x509 *x509, const char *varName)
  */
 int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen)
 {
-	unsigned char *generatedDER = NULL;
-	size_t generatedDERSize;
 	if ((ssize_t)buflen <= 0) {
 		prlog(PR_ERR, "ERROR: Certificate has invalid length %zd, cannot validate\n",
 		      buflen);
 		return CERT_FAIL;
 	}
-	// puts cert data into x509_Crt struct and returns number of failed parses
+	// returns x509 struct on success or NULL on fail
 	*x509 = crypto_x509_parse_der(certBuf, buflen);
-	if (!*x509) {
-		prlog(PR_INFO, "Failed to parse x509 as DER, trying PEM...\n");
-		// if failed, maybe input is PEM and so try converting PEM to DER, if conversion fails then we know it was DER and it failed
-		if (crypto_convert_pem_to_der(certBuf, buflen, &generatedDER, &generatedDERSize)) {
-			prlog(PR_ERR,
-			      "ERROR: Failed to parse x509 in DER and file is not in PEM\n");
-			return CERT_FAIL;
-		}
-		// if success then try to parse into x509 struct again
-		*x509 = crypto_x509_parse_der(generatedDER, generatedDERSize);
-		if (!*x509) {
-			prlog(PR_ERR,
-			      "ERROR: Failed to parse x509 (tried DER and PEM formats). \n");
-			return CERT_FAIL;
-		}
+	if (*x509)
+		return SUCCESS;
+/*
+	 *if here, parsing cert in der failed
+	 *check if we have compiled with pkcs7_write functions
+	 *if so we can try to convert pem to der and try again
+	 */
+#ifdef SECVAR_CRYPTO_WRITE_FUNC
+	prlog(PR_INFO, "Failed to parse x509 as DER, trying PEM...\n");
+	// if failed, maybe input is PEM and so try converting PEM to DER, if conversion fails then we know it was DER and it failed
+	*x509 = parseX509_PEM(certBuf, buflen);
+	if (!x509) {
+		prlog(PR_ERR, "ERROR: Failed to parse x509 (tried DER and PEM formats). \n");
+		return CERT_FAIL;
 	}
-	if (generatedDER)
-		free(generatedDER);
+#else
+	prlog(PR_INFO, "ERROR: Failed to parse x509. Make sure file is in DER not PEM\n");
+	return CERT_FAIL;
+#endif
 
 	return SUCCESS;
 }

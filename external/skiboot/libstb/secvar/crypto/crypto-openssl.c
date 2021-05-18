@@ -1,13 +1,20 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 /* Copyright 2021 IBM Corp.*/
-#ifdef OPENSSL
+#ifdef SECVAR_CRYPTO_OPENSSL
 // ^extra precaution to not compile with openssl unless specified
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h> // for exit
 #include "crypto.h"
-#include "include/prlog.h"
-#include "include/err.h"
+// commented out by Nick Child
+/*#include <skiboot.h> // for prlog
+*/
+// added by Nick Child
+#include "prlog.h"
+// commented out by Nick Child
+//#include "secvar_crypto_err.h" // for err codes
+// added by Nick Child
+#include "err.h"
 
 #include <openssl/pkcs7.h>
 #include <openssl/x509.h>
@@ -203,6 +210,8 @@ out:
 		return SUCCESS;
 	return PKCS7_FAIL;
 }
+
+#ifdef SECVAR_CRYPTO_WRITE_FUNC
 
 int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 				      const unsigned char *newData,
@@ -401,6 +410,25 @@ int crypto_pkcs7_generate_w_already_signed_data(
 	return PKCS7_FAIL;
 }
 
+int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
+			      unsigned char **output, size_t *olen)
+{
+	int rc;
+	BIO *bio;
+	bio = BIO_new_mem_buf(input, ilen);
+	//these variables are not needed on return, just needed to properly call the function
+	char *header = NULL, *name = NULL;
+	//returns 0 for fail and 1 on success
+	rc = !PEM_read_bio(bio, &name, &header, output, (long int *)olen);
+	if (header)
+		free(header);
+	if (name)
+		free(name);
+	BIO_free(bio);
+	return rc;
+}
+#endif
+
 int crypto_x509_get_der_len(crypto_x509 *x509)
 {
 	return i2d_X509(x509, NULL);
@@ -513,7 +541,7 @@ void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc,
 	OBJ_obj2txt(short_desc, max_len, alg->algorithm, 0);
 }
 
-int crypto_x509_get_long_desc(char *x509_info, size_t max_len, char *delim,
+int crypto_x509_get_long_desc(char *x509_info, size_t max_len, const char *delim,
 			      crypto_x509 *x509)
 {
 	int rc;
@@ -553,24 +581,6 @@ crypto_x509 *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
 void crypto_x509_free(crypto_x509 *x509)
 {
 	X509_free(x509);
-}
-
-int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
-			      unsigned char **output, size_t *olen)
-{
-	int rc;
-	BIO *bio;
-	bio = BIO_new_mem_buf(input, ilen);
-	//these variables are not needed on return, just needed to properly call the function
-	char *header = NULL, *name = NULL;
-	//returns 0 for fail and 1 on success
-	rc = !PEM_read_bio(bio, &name, &header, output, (long int *)olen);
-	if (header)
-		free(header);
-	if (name)
-		free(name);
-	BIO_free(bio);
-	return rc;
 }
 
 void crypto_strerror(int rc, char *out_str, size_t out_max_len)

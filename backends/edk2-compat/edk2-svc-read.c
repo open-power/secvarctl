@@ -585,7 +585,7 @@ struct command edk2_compat_command_table[] = {
 	{ .name = "write", .func = performWriteCommand },
 	{ .name = "validate", .func = performValidation },
 	{ .name = "verify", .func = performVerificationCommand },
-#ifndef NO_CRYPTO
+#ifdef SECVAR_CRYPTO_WRITE_FUNC
 	{ .name = "generate", .func = performGenerateCommand }
 #endif
 };
