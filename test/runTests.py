@@ -102,11 +102,7 @@ validateCommands=[
 [["-p"], False],#no pkcs7
 [["-p","./testdata/db_by_PK.auth"], False],#give auth as pkcs7
 ]
-toeslCommands=[
-[["-i", "-o", "out.esl"], False],#no input file
-[["-i", "./testdata/db_by_PK.auth", "-o"], False],#no output file
-[["-i", "./testdata/db_by_PK.auth"], False],#no output option
-]
+
 badEnvCommands=[ #[arr command to skew env, output of first command, arr command for sectool, expected result]
 [["rm", "./testenv/KEK/size"],None,["read", "-p", "./testenv/", "KEK"], False], #remove size and it should fail
 [["rm", "./testenv/KEK/size"],None,["read", "-p", "./testenv/"], True], #remove size but as long as one is readable then it is ok
@@ -282,28 +278,6 @@ class Test(unittest.TestCase):
 			self.assertEqual( getCmdResult(cmd+["-p", path, "KEK",i],out, self), False)#broken auths should fail
 			self.assertEqual( getCmdResult(cmd+["-p", path ,"-f", "KEK",i],out, self), True)#if forced, they should work
 			self.assertEqual(compareFiles(i,path+"KEK/update"), True)
-	def test_authtoesl(self):
-		out="authtoesllog.txt"
-		cmd=[SECTOOLS,"generate", "a:e"]
-		for i in goodAuths:
-			file="./testdata/"+i[0]
-			if file.startswith("./testdata/empty"):
-				preUpdate = "./testdata/empty.esl"
-			else:
-				preUpdate=file[:-4]+"esl"#get esl in auth
-			postUpdate="testGenerated.esl" 
-			if file.startswith("./testdata/dbx"):
-				self.assertEqual( getCmdResult(cmd+[ "-n",  "dbx", "-i", file, "-o", postUpdate],out, self), True)#assert command runs
-			else:
-				self.assertEqual( getCmdResult(cmd+[ "-i", file, "-o", postUpdate],out, self), True)#assert command runs
-			self.assertEqual(compareFiles(preUpdate,postUpdate), True)
-		command(["rm",postUpdate])
-		for i in toeslCommands:
-			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
-		for i in brokenAuths:
-			postUpdate="testGenerated.esl" 
-			self.assertEqual( getCmdResult(cmd+["-i", i, "-o", postUpdate],out, self), False) #all broken auths should fail to have correct esl
-			self.assertEqual( getCmdResult(["rm",postUpdate],out, self), False) #removal of output file should fail since it was never made
 	def test_badenv(self):
 		out="badEnvLog.txt"
 		for i in badEnvCommands:

@@ -74,6 +74,12 @@ badSignedCommands = [
 
 ]
 
+toeslCommands=[
+[["-i", "-o", "out.esl"], False],#no input file
+[["-i", "./testdata/db_by_PK.auth", "-o"], False],#no output file
+[["-i", "./testdata/db_by_PK.auth"], False],#no output option
+]
+
 def command(args,out=None, addCMDRan=True):#stores last log of function into log file
 		if out:
 			with open(out, "w") as f:
@@ -425,6 +431,33 @@ class Test(unittest.TestCase):
 			 			self.assertEqual( getCmdResult(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out, self), True)
 
 			 		self.assertEqual( os.path.getsize(outFile), function[1])
+	def test_authtoesl(self):
+		out="authtoesllog.txt"
+		cmd=[SECTOOLS,"generate", "a:e"]
+		inpDir = "./testdata/"
+		postUpdate="testGenerated.esl"
+		for file in os.listdir(inpDir):
+			if not file.endswith(".auth"):
+				continue;
+			file = inpDir+file
+			if file.startswith("./testdata/empty"):
+				preUpdate = "./testdata/empty.esl"
+			else:
+				preUpdate=file[:-4]+"esl"#get esl in auth
+			if file.startswith("./testdata/dbx"):
+				self.assertEqual( getCmdResult(cmd+[ "-n",  "dbx", "-i", file, "-o", postUpdate],out, self), True)#assert command runs
+			else:
+				self.assertEqual( getCmdResult(cmd+[ "-i", file, "-o", postUpdate],out, self), True)#assert command runs
+			self.assertEqual(compareFiles(preUpdate,postUpdate), True)
+		command(["rm",postUpdate])
+		for i in toeslCommands:
+			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
+		inpDir = './testdata/brokenFiles/'
+		for file in os.listdir(inpDir):
+			if not file.endswith(".auth"):
+				continue;
+			self.assertEqual( getCmdResult(cmd+["-i", file, "-o", postUpdate],out, self), False) #all broken auths should fail to have correct esl
+			self.assertEqual( getCmdResult(["rm",postUpdate],out, self), False) #removal of output file should fail since it was never made
 
 
 		
