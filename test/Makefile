@@ -14,9 +14,18 @@ else
 	MEMARGS=
 endif
 
+#run tests against secvarctl compiled with openssl
+OPENSSL = 0
+ifeq ($(OPENSSL),1)
+	OPENSSL_TESTS = "OPENSSL_TESTS_ONLY"
+else 
+	OPENSSL_TESTS =
+endif
+
 all: $(data) ../secvarctl-cov
 	$(py) runTests.py $(MEMARGS)
-	$(py) runSvcGenerateTests.py $(MEMARGS)
+	$(py) runSvcGenerateTests.py $(MEMARGS) $(OPENSSL_TESTS)
+
 	
 
 generate: $(data)
