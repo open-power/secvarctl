@@ -35,9 +35,10 @@ else
 	STATICFLAG=
 endif
 
-#use SECVAR_CRYPTO_WRITE_FUNC for smaller executable but limited functionality
-NO_CRYPTO = 0 
-ifeq ($(strip $(NO_CRYPTO)), 0)
+#use CRYPTO_READ_ONLY for smaller executable but limited functionality
+#removes all write functions (secvarctl generate, pem_to_der etc.)
+CRYPTO_READ_ONLY = 0 
+ifeq ($(strip $(CRYPTO_READ_ONLY)), 0)
 	_CFLAGS+=-DSECVAR_CRYPTO_WRITE_FUNC
 endif
 

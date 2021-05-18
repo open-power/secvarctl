@@ -32,7 +32,7 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
  | Build W OpenSSL as cryptolib | `make OPENSSL=1` | `mkdir build && cd build && cmake -DOPENSSL=1 [build options] ../ . && cmake --build .` |
  | Static Build | `STATIC=1` | `-DSTATIC=1`|
  | Reduced Size Build | default | `-DSTRIP=1` |
- | Build Without Crypto Functions | `NO_CRYPTO=1` | `-DNO_CRYPTO=1` |
+ | Build Without Crypto Write Functions | `CRYPTO_READ_ONLY=1` | `-CRYPTO_READ_ONLY=1` |
  | Build W Specific Mbedtls Library | `CFLAGS="-I<path>/include" LDFLAGS="-L<path>/library"` | `-DCUSTOM_MBEDTLS=<path>` |
  | Build for Coverage Tests | `make [options] secvarctl-cov` | `-DCMAKE_BUILD_TYPE=Coverage` |
  | Build W Debug Symbols | `make DEBUG=1` | default |
