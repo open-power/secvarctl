@@ -25,47 +25,38 @@ enum pkcs7_generation_method {
 struct Arguments {
 	// the pkcs7_gen_meth is to determine if signKeys stores a private key file(0) or signed data (1)
 	int helpFlag, inpValid, signKeyCount, signCertCount;
-	const char *inFile, *outFile, **signCerts, **signKeys, *inForm,
-		*outForm, *varName, *hashAlg;
+	const char *inFile, *outFile, **signCerts, **signKeys, *inForm, *outForm, *varName,
+		*hashAlg;
 	struct efi_time *time;
 	enum pkcs7_generation_method pkcs7_gen_meth;
 };
 
 static int parse_opt(int key, char *arg, struct argp_state *state);
-static int generateHash(const unsigned char *data, size_t size,
-			struct Arguments *args, const struct hash_funct *alg,
-			unsigned char **outHash, size_t *outHashSize);
+static int generateHash(const unsigned char *data, size_t size, struct Arguments *args,
+			const struct hash_funct *alg, unsigned char **outHash, size_t *outHashSize);
 static int validateHashAndAlg(size_t size, const struct hash_funct *alg);
-static int toESL(const unsigned char *data, size_t size, const uuid_t guid,
-		 unsigned char **outESL, size_t *outESLSize);
+static int toESL(const unsigned char *data, size_t size, const uuid_t guid, unsigned char **outESL,
+		 size_t *outESLSize);
 static int getHashFunction(const char *name, struct hash_funct **returnFunct);
-static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize,
-			    struct Arguments *args, int hashFunct,
-			    unsigned char **outBuff, size_t *outBuffSize);
-static int toAuth(const unsigned char *newESL, size_t eslSize,
-		  struct Arguments *args, int hashFunct,
-		  unsigned char **outBuff, size_t *outBuffSize);
-static int generateESL(const unsigned char *buff, size_t size,
-		       struct Arguments *args,
-		       const struct hash_funct *hashFunct,
-		       unsigned char **outBuff, size_t *outBuffSize);
-static int generateAuthOrPKCS7(const unsigned char *buff, size_t size,
-			       struct Arguments *args,
-			       const struct hash_funct *hashFunct,
-			       unsigned char **outBuff, size_t *outBuffSize);
+static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize, struct Arguments *args,
+			    int hashFunct, unsigned char **outBuff, size_t *outBuffSize);
+static int toAuth(const unsigned char *newESL, size_t eslSize, struct Arguments *args,
+		  int hashFunct, unsigned char **outBuff, size_t *outBuffSize);
+static int generateESL(const unsigned char *buff, size_t size, struct Arguments *args,
+		       const struct hash_funct *hashFunct, unsigned char **outBuff,
+		       size_t *outBuffSize);
+static int generateAuthOrPKCS7(const unsigned char *buff, size_t size, struct Arguments *args,
+			       const struct hash_funct *hashFunct, unsigned char **outBuff,
+			       size_t *outBuffSize);
 static int getTimestamp(struct efi_time *ts);
-static int getOutputData(const unsigned char *buff, size_t size,
-			 struct Arguments *args,
-			 const struct hash_funct *hashFunction,
-			 unsigned char **outBuff, size_t *outBuffSize);
-static int authToESL(const unsigned char *in, size_t inSize,
-		     unsigned char **out, size_t *outSize);
-static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size,
-				  struct Arguments *args,
+static int getOutputData(const unsigned char *buff, size_t size, struct Arguments *args,
+			 const struct hash_funct *hashFunction, unsigned char **outBuff,
+			 size_t *outBuffSize);
+static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out, size_t *outSize);
+static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size, struct Arguments *args,
 				  unsigned char **outBuff, size_t *outBuffSize);
-static int getPreHashForSecVar(unsigned char **outData, size_t *outSize,
-			       const unsigned char *ESL, size_t ESL_size,
-			       struct Arguments *args);
+static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const unsigned char *ESL,
+			       size_t ESL_size, struct Arguments *args);
 static int parseCustomTimestamp(struct efi_time *strct, const char *str);
 static void convert_tm_to_efi_time(struct efi_time *efi_t, struct tm *tm_t);
 /*
@@ -106,8 +97,7 @@ int performGenerateCommand(int argc, char *argv[])
 		{ "alg", 'h', "HASH_ALG", 0,
 		  "hash function, use when '[h]ash' is input/output format."
 		  " currently accepted values: {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}, Default is 'SHA256'" },
-		{ "verbose", 'v', 0, 0,
-		  "print more verbose process information" },
+		{ "verbose", 'v', 0, 0, "print more verbose process information" },
 		{ "key", 'k', "FILE", 0,
 		  "private RSA key (PEM), used when signing data for PKCS7/Auth files"
 		  " must have a corresponding '-c FILE' ."
@@ -130,8 +120,7 @@ int performGenerateCommand(int argc, char *argv[])
 		{ 0, 'i', "FILE", OPTION_HIDDEN, "input file" },
 		{ 0, 'o', "FILE", OPTION_HIDDEN, "output file" },
 		{ "help", '?', 0, 0, "Give this help list", 1 },
-		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0,
-		  "Give a short usage message", -1 },
+		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{ 0 }
 	};
 
@@ -179,8 +168,7 @@ int performGenerateCommand(int argc, char *argv[])
 
 	};
 
-	rc = argp_parse(&argp, argc, argv,
-			ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
+	rc = argp_parse(&argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
 	if (rc || args.helpFlag)
 		goto out;
 
@@ -197,9 +185,8 @@ int performGenerateCommand(int argc, char *argv[])
 		rc = ARG_PARSE_FAIL;
 		goto out;
 	}
-	prlog(PR_INFO,
-	      "Input file is %s of type %s , output file is %s of type %s\n",
-	      args.inFile, args.inForm, args.outFile, args.outForm);
+	prlog(PR_INFO, "Input file is %s of type %s , output file is %s of type %s\n", args.inFile,
+	      args.inForm, args.outFile, args.outForm);
 
 	// if reset key than don't look for an input file
 	if (args.inForm[0] == 'r')
@@ -208,8 +195,7 @@ int performGenerateCommand(int argc, char *argv[])
 		// get data from input file
 		buff = (unsigned char *)getDataFromFile(args.inFile, &size);
 		if (buff == NULL) {
-			prlog(PR_ERR, "ERROR: Could not find data in file %s\n",
-			      args.inFile);
+			prlog(PR_ERR, "ERROR: Could not find data in file %s\n", args.inFile);
 			rc = INVALID_FILE;
 			goto out;
 		}
@@ -222,11 +208,9 @@ int performGenerateCommand(int argc, char *argv[])
 	if (rc)
 		goto out;
 	// now we can try to generate the desired output format
-	rc = getOutputData(buff, size, &args, hashFunction, &outBuff,
-			   &outBuffSize);
+	rc = getOutputData(buff, size, &args, hashFunction, &outBuff, &outBuffSize);
 	if (rc) {
-		prlog(PR_ERR, "Failed to generate into output format: %s\n",
-		      args.outForm);
+		prlog(PR_ERR, "Failed to generate into output format: %s\n", args.outForm);
 		goto out;
 	}
 
@@ -234,9 +218,7 @@ int performGenerateCommand(int argc, char *argv[])
 	// write data to new file
 	rc = createFile(args.outFile, (char *)outBuff, outBuffSize);
 	if (rc) {
-		prlog(PR_ERR,
-		      "ERROR: Could not write new data to output file %s\n",
-		      args.outFile);
+		prlog(PR_ERR, "ERROR: Could not write new data to output file %s\n", args.outFile);
 	}
 
 out:
@@ -289,20 +271,17 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		rc = reallocArray((void **)&args->signKeys, args->signKeyCount,
 				  sizeof(*args->signKeys));
 		if (rc) {
-			prlog(PR_ERR,
-			      "Failed to realloc private key (-k <>) array\n");
+			prlog(PR_ERR, "Failed to realloc private key (-k <>) array\n");
 			break;
 		}
 		args->signKeys[args->signKeyCount - 1] = arg;
 		break;
 	case 'c':
 		args->signCertCount++;
-		rc = reallocArray((void **)&args->signCerts,
-				  args->signCertCount,
+		rc = reallocArray((void **)&args->signCerts, args->signCertCount,
 				  sizeof(*args->signCerts));
 		if (rc) {
-			prlog(PR_ERR,
-			      "Failed to realloc certificate (-c <>) array\n");
+			prlog(PR_ERR, "Failed to realloc certificate (-c <>) array\n");
 			break;
 		}
 		args->signCerts[args->signCertCount - 1] = arg;
@@ -326,8 +305,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		rc = reallocArray((void **)&args->signKeys, args->signKeyCount,
 				  sizeof(*args->signKeys));
 		if (rc) {
-			prlog(PR_ERR,
-			      "Failed to realloc signature (-s <>) array\n");
+			prlog(PR_ERR, "Failed to realloc signature (-s <>) array\n");
 			break;
 		}
 		args->signKeys[args->signKeyCount - 1] = arg;
@@ -380,17 +358,12 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		else if (args->time && validateTime(args->time))
 			prlog(PR_ERR,
 			      "Invalid timestamp flag '-t YYYY-MM-DDThh:mm:ss' , see usage...\n");
-		else if (args->inForm[0] != 'r' &&
-			 (args->inFile == NULL || isFile(args->inFile)))
-			prlog(PR_ERR,
-			      "ERROR: Input File is invalid, see usage below...\n");
+		else if (args->inForm[0] != 'r' && (args->inFile == NULL || isFile(args->inFile)))
+			prlog(PR_ERR, "ERROR: Input File is invalid, see usage below...\n");
 		else if (args->varName && isVariable(args->varName))
-			prlog(PR_ERR,
-			      "ERROR: %s is not a valid variable name\n",
-			      args->varName);
+			prlog(PR_ERR, "ERROR: %s is not a valid variable name\n", args->varName);
 		else if (args->outFile == NULL)
-			prlog(PR_ERR,
-			      "ERROR: No output file given, see usage below...\n");
+			prlog(PR_ERR, "ERROR: No output file given, see usage below...\n");
 		else
 			break;
 		argp_usage(state);
@@ -419,8 +392,7 @@ static int parseCustomTimestamp(struct efi_time *strct, const char *str)
 	if (ret == NULL)
 		return INVALID_TIMESTAMP;
 	else if (*ret != '\0') {
-		prlog(PR_ERR, "ERROR: Failed to parse timestamp value at %s\n",
-		      ret);
+		prlog(PR_ERR, "ERROR: Failed to parse timestamp value at %s\n", ret);
 		return INVALID_TIMESTAMP;
 	}
 
@@ -437,10 +409,9 @@ static int parseCustomTimestamp(struct efi_time *strct, const char *str)
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int getOutputData(const unsigned char *buff, size_t size,
-			 struct Arguments *args,
-			 const struct hash_funct *hashFunction,
-			 unsigned char **outBuff, size_t *outBuffSize)
+static int getOutputData(const unsigned char *buff, size_t size, struct Arguments *args,
+			 const struct hash_funct *hashFunction, unsigned char **outBuff,
+			 size_t *outBuffSize)
 {
 	int rc;
 	// once here it is time to plan the course of action depending on the output type desired
@@ -449,8 +420,7 @@ static int getOutputData(const unsigned char *buff, size_t size,
 		rc = CERT_FAIL; // cannot generate a cert
 		break;
 	case 'h':
-		rc = generateHash(buff, size, args, hashFunction, outBuff,
-				  outBuffSize);
+		rc = generateHash(buff, size, args, hashFunction, outBuff, outBuffSize);
 		break;
 	case 'x':
 		// intentional flow
@@ -461,8 +431,7 @@ static int getOutputData(const unsigned char *buff, size_t size,
 		if (!args->time) {
 			args->time = calloc(1, sizeof(*args->time));
 			if (!args->time) {
-				prlog(PR_ERR,
-				      "ERROR: failed to allocate memory\n");
+				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 				rc = ALLOC_FAIL;
 				goto out;
 			}
@@ -470,16 +439,13 @@ static int getOutputData(const unsigned char *buff, size_t size,
 			if (rc)
 				goto out;
 		}
-		rc = generateAuthOrPKCS7(buff, size, args, hashFunction,
-					 outBuff, outBuffSize);
+		rc = generateAuthOrPKCS7(buff, size, args, hashFunction, outBuff, outBuffSize);
 		break;
 	case 'e':
-		rc = generateESL(buff, size, args, hashFunction, outBuff,
-				 outBuffSize);
+		rc = generateESL(buff, size, args, hashFunction, outBuff, outBuffSize);
 		break;
 	default:
-		prlog(PR_ERR,
-		      "ERROR: Unknown output format %s, use `--help` for more info\n",
+		prlog(PR_ERR, "ERROR: Unknown output format %s, use `--help` for more info\n",
 		      args->outForm);
 		rc = ARG_PARSE_FAIL;
 	}
@@ -498,10 +464,9 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int generateAuthOrPKCS7(const unsigned char *buff, size_t size,
-			       struct Arguments *args,
-			       const struct hash_funct *hashFunct,
-			       unsigned char **outBuff, size_t *outBuffSize)
+static int generateAuthOrPKCS7(const unsigned char *buff, size_t size, struct Arguments *args,
+			       const struct hash_funct *hashFunct, unsigned char **outBuff,
+			       size_t *outBuffSize)
 {
 	int rc;
 	size_t intermediateBuffSize, inpSize = size;
@@ -527,8 +492,7 @@ static int generateAuthOrPKCS7(const unsigned char *buff, size_t size,
 		if (!args->inpValid) {
 			rc = validateESL(*inpPtr, inpSize, args->varName);
 			if (rc) {
-				prlog(PR_ERR,
-				      "ERROR: Could not validate ESL\n");
+				prlog(PR_ERR, "ERROR: Could not validate ESL\n");
 				break;
 			}
 		}
@@ -545,10 +509,8 @@ static int generateAuthOrPKCS7(const unsigned char *buff, size_t size,
 		}
 		break;
 	default:
-		prlog(PR_ERR,
-		      "ERROR: Unknown input format %s for generating %s file.\n",
-		      args->inForm,
-		      (args->outForm[0] == 'a' ? "an Auth" : "a PKCS7"));
+		prlog(PR_ERR, "ERROR: Unknown input format %s for generating %s file.\n",
+		      args->inForm, (args->outForm[0] == 'a' ? "an Auth" : "a PKCS7"));
 		rc = ARG_PARSE_FAIL;
 	}
 	if (rc) {
@@ -557,19 +519,16 @@ static int generateAuthOrPKCS7(const unsigned char *buff, size_t size,
 	}
 
 	if (args->outForm[0] == 'a')
-		rc = toAuth(*inpPtr, inpSize, args, hashFunct->crypto_md_funct,
-			    outBuff, outBuffSize);
+		rc = toAuth(*inpPtr, inpSize, args, hashFunct->crypto_md_funct, outBuff,
+			    outBuffSize);
 	else if (args->outForm[0] == 'x')
-		rc = toHashForSecVarSigning(*inpPtr, inpSize, args, outBuff,
-					    outBuffSize);
+		rc = toHashForSecVarSigning(*inpPtr, inpSize, args, outBuff, outBuffSize);
 	else
-		rc = toPKCS7ForSecVar(*inpPtr, inpSize, args,
-				      hashFunct->crypto_md_funct, outBuff,
+		rc = toPKCS7ForSecVar(*inpPtr, inpSize, args, hashFunct->crypto_md_funct, outBuff,
 				      outBuffSize);
 
 	if (rc) {
-		prlog(PR_ERR,
-		      "Failed to generate %s file, use `--help` for more info\n",
+		prlog(PR_ERR, "Failed to generate %s file, use `--help` for more info\n",
 		      args->outForm[0] == 'a' ? "Auth" :
 		      args->outForm[0] == 'x' ? "pre-signed hash" :
 						      "PKCS7");
@@ -591,10 +550,9 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int generateESL(const unsigned char *buff, size_t size,
-		       struct Arguments *args,
-		       const struct hash_funct *hashFunct,
-		       unsigned char **outBuff, size_t *outBuffSize)
+static int generateESL(const unsigned char *buff, size_t size, struct Arguments *args,
+		       const struct hash_funct *hashFunct, unsigned char **outBuff,
+		       size_t *outBuffSize)
 {
 	int rc;
 	size_t intermediateBuffSize, inpSize = size;
@@ -604,10 +562,8 @@ static int generateESL(const unsigned char *buff, size_t size,
 
 	switch (args->inForm[0]) {
 	case 'f':
-		rc = crypto_md_generate_hash(buff, size,
-					     hashFunct->crypto_md_funct,
-					     &intermediateBuff,
-					     &intermediateBuffSize);
+		rc = crypto_md_generate_hash(buff, size, hashFunct->crypto_md_funct,
+					     &intermediateBuff, &intermediateBuffSize);
 		if (rc) {
 			prlog(PR_ERR, "Failed to generate hash from file\n");
 			break;
@@ -620,8 +576,7 @@ static int generateESL(const unsigned char *buff, size_t size,
 		if (!args->inpValid) {
 			rc = validateHashAndAlg(inpSize, hashFunct);
 			if (rc) {
-				prlog(PR_ERR,
-				      "Failed to validate input hash data\n");
+				prlog(PR_ERR, "Failed to validate input hash data\n");
 				break;
 			}
 		}
@@ -631,19 +586,17 @@ static int generateESL(const unsigned char *buff, size_t size,
 	case 'c':
 		// two intermediate buffers needed, one for input -> DER and one for DER -> ESL,
 		prlog(PR_INFO, "Converting x509 from PEM to DER...\n");
-		rc = crypto_convert_pem_to_der(
-			*inpPtr, inpSize, (unsigned char **)&intermediateBuff,
-			&intermediateBuffSize);
+		rc = crypto_convert_pem_to_der(*inpPtr, inpSize,
+					       (unsigned char **)&intermediateBuff,
+					       &intermediateBuffSize);
 		if (rc) {
 			prlog(PR_ERR, "ERROR: Could not convert PEM to DER\n");
 			break;
 		}
 		if (!args->inpValid) {
-			rc = validateCert(intermediateBuff,
-					  intermediateBuffSize, args->varName);
+			rc = validateCert(intermediateBuff, intermediateBuffSize, args->varName);
 			if (rc) {
-				prlog(PR_ERR,
-				      "ERROR: Could not validate certificate\n");
+				prlog(PR_ERR, "ERROR: Could not validate certificate\n");
 				break;
 			}
 		}
@@ -657,8 +610,7 @@ static int generateESL(const unsigned char *buff, size_t size,
 		if (!args->inpValid) {
 			rc = validateAuth(buff, size, args->varName);
 			if (rc) {
-				prlog(PR_ERR,
-				      "ERROR: Could not validate signed auth file\n");
+				prlog(PR_ERR, "ERROR: Could not validate signed auth file\n");
 				break;
 			}
 		}
@@ -700,9 +652,8 @@ out:
  *@param outHashSize, the length of outHash
  *@return SUCCESS or err number 
  */
-static int generateHash(const unsigned char *data, size_t size,
-			struct Arguments *args, const struct hash_funct *alg,
-			unsigned char **outHash, size_t *outHashSize)
+static int generateHash(const unsigned char *data, size_t size, struct Arguments *args,
+			const struct hash_funct *alg, unsigned char **outHash, size_t *outHashSize)
 {
 	int rc;
 	//  if the input is not declared valid then we validate it is the same as inForm format
@@ -735,8 +686,7 @@ static int generateHash(const unsigned char *data, size_t size,
 			return rc;
 		}
 	}
-	rc = crypto_md_generate_hash(data, size, alg->crypto_md_funct, outHash,
-				     outHashSize);
+	rc = crypto_md_generate_hash(data, size, alg->crypto_md_funct, outHash, outHashSize);
 	if (rc) {
 		prlog(PR_ERR, "Failed to generate hash\n");
 		return rc;
@@ -770,8 +720,8 @@ static int validateHashAndAlg(size_t size, const struct hash_funct *alg)
  *@param outESLSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int toESL(const unsigned char *data, size_t size, const uuid_t guid,
-		 unsigned char **outESL, size_t *outESLSize)
+static int toESL(const unsigned char *data, size_t size, const uuid_t guid, unsigned char **outESL,
+		 size_t *outESLSize)
 {
 	EFI_SIGNATURE_LIST esl;
 	size_t offset = 0;
@@ -823,16 +773,14 @@ static int toESL(const unsigned char *data, size_t size, const uuid_t guid,
  *NOTE: This allocates memory for output buffer, FREE LATER
  *@return SUCCESS or error number
  */
-static int authToESL(const unsigned char *in, size_t inSize,
-		     unsigned char **out, size_t *outSize)
+static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out, size_t *outSize)
 {
 	size_t length, auth_buffer_size, offset = 0, pkcs7_size;
 	const struct efi_variable_authentication_2 *auth;
 
 	auth = (struct efi_variable_authentication_2 *)in;
 	length = auth->auth_info.hdr.dw_length;
-	if (length <= 0 ||
-	    length > inSize) { // if total size of header and pkcs7
+	if (length <= 0 || length > inSize) { // if total size of header and pkcs7
 		prlog(PR_ERR, "ERROR: Invalid auth size %zd\n", length);
 		return AUTH_FAIL;
 	}
@@ -847,8 +795,7 @@ static int authToESL(const unsigned char *in, size_t inSize,
 	 * efi_var_2->auth_info.data = auth descriptor + new ESL data.
 	 * We want only only the auth descriptor/pkcs7 from .data.
 	 */
-	auth_buffer_size = sizeof(auth->timestamp) +
-			   sizeof(auth->auth_info.hdr) +
+	auth_buffer_size = sizeof(auth->timestamp) + sizeof(auth->auth_info.hdr) +
 			   sizeof(auth->auth_info.cert_type) + pkcs7_size;
 	if (auth_buffer_size > inSize) { // If no ESL DATA attatched
 		prlog(PR_ERR, "ERROR: No data to verify, no attatched ESL\n");
@@ -878,18 +825,15 @@ static int authToESL(const unsigned char *in, size_t inSize,
  */
 static int getHashFunction(const char *name, struct hash_funct **returnFunct)
 {
-	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct);
-	     i++) {
+	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct); i++) {
 		if (!strcmp(name, hash_functions[i].name)) {
 			*returnFunct = (struct hash_funct *)&hash_functions[i];
 			return SUCCESS;
 		}
 	}
-	prlog(PR_ERR, "ERROR: Invalid hash algorithm %s , hint: use -h { ",
-	      name);
+	prlog(PR_ERR, "ERROR: Invalid hash algorithm %s , hint: use -h { ", name);
 	// loop through all known hashes
-	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct);
-	     i++) {
+	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct); i++) {
 		if (i == sizeof(hash_functions) / sizeof(struct hash_funct) - 1)
 			prlog(PR_ERR, "%s }\n", hash_functions[i].name);
 		else
@@ -940,8 +884,7 @@ static int getTimestamp(struct efi_time *ts)
  *@param outBuffSize, the length of hashed data (should be 32 bytes)
  *@return SUCCESS or err number 
  */
-static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size,
-				  struct Arguments *args,
+static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size, struct Arguments *args,
 				  unsigned char **outBuff, size_t *outBuffSize)
 {
 	int rc;
@@ -953,15 +896,13 @@ static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size,
 		prlog(PR_ERR, "Failed to generate pre-hash data\n");
 		goto out;
 	}
-	rc = crypto_md_generate_hash(preHash, preHash_size, CRYPTO_MD_SHA256,
-				     outBuff, outBuffSize);
+	rc = crypto_md_generate_hash(preHash, preHash_size, CRYPTO_MD_SHA256, outBuff, outBuffSize);
 	if (rc) {
 		prlog(PR_ERR, "Failed to generate hash\n");
 		goto out;
 	}
 	if (*outBuffSize != 32) {
-		prlog(PR_ERR,
-		      "ERROR: size of SHA256 is not 32 bytes, found %zd bytes\n",
+		prlog(PR_ERR, "ERROR: size of SHA256 is not 32 bytes, found %zd bytes\n",
 		      *outBuffSize);
 		rc = HASH_FAIL;
 	}
@@ -1005,9 +946,8 @@ static char *char_to_wchar(const char *key, const size_t keylen)
  *@param args, struct containing imprtant metadata info
  *@return, success or error number
  */
-static int getPreHashForSecVar(unsigned char **outData, size_t *outSize,
-			       const unsigned char *ESL, size_t ESL_size,
-			       struct Arguments *args)
+static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const unsigned char *ESL,
+			       size_t ESL_size, struct Arguments *args)
 {
 	int rc = SUCCESS;
 	unsigned char *ptr = NULL;
@@ -1017,8 +957,7 @@ static int getPreHashForSecVar(unsigned char **outData, size_t *outSize,
 	uuid_t guid;
 
 	if (!args->varName) {
-		prlog(PR_ERR,
-		      "ERROR: No secure variable name given... use -n <varName> option\n");
+		prlog(PR_ERR, "ERROR: No secure variable name given... use -n <varName> option\n");
 		rc = ARG_PARSE_FAIL;
 		goto out;
 	}
@@ -1031,12 +970,10 @@ static int getPreHashForSecVar(unsigned char **outData, size_t *outSize,
 	// some parts taken from edk2-compat-process.c
 	if (key_equals(args->varName, "PK") || key_equals(args->varName, "KEK"))
 		guid = EFI_GLOBAL_VARIABLE_GUID;
-	else if (key_equals(args->varName, "db") ||
-		 key_equals(args->varName, "dbx"))
+	else if (key_equals(args->varName, "db") || key_equals(args->varName, "dbx"))
 		guid = EFI_IMAGE_SECURITY_DATABASE_GUID;
 	else {
-		prlog(PR_ERR, "ERROR: unknown update variable %s\n",
-		      args->varName);
+		prlog(PR_ERR, "ERROR: unknown update variable %s\n", args->varName);
 		rc = ARG_PARSE_FAIL;
 		goto out;
 	}
@@ -1045,8 +982,7 @@ static int getPreHashForSecVar(unsigned char **outData, size_t *outSize,
 	varlen = strlen(args->varName) * 2;
 	wkey = char_to_wchar(args->varName, strlen(args->varName));
 	// with timestamp and all this funky bussiniss, we can  make the correct data to be hashed
-	*outSize = varlen + sizeof(guid) + sizeof(attr) +
-		   sizeof(struct efi_time) + ESL_size;
+	*outSize = varlen + sizeof(guid) + sizeof(attr) + sizeof(struct efi_time) + ESL_size;
 	*outData = malloc(*outSize);
 	if (!*outData) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
@@ -1080,16 +1016,14 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize,
-			    struct Arguments *args, int hashFunct,
-			    unsigned char **outBuff, size_t *outBuffSize)
+static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize, struct Arguments *args,
+			    int hashFunct, unsigned char **outBuff, size_t *outBuffSize)
 {
 	int rc;
 	size_t totalSize;
 	unsigned char *actualData = NULL;
 
-	rc = getPreHashForSecVar(&actualData, &totalSize, newData, dataSize,
-				 args);
+	rc = getPreHashForSecVar(&actualData, &totalSize, newData, dataSize, args);
 	if (rc) {
 		prlog(PR_ERR, "Failed to generate pre-hash data for PKCS7\n");
 		goto out;
@@ -1098,14 +1032,13 @@ static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize,
 	if (args->pkcs7_gen_meth) {
 		prlog(PR_INFO, "Generating PKCS7 with already signed data\n");
 		rc = crypto_pkcs7_generate_w_already_signed_data(
-			(unsigned char **)outBuff, outBuffSize, actualData,
-			totalSize, args->signCerts, args->signKeys,
-			args->signKeyCount, CRYPTO_MD_SHA256);
+			(unsigned char **)outBuff, outBuffSize, actualData, totalSize,
+			args->signCerts, args->signKeys, args->signKeyCount, CRYPTO_MD_SHA256);
 	} else
-		rc = crypto_pkcs7_generate_w_signature(
-			(unsigned char **)outBuff, outBuffSize, actualData,
-			totalSize, args->signCerts, args->signKeys,
-			args->signKeyCount, CRYPTO_MD_SHA256);
+		rc = crypto_pkcs7_generate_w_signature((unsigned char **)outBuff, outBuffSize,
+						       actualData, totalSize, args->signCerts,
+						       args->signKeys, args->signKeyCount,
+						       CRYPTO_MD_SHA256);
 	if (rc) {
 		prlog(PR_ERR, "ERROR: making PKCS7 failed\n");
 		rc = PKCS7_FAIL;
@@ -1129,9 +1062,8 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int toAuth(const unsigned char *newESL, size_t eslSize,
-		  struct Arguments *args, int hashFunct,
-		  unsigned char **outBuff, size_t *outBuffSize)
+static int toAuth(const unsigned char *newESL, size_t eslSize, struct Arguments *args,
+		  int hashFunct, unsigned char **outBuff, size_t *outBuffSize)
 {
 	int rc;
 	size_t pkcs7Size, offset = 0;
@@ -1139,20 +1071,16 @@ static int toAuth(const unsigned char *newESL, size_t eslSize,
 	struct efi_variable_authentication_2 authHeader;
 
 	// generate PKCS7
-	rc = toPKCS7ForSecVar(newESL, eslSize, args, hashFunct, &pkcs7,
-			      &pkcs7Size);
+	rc = toPKCS7ForSecVar(newESL, eslSize, args, hashFunct, &pkcs7, &pkcs7Size);
 	if (rc) {
-		prlog(PR_ERR,
-		      "Cannot generate Auth File, failed to generate PKCS7\n");
+		prlog(PR_ERR, "Cannot generate Auth File, failed to generate PKCS7\n");
 		goto out;
 	}
 	//  create Auth header
 	authHeader.timestamp = *args->time;
-	authHeader.auth_info.hdr.dw_length =
-		sizeof(authHeader.auth_info.hdr) +
-		sizeof(authHeader.auth_info.cert_type) + pkcs7Size;
-	authHeader.auth_info.hdr.w_revision =
-		cpu_to_be16(WIN_CERT_TYPE_PKCS_SIGNED_DATA);
+	authHeader.auth_info.hdr.dw_length = sizeof(authHeader.auth_info.hdr) +
+					     sizeof(authHeader.auth_info.cert_type) + pkcs7Size;
+	authHeader.auth_info.hdr.w_revision = cpu_to_be16(WIN_CERT_TYPE_PKCS_SIGNED_DATA);
 	// ranges from f0 -ff, but all files Ive seen have f10e
 	authHeader.auth_info.hdr.w_certificate_type = cpu_to_be16(0xf10e);
 	authHeader.auth_info.cert_type = EFI_CERT_TYPE_PKCS7_GUID;
@@ -1174,8 +1102,7 @@ static int toAuth(const unsigned char *newESL, size_t eslSize,
 	prlog(PR_INFO, "\t+ PKCS7 %zd bytes\n", pkcs7Size);
 	memcpy(*outBuff + offset, newESL, eslSize);
 	offset += eslSize;
-	prlog(PR_INFO, "\t+ new ESL %zd bytes\n\t= %zd total bytes\n", eslSize,
-	      offset);
+	prlog(PR_INFO, "\t+ new ESL %zd bytes\n\t= %zd total bytes\n", eslSize, offset);
 
 out:
 	if (pkcs7)

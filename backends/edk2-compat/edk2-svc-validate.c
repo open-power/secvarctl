@@ -15,16 +15,11 @@ struct Arguments {
 
 static bool validate_hash(uuid_t type, size_t size);
 static int parse_opt(int key, char *arg, struct argp_state *state);
-static int validateSingularESL(size_t *bytesRead, const unsigned char *esl,
-			       size_t eslvarsize, const char *varName);
+static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size_t eslvarsize,
+			       const char *varName);
 static int validateCertStruct(crypto_x509 *x509, const char *varName);
 
-enum fileTypes {
-	AUTH_FILE = 'a',
-	PKCS7_FILE = 'p',
-	ESL_FILE = 'e',
-	CERT_FILE = 'c'
-};
+enum fileTypes { AUTH_FILE = 'a', PKCS7_FILE = 'p', ESL_FILE = 'e', CERT_FILE = 'c' };
 
 /*
  *called from main()
@@ -38,27 +33,23 @@ int performValidation(int argc, char *argv[])
 	unsigned char *buff = NULL;
 	size_t size;
 	int rc;
-	struct Arguments args = { .helpFlag = 0,
-				  .inFile = NULL,
-				  .inForm = AUTH_FILE,
-				  .varName = NULL };
+	struct Arguments args = {
+		.helpFlag = 0, .inFile = NULL, .inForm = AUTH_FILE, .varName = NULL
+	};
 	// combine command and subcommand for usage/help messages
 	argv[0] = "secvarctl validate";
 
 	struct argp_option options[] = {
-		{ "verbose", 'v', 0, 0,
-		  "print more verbose process information" },
+		{ "verbose", 'v', 0, 0, "print more verbose process information" },
 		{ "pkcs7", 'p', 0, 0, "file is a PKCS7" },
 		{ "esl", 'e', 0, 0, "file is an EFI Signature List (ESL)" },
-		{ "cert", 'c', 0, 0,
-		  "file is an x509 cert (DER or PEM format)" },
+		{ "cert", 'c', 0, 0, "file is an x509 cert (DER or PEM format)" },
 		{ "auth", 'a', 0, 0,
 		  "file is a properly generated authenticated variable, DEFAULT" },
 		{ "dbx", 'x', 0, 0,
 		  "file is for the dbx (allows for data to contain a hash not an x509), Note: user still should specify the file type" },
 		{ "help", '?', 0, 0, "Give this help list", 1 },
-		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0,
-		  "Give a short usage message", -1 },
+		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{ 0 }
 	};
 
@@ -69,15 +60,13 @@ int performValidation(int argc, char *argv[])
 		" use 'secvarctl verify' to see if content and file signature (if PKCS7/auth) are valid"
 	};
 
-	rc = argp_parse(&argp, argc, argv,
-			ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
+	rc = argp_parse(&argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
 	if (rc || args.helpFlag)
 		goto out;
 
 	buff = (unsigned char *)getDataFromFile(args.inFile, &size);
 	if (!buff) {
-		prlog(PR_ERR, "ERROR: failed to get data from %s\n",
-		      args.inFile);
+		prlog(PR_ERR, "ERROR: failed to get data from %s\n", args.inFile);
 		rc = INVALID_FILE;
 		goto out;
 	}
@@ -154,8 +143,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		if (args->helpFlag)
 			break;
 		if (!args->inFile)
-			prlog(PR_ERR,
-			      "ERROR: missing input file, see usage...\n");
+			prlog(PR_ERR, "ERROR: missing input file, see usage...\n");
 		else
 			break;
 		argp_usage(state);
@@ -191,8 +179,7 @@ int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key)
 	}
 
 	if (buflen < sizeof(struct efi_variable_authentication_2)) {
-		prlog(PR_ERR,
-		      "ERROR: auth file is too small to be valid auth file\n");
+		prlog(PR_ERR, "ERROR: auth file is too small to be valid auth file\n");
 		return AUTH_FAIL;
 	}
 
@@ -200,9 +187,8 @@ int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key)
 	authSize = auth->auth_info.hdr.dw_length + sizeof(auth->timestamp);
 	// if expected length is greater than the actual length or not a valid size, return fail
 	if ((ssize_t)authSize <= 0 || authSize > buflen) {
-		prlog(PR_ERR,
-		      "ERROR: Invalid auth size, expected %zd found %zd\n",
-		      authSize, buflen);
+		prlog(PR_ERR, "ERROR: Invalid auth size, expected %zd found %zd\n", authSize,
+		      buflen);
 		return AUTH_FAIL;
 	}
 
@@ -242,8 +228,7 @@ int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key)
 	// now validate appended ESL
 	// if no ESL appended then print warning and continue, could be a delete key update
 	if (authSize == buflen) {
-		prlog(PR_WARNING,
-		      "WARNING: appended ESL is empty, (valid key reset file)...\n");
+		prlog(PR_WARNING, "WARNING: appended ESL is empty, (valid key reset file)...\n");
 	} else {
 		rc = validateESL(authBuf + authSize, buflen - authSize, key);
 		if (rc) {
@@ -268,10 +253,9 @@ size_t get_pkcs7_len(const struct efi_variable_authentication_2 *auth)
 		return 0;
 	}
 	dw_length = auth->auth_info.hdr.dw_length;
-	size = dw_length - (sizeof(auth->auth_info.hdr.dw_length) +
-			    sizeof(auth->auth_info.hdr.w_revision) +
-			    sizeof(auth->auth_info.hdr.w_certificate_type) +
-			    sizeof(auth->auth_info.cert_type));
+	size = dw_length -
+	       (sizeof(auth->auth_info.hdr.dw_length) + sizeof(auth->auth_info.hdr.w_revision) +
+		sizeof(auth->auth_info.hdr.w_certificate_type) + sizeof(auth->auth_info.cert_type));
 
 	return size;
 }
@@ -311,8 +295,7 @@ int validatePKCS7(const unsigned char *cert_data, size_t len)
 		else
 			rc = CERT_FAIL;
 		if (rc) {
-			prlog(PR_ERR,
-			      "ERROR: failure to parse x509 signing certificate\n");
+			prlog(PR_ERR, "ERROR: failure to parse x509 signing certificate\n");
 			goto out;
 		}
 
@@ -345,13 +328,10 @@ int validateESL(const unsigned char *eslBuf, size_t buflen, const char *key)
 	int count = 0, offset = 0, rc;
 	prlog(PR_INFO, "VALIDATING ESL:\n");
 	while (eslvarsize > 0) {
-		rc = validateSingularESL(&eslsize, eslBuf + offset, eslvarsize,
-					 key);
+		rc = validateSingularESL(&eslsize, eslBuf + offset, eslvarsize, key);
 		// verify current esl to ensure it is a valid sigList, if 1 is returned break or error
 		if (rc) {
-			prlog(PR_ERR,
-			      "ERROR: Sig List #%d is not structured correctly\n",
-			      count);
+			prlog(PR_ERR, "ERROR: Sig List #%d is not structured correctly\n", count);
 			// if there is one good esl just leave the loop
 			if (count)
 				break;
@@ -381,8 +361,8 @@ int validateESL(const unsigned char *eslBuf, size_t buflen, const char *key)
  *@param varName, variable name {"db","dbx","KEK", "PK"} b/c dbx is a different format
  *@return SUCCESS if cetificate and header info is valid, errno otherwise
  */
-static int validateSingularESL(size_t *bytesRead, const unsigned char *esl,
-			       size_t eslvarsize, const char *varName)
+static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size_t eslvarsize,
+			       const char *varName)
 {
 	ssize_t cert_size;
 	int rc;
@@ -402,11 +382,9 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl,
 	sigList = get_esl_signature_list((const char *)esl, eslvarsize);
 	// check size info is logical
 	if (sigList->SignatureListSize > 0) {
-		if ((sigList->SignatureSize <= 0 &&
-		     sigList->SignatureHeaderSize <= 0) ||
+		if ((sigList->SignatureSize <= 0 && sigList->SignatureHeaderSize <= 0) ||
 		    sigList->SignatureListSize <
-			    sigList->SignatureHeaderSize +
-				    sigList->SignatureSize) {
+			    sigList->SignatureHeaderSize + sigList->SignatureSize) {
 			/*printf("Sig List : %d , sig Header: %d, sig Size: %d\n",list.SignatureListSize,list.SignatureHeaderSize,list.SignatureSize);*/
 			prlog(PR_ERR,
 			      "ERROR: Sig List is not structured correctly, defined size and actual sizes are mismatched\n");
@@ -415,8 +393,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl,
 	}
 	if (verbose >= PR_INFO)
 		printESLInfo(sigList);
-	if (sigList->SignatureListSize > eslvarsize ||
-	    sigList->SignatureHeaderSize > eslvarsize ||
+	if (sigList->SignatureListSize > eslvarsize || sigList->SignatureHeaderSize > eslvarsize ||
 	    sigList->SignatureSize > eslvarsize) {
 		prlog(PR_ERR,
 		      "ERROR: Expected Sig List Size %d + Header size %d + Signature Size is %d larger than actual size %zd\n",
@@ -439,8 +416,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl,
 
 	// if dbx expect some type of SHA
 	if (varName && !strcmp(varName, "dbx")) {
-		if (strncmp(getSigType(sigList->SignatureType), "SHA", 3) !=
-		    0) {
+		if (strncmp(getSigType(sigList->SignatureType), "SHA", 3) != 0) {
 			prlog(PR_ERR,
 			      "ERROR: dbx has wrong guid type, expected a SHA function found %s\n",
 			      getSigType(sigList->SignatureType));
@@ -456,8 +432,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl,
 	cert_size = get_esl_cert((const char *)esl, sigList,
 				 (char **)&cert); // puts sig data in cert
 	if (cert_size <= 0) {
-		prlog(PR_ERR,
-		      "\tERROR: Signature Size was too small, no data \n");
+		prlog(PR_ERR, "\tERROR: Signature Size was too small, no data \n");
 		return ESL_FAIL;
 	}
 	// if dbx, make sure it is 32 bytes if SHA256, 64 for SHA512 etc, and skip x509 validation
@@ -487,10 +462,8 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl,
 static bool validate_hash(uuid_t type, size_t size)
 {
 	// loop through all known hashes
-	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct);
-	     i++) {
-		if (uuid_equals(&type, hash_functions[i].guid) &&
-		    (size == hash_functions[i].size))
+	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct); i++) {
+		if (uuid_equals(&type, hash_functions[i].guid) && (size == hash_functions[i].size))
 			return true;
 	}
 
@@ -505,8 +478,7 @@ static bool validate_hash(uuid_t type, size_t size)
  *@return CERT_FAIL if certificate had incorrect data
  *@return SUCCESS if certificate is valid
  */
-int validateCert(const unsigned char *certBuf, size_t buflen,
-		 const char *varName)
+int validateCert(const unsigned char *certBuf, size_t buflen, const char *varName)
 {
 	int rc;
 	crypto_x509 *x509 = NULL;
@@ -553,8 +525,7 @@ static int validateCertStruct(crypto_x509 *x509, const char *varName)
 	// check raw certificate body has TBSCertificate data
 	len = crypto_x509_get_tbs_der_len(x509);
 	if (len < 0) {
-		prlog(PR_ERR,
-		      "ERROR: Could not read length of X509 TBS Certificate\n");
+		prlog(PR_ERR, "ERROR: Could not read length of X509 TBS Certificate\n");
 		return CERT_FAIL;
 	}
 	if (len == 0) {
@@ -587,17 +558,14 @@ static int validateCertStruct(crypto_x509 *x509, const char *varName)
 	// if x509 for db then signature can be RSA 4096 or other (since it won't be signing anything else)
 	// this addresses OS's that release certificates with non RSA-2048 (ex: RHEL)
 	if (varName == NULL || strncmp(varName, "db", strlen(varName))) {
-		if (crypto_x509_md_is_sha256(x509) ||
-		    crypto_x509_oid_is_pkcs1_sha256(x509) ||
+		if (crypto_x509_md_is_sha256(x509) || crypto_x509_oid_is_pkcs1_sha256(x509) ||
 		    crypto_x509_get_pk_bit_len(x509) != 2048) {
 			x509_info = malloc(CERT_BUFFER_SIZE);
 			if (!x509_info) {
-				prlog(PR_ERR,
-				      "ERROR: failed to allocate memory\n");
+				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 				return CERT_FAIL;
 			}
-			crypto_x509_get_short_info(x509, x509_info,
-						   CERT_BUFFER_SIZE);
+			crypto_x509_get_short_info(x509, x509_info, CERT_BUFFER_SIZE);
 			prlog(PR_ERR,
 			      "ERROR: Wanted x509 with RSA 2048 and SHA-256. Discovered %s with signature length %d bits\n",
 			      x509_info, crypto_x509_get_pk_bit_len(x509));
@@ -633,8 +601,7 @@ int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen)
 	unsigned char *generatedDER = NULL;
 	size_t generatedDERSize;
 	if ((ssize_t)buflen <= 0) {
-		prlog(PR_ERR,
-		      "ERROR: Certificate has invalid length %zd, cannot validate\n",
+		prlog(PR_ERR, "ERROR: Certificate has invalid length %zd, cannot validate\n",
 		      buflen);
 		return CERT_FAIL;
 	}
@@ -643,8 +610,7 @@ int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen)
 	if (!*x509) {
 		prlog(PR_INFO, "Failed to parse x509 as DER, trying PEM...\n");
 		// if failed, maybe input is PEM and so try converting PEM to DER, if conversion fails then we know it was DER and it failed
-		if (crypto_convert_pem_to_der(certBuf, buflen, &generatedDER,
-					      &generatedDERSize)) {
+		if (crypto_convert_pem_to_der(certBuf, buflen, &generatedDER, &generatedDERSize)) {
 			prlog(PR_ERR,
 			      "ERROR: Failed to parse x509 in DER and file is not in PEM\n");
 			return CERT_FAIL;
@@ -678,13 +644,11 @@ int validateTS(const unsigned char *data, size_t size)
 	if (size != sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1)) {
 		prlog(PR_ERR,
 		      "ERROR: TS variable does not contain data on all the variables, expected %ld bytes of data, found %zd\n",
-		      sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1),
-		      size);
+		      sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1), size);
 		return INVALID_TIMESTAMP;
 	}
 	for (pointer = (char *)data; size > 0;
-	     pointer += sizeof(struct efi_time),
-	    size -= sizeof(struct efi_time)) {
+	     pointer += sizeof(struct efi_time), size -= sizeof(struct efi_time)) {
 		tmpStamp = (struct efi_time *)pointer;
 		rc = validateTime(tmpStamp);
 		if (rc)
@@ -714,38 +678,32 @@ out:
 int validateTime(struct efi_time *time)
 {
 	if (time->year < 1900 || time->year > 9999) {
-		prlog(PR_ERR, "ERROR: Invalid Timestamp value for year: %d\n",
-		      time->year);
+		prlog(PR_ERR, "ERROR: Invalid Timestamp value for year: %d\n", time->year);
 		return INVALID_TIMESTAMP;
 	}
 
 	if (time->month < 1 || time->month > 12) {
-		prlog(PR_ERR, "ERROR: Invalid Timestamp value for month: %d\n",
-		      time->month);
+		prlog(PR_ERR, "ERROR: Invalid Timestamp value for month: %d\n", time->month);
 		return INVALID_TIMESTAMP;
 	}
 
 	if (time->day < 1 || time->day > 31) {
-		prlog(PR_ERR, "ERROR: Invalid Timestamp value for day: %d\n",
-		      time->day);
+		prlog(PR_ERR, "ERROR: Invalid Timestamp value for day: %d\n", time->day);
 		return INVALID_TIMESTAMP;
 	}
 
 	if (time->hour < 0 || time->hour > 23) {
-		prlog(PR_ERR, "ERROR: Invalid Timestamp value for hour: %d\n",
-		      time->hour);
+		prlog(PR_ERR, "ERROR: Invalid Timestamp value for hour: %d\n", time->hour);
 		return INVALID_TIMESTAMP;
 	}
 
 	if (time->minute < 0 || time->minute > 59) {
-		prlog(PR_ERR, "ERROR: Invalid Timestamp value for minute: %d\n",
-		      time->minute);
+		prlog(PR_ERR, "ERROR: Invalid Timestamp value for minute: %d\n", time->minute);
 		return INVALID_TIMESTAMP;
 	}
 
 	if (time->second < 0 || time->second > 60) {
-		prlog(PR_ERR, "ERROR: Invalid Timestamp value for second: %d\n",
-		      time->second);
+		prlog(PR_ERR, "ERROR: Invalid Timestamp value for second: %d\n", time->second);
 		return INVALID_TIMESTAMP;
 	}
 
@@ -756,6 +714,6 @@ void printTimestamp(struct efi_time t)
 {
 	// NOTE: if auth is made with sign-efi-sig-list, year will be actual year+1 (see https:// blog.hansenpartnership.com/updating-pk-kek-db-and-x-in-user-mode/),
 	// also month could be one less bc months are 0-11 not 1-12
-	printf("%04d-%02d-%02d %02d:%02d:%02d UTC\n", t.year, t.month, t.day,
-	       t.hour, t.minute, t.second);
+	printf("%04d-%02d-%02d %02d:%02d:%02d UTC\n", t.year, t.month, t.day, t.hour, t.minute,
+	       t.second);
 }

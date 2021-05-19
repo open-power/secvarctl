@@ -18,20 +18,17 @@ struct Arguments {
 
 extern struct secvar_backend_driver edk2_compatible_v1;
 
-static int verify(char **currentVars, int currCount, const char **updateVars,
-		  int updateCount, const char *path, int writeFlag);
+static int verify(char **currentVars, int currCount, const char **updateVars, int updateCount,
+		  const char *path, int writeFlag);
 static int validateVarsArg(const char *vars[], int size);
 static int getCurrentVars(char **newCurr, int *size, const char *path);
 static char *opalErrToString(int rc);
 static int parse_opt(int key, char *arg, struct argp_state *state);
-static int validateBanks(struct list_head *update_bank,
-			 struct list_head *variable_bank);
-static int setupBanks(struct list_head *variable_bank,
-		      struct list_head *update_bank, char *currentVars[],
-		      int currCount, const char *updateVars[], int updateCount,
+static int validateBanks(struct list_head *update_bank, struct list_head *variable_bank);
+static int setupBanks(struct list_head *variable_bank, struct list_head *update_bank,
+		      char *currentVars[], int currCount, const char *updateVars[], int updateCount,
 		      const char *path);
-static void printBanks(struct list_head *variable_bank,
-		       struct list_head *update_bank);
+static void printBanks(struct list_head *variable_bank, struct list_head *update_bank);
 static int commitUpdateBank(struct list_head *update_bank, const char *path);
 
 /**
@@ -54,8 +51,7 @@ int performVerificationCommand(int argc, char *argv[])
 	argv[0] = "secvarctl verify";
 
 	struct argp_option options[] = {
-		{ "verbose", 'v', 0, 0,
-		  "print more verbose process information" },
+		{ "verbose", 'v', 0, 0, "print more verbose process information" },
 		{ "path", 'p', "PATH", 0,
 		  "manually set path to current variables, looks for .../<var>/data file in PATH, default is " SECVARPATH
 		  " . Cannot be used with `-c` " },
@@ -66,8 +62,7 @@ int performVerificationCommand(int argc, char *argv[])
 		{ 0, 'u', "{UPDATE LIST}", OPTION_HIDDEN,
 		  "set update variables (see below for format)" },
 		{ "help", '?', 0, 0, "Give this help list", 1 },
-		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0,
-		  "Give a short usage message", -1 },
+		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{ 0 }
 	};
 
@@ -89,14 +84,13 @@ int performVerificationCommand(int argc, char *argv[])
 		" unless variable is TS (in which case it would contain 4 16 byte timestamps)"
 	};
 
-	rc = argp_parse(&argp, argc, argv,
-			ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
+	rc = argp_parse(&argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
 	if (rc || args.helpFlag) {
 		goto out;
 	}
 
-	rc = verify(args.currentVars, args.currVarCount, args.updateVars,
-		    args.updateVarCount, args.pathToSecVars, args.writeFlag);
+	rc = verify(args.currentVars, args.currVarCount, args.updateVars, args.updateVarCount,
+		    args.pathToSecVars, args.writeFlag);
 
 out:
 	if (args.currentVars)
@@ -140,19 +134,16 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		break;
 	case 'u':
 		if (args->updateVars) {
-			prlog(PR_ERR,
-			      "ERROR: Update variables defined twice, see usage...\n");
+			prlog(PR_ERR, "ERROR: Update variables defined twice, see usage...\n");
 			argp_usage(state);
 			rc = ARG_PARSE_FAIL;
 			break;
 		}
 		current = state->next - 1;
-		while (state->next != state->argc &&
-		       state->argv[state->next][0] != '-')
+		while (state->next != state->argc && state->argv[state->next][0] != '-')
 			state->next++;
 		args->updateVarCount = (state->next - current);
-		args->updateVars =
-			malloc(sizeof(char *) * args->updateVarCount);
+		args->updateVars = malloc(sizeof(char *) * args->updateVarCount);
 		if (!args->updateVars) {
 			prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 			rc = ALLOC_FAIL;
@@ -163,15 +154,13 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		break;
 	case 'c':
 		if (args->currentVars) {
-			prlog(PR_ERR,
-			      "ERROR: Current variables defined twice, see usage...\n");
+			prlog(PR_ERR, "ERROR: Current variables defined twice, see usage...\n");
 			argp_usage(state);
 			rc = ARG_PARSE_FAIL;
 			break;
 		}
 		current = state->next - 1;
-		while (state->next != state->argc &&
-		       state->argv[state->next][0] != '-')
+		while (state->next != state->argc && state->argv[state->next][0] != '-')
 			state->next++;
 		args->currVarCount = (state->next - current);
 		args->currentVars = malloc(sizeof(char *) * args->currVarCount);
@@ -192,8 +181,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			      "ERROR: No update variables/files given, use -u <varName_1> <authFileForVar_1>...\n\t\t"
 			      "Where <varName> is one of {'PK','KEK','db','dbx'} and <authFileForVar> is "
 			      "a properly generated authenticated variable file\n");
-		else if (validateVarsArg(args->updateVars,
-					 args->updateVarCount))
+		else if (validateVarsArg(args->updateVars, args->updateVarCount))
 			prlog(PR_ERR,
 			      "ERROR: Update vars list not in right format: "
 			      "-u <varName_1> <authFileForVar_1> <varName_2> <authFileForVar_2> ...\n\t\t"
@@ -203,9 +191,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			if (args->writeFlag)
 				prlog(PR_ERR,
 				      "ERROR: Cannot update files if current variable files are given. remove -w\n");
-			else if (validateVarsArg(
-					 (const char **)args->currentVars,
-					 args->currVarCount))
+			else if (validateVarsArg((const char **)args->currentVars,
+						 args->currVarCount))
 				prlog(PR_ERR,
 				      "ERROR: Current vars list not in right format: "
 				      "<varName_1> <eslFileForVar_1> <varName_2> <eslFileForVar_2> ...\n\t\t"
@@ -236,8 +223,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
  *@param writeFlag 0 if -w no given, 1 if given
  *@return SUCCESS or error value
  */
-static int verify(char *currentVars[], int currCount, const char *updateVars[],
-		  int updateCount, const char *path, int writeFlag)
+static int verify(char *currentVars[], int currCount, const char *updateVars[], int updateCount,
+		  const char *path, int writeFlag)
 {
 	int rc;
 	struct list_head update_bank, variable_bank, update_bank_copy;
@@ -248,8 +235,8 @@ static int verify(char *currentVars[], int currCount, const char *updateVars[],
 	if (!path) {
 		path = SECVARPATH;
 	}
-	rc = setupBanks(&variable_bank, &update_bank, currentVars, currCount,
-			updateVars, updateCount, path);
+	rc = setupBanks(&variable_bank, &update_bank, currentVars, currCount, updateVars,
+			updateCount, path);
 	if (rc) {
 		prlog(PR_ERR, "ERROR:Could not initialize banks\n");
 		goto out;
@@ -262,8 +249,7 @@ static int verify(char *currentVars[], int currCount, const char *updateVars[],
 	// run preprocess
 	rc = edk2_compatible_v1.pre_process(&variable_bank, &update_bank);
 	if (rc) {
-		prlog(PR_ERR,
-		      "ERROR: Failed in preprocessing OPAL ERR = %d = %s\n", rc,
+		prlog(PR_ERR, "ERROR: Failed in preprocessing OPAL ERR = %d = %s\n", rc,
 		      opalErrToString(rc));
 		goto out;
 	}
@@ -277,8 +263,7 @@ static int verify(char *currentVars[], int currCount, const char *updateVars[],
 	// run process
 	rc = edk2_compatible_v1.process(&variable_bank, &update_bank);
 	if (rc) {
-		prlog(PR_ERR,
-		      "ERROR: Failed in processing OPAL ERR = %d = %s\n", rc,
+		prlog(PR_ERR, "ERROR: Failed in processing OPAL ERR = %d = %s\n", rc,
 		      opalErrToString(rc));
 		goto out;
 	}
@@ -290,8 +275,7 @@ static int verify(char *currentVars[], int currCount, const char *updateVars[],
 	if (writeFlag) {
 		rc = commitUpdateBank(&update_bank_copy, path);
 		if (rc) {
-			prlog(PR_ERR,
-			      "ERROR: Failed in submitting update #%d\n", rc);
+			prlog(PR_ERR, "ERROR: Failed in submitting update #%d\n", rc);
 			goto out;
 		}
 	}
@@ -314,9 +298,8 @@ out:
  *@param path holds path to current vars
  *@return SUCCESS or error value
  */
-static int setupBanks(struct list_head *variable_bank,
-		      struct list_head *update_bank, char *currentVars[],
-		      int currCount, const char *updateVars[], int updateCount,
+static int setupBanks(struct list_head *variable_bank, struct list_head *update_bank,
+		      char *currentVars[], int currCount, const char *updateVars[], int updateCount,
 		      const char *path)
 {
 	int defaultVarsFlag = 0;
@@ -328,17 +311,14 @@ static int setupBanks(struct list_head *variable_bank,
 	if (!currentVars) {
 		defaultVarsFlag = 1;
 		// max length of this array is #OfVars *2 b/c max contents= {Pk, path/pk/data, KEK, path/kek/data,etc}
-		currentVars =
-			calloc(1, sizeof(char *) * ARRAY_SIZE(variables) * 2);
+		currentVars = calloc(1, sizeof(char *) * ARRAY_SIZE(variables) * 2);
 		if (!currentVars) {
 			prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 			return ALLOC_FAIL;
 		}
 		// unlikely fail, if alloc fails
 		if (getCurrentVars(currentVars, &currCount, path)) {
-			prlog(PR_ERR,
-			      "Could not get current variables from path %s\n",
-			      path);
+			prlog(PR_ERR, "Could not get current variables from path %s\n", path);
 			return INVALID_FILE;
 		}
 	}
@@ -348,38 +328,31 @@ static int setupBanks(struct list_head *variable_bank,
 	for (int i = 0; i < updateCount; i += 2) {
 		c = getDataFromFile((char *)updateVars[i + 1], &len);
 		if (c) {
-			list_add_tail(update_bank,
-				      &new_secvar(updateVars[i],
-						  strlen(updateVars[i]) + 1, c,
-						  len, 0)
-					       ->link);
+			list_add_tail(update_bank, &new_secvar(updateVars[i],
+							       strlen(updateVars[i]) + 1, c, len, 0)
+							    ->link);
 			free(c);
 		} else
-			prlog(PR_INFO,
-			      "Failed to open %s, not adding it to list\n",
+			prlog(PR_INFO, "Failed to open %s, not adding it to list\n",
 			      updateVars[i + 1]);
 	}
 	// fill variable bank with current vars
 	for (int i = 0; i < currCount; i += 2) {
 		if (defaultVarsFlag) {
 			// if getting secvar successful add tmp to list
-			if (!getSecVar(&tmp, currentVars[i],
-				       currentVars[i + 1]))
+			if (!getSecVar(&tmp, currentVars[i], currentVars[i + 1]))
 				list_add_tail(variable_bank, &tmp->link);
 
 		} else {
 			c = getDataFromFile((char *)currentVars[i + 1], &len);
 			if (c) {
-				list_add_tail(
-					variable_bank,
-					&new_secvar(currentVars[i],
-						    strlen(currentVars[i]) + 1,
-						    c, len, 0)
-						 ->link);
+				list_add_tail(variable_bank,
+					      &new_secvar(currentVars[i],
+							  strlen(currentVars[i]) + 1, c, len, 0)
+						       ->link);
 				free(c);
 			} else
-				prlog(PR_INFO,
-				      "Failed to open %s, not adding it to list\n",
+				prlog(PR_INFO, "Failed to open %s, not adding it to list\n",
 				      currentVars[i + 1]);
 		}
 	}
@@ -400,8 +373,7 @@ static int setupBanks(struct list_head *variable_bank,
  *@param update_bank list of secvar's of update variables
  *@return SUCCESS or error value if any files fail
  */
-static int validateBanks(struct list_head *update_bank,
-			 struct list_head *variable_bank)
+static int validateBanks(struct list_head *update_bank, struct list_head *variable_bank)
 {
 	int rc = SUCCESS;
 	struct secvar *var = NULL;
@@ -417,11 +389,9 @@ static int validateBanks(struct list_head *update_bank,
 			      var->key);
 			return rc;
 		}
-		rc = validateAuth((unsigned char *)var->data, var->data_size,
-				  var->key);
+		rc = validateAuth((unsigned char *)var->data, var->data_size, var->key);
 		if (rc) {
-			prlog(PR_ERR,
-			      "ERROR: failed to validate Auth file for %s, returned %d\n",
+			prlog(PR_ERR, "ERROR: failed to validate Auth file for %s, returned %d\n",
 			      var->key, rc);
 			return rc;
 		}
@@ -430,14 +400,12 @@ static int validateBanks(struct list_head *update_bank,
 	// if no PK then were in setup mode so skip vallidation of current keys
 	if (find_secvar("PK", 3, variable_bank)) {
 		list_for_each (variable_bank, var, link) {
-			prlog(PR_INFO, "----VALIDATING CURRENT VAR: %s----\n",
-			      var->key);
+			prlog(PR_INFO, "----VALIDATING CURRENT VAR: %s----\n", var->key);
 			if (strcmp(var->key, "TS") == 0)
-				rc = validateTS((unsigned char *)var->data,
-						var->data_size);
+				rc = validateTS((unsigned char *)var->data, var->data_size);
 			else
-				rc = validateESL((unsigned char *)var->data,
-						 var->data_size, var->key);
+				rc = validateESL((unsigned char *)var->data, var->data_size,
+						 var->key);
 			if (rc) {
 				prlog(PR_ERR,
 				      "ERROR: failed to validate data file for %s,returned %d\n",
@@ -516,8 +484,7 @@ static int getCurrentVars(char *newCurr[], int *size, const char *path)
 	char *ext = "/data";
 	char *fullPath = NULL;
 	for (i = 0; i < ARRAY_SIZE(variables); i++) {
-		fullPath = malloc(strlen(path) + strlen(variables[i]) +
-				  strlen(ext) + 1);
+		fullPath = malloc(strlen(path) + strlen(variables[i]) + strlen(ext) + 1);
 		if (!fullPath) {
 			prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 			return ALLOC_FAIL;
@@ -531,17 +498,14 @@ static int getCurrentVars(char *newCurr[], int *size, const char *path)
 		if (!isFile(fullPath)) {
 			newCurr[lenCtr] = malloc(strlen(variables[i]) + 1);
 			if (!newCurr[lenCtr]) {
-				prlog(PR_ERR,
-				      "ERROR: failed to allocate memory\n");
+				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 				free(fullPath);
 				return ALLOC_FAIL;
 			}
-			strncpy(newCurr[lenCtr++], variables[i],
-				strlen(variables[i]) + 1);
+			strncpy(newCurr[lenCtr++], variables[i], strlen(variables[i]) + 1);
 			newCurr[lenCtr] = malloc(strlen(fullPath) + 1);
 			if (!newCurr[lenCtr]) {
-				prlog(PR_ERR,
-				      "ERROR: failed to allocate memory\n");
+				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 				free(fullPath);
 				return ALLOC_FAIL;
 			}
@@ -562,20 +526,17 @@ static int getCurrentVars(char *newCurr[], int *size, const char *path)
  *@param variable_bank list of secvar's of current variables
  *@param update_bank list of secvar's of update variables
  */
-static void printBanks(struct list_head *variable_bank,
-		       struct list_head *update_bank)
+static void printBanks(struct list_head *variable_bank, struct list_head *update_bank)
 {
 	struct secvar *var = NULL;
 	printf("----CONTENTS OF UPDATE BANK----\n");
 	list_for_each (update_bank, var, link) {
-		printf("SecVar for %s contains %zd bytes of data\n", var->key,
-		       var->data_size);
+		printf("SecVar for %s contains %zd bytes of data\n", var->key, var->data_size);
 	}
 
 	printf("----CONTENTS OF VARIABLE BANK----\n");
 	list_for_each (variable_bank, var, link) {
-		printf("SecVar for %s contains %zd bytes of data\n", var->key,
-		       var->data_size);
+		printf("SecVar for %s contains %zd bytes of data\n", var->key, var->data_size);
 	}
 }
 
@@ -590,11 +551,9 @@ static int commitUpdateBank(struct list_head *update_bank, const char *path)
 	int rc = INVALID_FILE;
 	struct secvar *var = NULL;
 	list_for_each (update_bank, var, link) {
-		prlog(PR_INFO,
-		      "Writing new %s with %zd bytes of data to %s%s/update\n",
-		      var->key, var->data_size, path, var->key);
-		rc = updateVar(path, var->key, (unsigned char *)var->data,
-			       var->data_size);
+		prlog(PR_INFO, "Writing new %s with %zd bytes of data to %s%s/update\n", var->key,
+		      var->data_size, path, var->key);
+		rc = updateVar(path, var->key, (unsigned char *)var->data, var->data_size);
 		if (rc) {
 			prlog(PR_ERR, "ERROR: issue writing to file #%d\n",
 			      rc); // consider continuing

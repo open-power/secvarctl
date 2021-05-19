@@ -10,8 +10,7 @@
 #include "secvarctl.h"
 #include "backends/edk2-compat/include/edk2-svc.h" // import last!!
 
-static int updateSecVar(const char *var, const char *authFile, const char *path,
-			int force);
+static int updateSecVar(const char *var, const char *authFile, const char *path, int force);
 
 struct Arguments {
 	int helpFlag, inpValid;
@@ -29,24 +28,19 @@ static int parse_opt(int key, char *arg, struct argp_state *state);
 int performWriteCommand(int argc, char *argv[])
 {
 	int rc;
-	struct Arguments args = { .helpFlag = 0,
-				  .inpValid = 0,
-				  .pathToSecVars = NULL,
-				  .inFile = NULL,
-				  .varName = NULL };
+	struct Arguments args = {
+		.helpFlag = 0, .inpValid = 0, .pathToSecVars = NULL, .inFile = NULL, .varName = NULL
+	};
 	// combine command and subcommand for usage/help messages
 	argv[0] = "secvarctl write";
 
 	struct argp_option options[] = {
-		{ "verbose", 'v', 0, 0,
-		  "print more verbose process information" },
-		{ "force", 'f', 0, 0,
-		  "force update, skips validation of file" },
+		{ "verbose", 'v', 0, 0, "print more verbose process information" },
+		{ "force", 'f', 0, 0, "force update, skips validation of file" },
 		{ "path", 'p', "PATH", 0,
 		  "looks for .../<var>/update file in PATH, default is " SECVARPATH },
 		{ "help", '?', 0, 0, "Give this help list", 1 },
-		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0,
-		  "Give a short usage message", -1 },
+		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{ 0 }
 	};
 
@@ -59,13 +53,11 @@ int performWriteCommand(int argc, char *argv[])
 		"<AUTH_FILE> must be a properly generated authenticated variable file"
 	};
 
-	rc = argp_parse(&argp, argc, argv,
-			ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
+	rc = argp_parse(&argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
 	if (rc || args.helpFlag)
 		goto out;
 
-	rc = updateSecVar(args.varName, args.inFile, args.pathToSecVars,
-			  args.inpValid);
+	rc = updateSecVar(args.varName, args.inFile, args.pathToSecVars, args.inpValid);
 
 out:
 	if (!args.helpFlag)
@@ -114,14 +106,11 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		if (args->helpFlag)
 			break;
 		if (!args->varName)
-			prlog(PR_ERR,
-			      "ERROR: missing variable, see usage...\n");
+			prlog(PR_ERR, "ERROR: missing variable, see usage...\n");
 		else if (!args->inFile)
-			prlog(PR_ERR,
-			      "ERROR: missing input file, see usage...\n");
+			prlog(PR_ERR, "ERROR: missing input file, see usage...\n");
 		else if (isVariable(args->varName))
-			prlog(PR_ERR,
-			      "ERROR: Unrecognized variable name %s, see usage...\n",
+			prlog(PR_ERR, "ERROR: Unrecognized variable name %s, see usage...\n",
 			      args->varName);
 		else if (strcmp(args->varName, "TS") == 0)
 			prlog(PR_ERR,
@@ -162,8 +151,7 @@ int isVariable(const char *var)
  *@param force 1 for no validation of auth, 0 for validate
  *@return error if variable given is unknown, or issue validating or writing
  */
-static int updateSecVar(const char *varName, const char *authFile,
-			const char *path, int force)
+static int updateSecVar(const char *varName, const char *authFile, const char *path, int force)
 {
 	int rc;
 	unsigned char *buff = NULL;
@@ -188,8 +176,7 @@ static int updateSecVar(const char *varName, const char *authFile,
 	rc = updateVar(path, varName, buff, size);
 
 	if (rc)
-		prlog(PR_ERR, "ERROR: issue writing to file: %s\n",
-		      strerror(errno));
+		prlog(PR_ERR, "ERROR: issue writing to file: %s\n", strerror(errno));
 	free(buff);
 
 	return rc;
@@ -203,8 +190,7 @@ static int updateSecVar(const char *varName, const char *authFile,
  *@param size , size of buff
  *@return whatever returned by writeData, SUCCESS or errno
  */
-int updateVar(const char *path, const char *var, const unsigned char *buff,
-	      size_t size)
+int updateVar(const char *path, const char *var, const unsigned char *buff, size_t size)
 {
 	int commandLength, rc;
 	char *fullPathWithCommand = NULL;
