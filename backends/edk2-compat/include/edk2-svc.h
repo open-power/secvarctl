@@ -20,10 +20,10 @@
 #define SECVARPATH "/sys/firmware/secvar/vars/"
 #endif
 
-#define variables                                                              \
-	(char *[])                                                             \
-	{                                                                      \
-		"PK", "KEK", "db", "dbx", "TS"                                 \
+#define variables                                                                                  \
+	(char *[])                                                                                 \
+	{                                                                                          \
+		"PK", "KEK", "db", "dbx", "TS"                                                     \
 	}
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 #define uuid_equals(a, b) (!memcmp(a, b, UUID_SIZE))
@@ -75,14 +75,12 @@ int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen);
 const char *getSigType(const uuid_t);
 
 int getSecVar(struct secvar **var, const char *name, const char *fullPath);
-int updateVar(const char *path, const char *var, const unsigned char *buff,
-	      size_t size);
+int updateVar(const char *path, const char *var, const unsigned char *buff, size_t size);
 int isVariable(const char *var);
 
 int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key);
 int validateESL(const unsigned char *eslBuf, size_t buflen, const char *key);
-int validateCert(const unsigned char *authBuf, size_t buflen,
-		 const char *varName);
+int validateCert(const unsigned char *authBuf, size_t buflen, const char *varName);
 int validatePKCS7(const unsigned char *cert_data, size_t len);
 int validateTS(const unsigned char *data, size_t size);
 int validateTime(struct efi_time *time);

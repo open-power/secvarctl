@@ -11,8 +11,7 @@ static struct backend *getBackend();
 
 static struct backend backends[] = {
 	{ .name = "ibm,edk2-compat-v1",
-	  .countCmds =
-		  sizeof(edk2_compat_command_table) / sizeof(struct command),
+	  .countCmds = sizeof(edk2_compat_command_table) / sizeof(struct command),
 	  .commands = edk2_compat_command_table },
 };
 
@@ -112,14 +111,12 @@ int main(int argc, char *argv[])
  */
 static struct backend *getBackend()
 {
-	char *buff = NULL,
-	     *secVarFormatLocation = "/sys/firmware/secvar/format";
+	char *buff = NULL, *secVarFormatLocation = "/sys/firmware/secvar/format";
 	size_t buffSize;
 	struct backend *result = NULL;
 	// if file doesnt exist then print warning and keep going
 	if (isFile(secVarFormatLocation)) {
-		prlog(PR_WARNING,
-		      "WARNING!! Platform does not support secure variables\n");
+		prlog(PR_WARNING, "WARNING!! Platform does not support secure variables\n");
 		goto out;
 	}
 	buff = getDataFromFile(secVarFormatLocation, &buffSize);
@@ -131,16 +128,13 @@ static struct backend *getBackend()
 	}
 	// loop through all known backends
 	for (int i = 0; i < sizeof(backends) / sizeof(struct backend); i++) {
-		if (!strncmp(buff, backends[i].name,
-			     strlen(backends[i].name))) {
-			prlog(PR_NOTICE, "Found Backend %s\n",
-			      backends[i].name);
+		if (!strncmp(buff, backends[i].name, strlen(backends[i].name))) {
+			prlog(PR_NOTICE, "Found Backend %s\n", backends[i].name);
 			result = &backends[i];
 			goto out;
 		}
 	}
-	prlog(PR_WARNING,
-	      "WARNING!! %s  does not contain known backend format.\n",
+	prlog(PR_WARNING, "WARNING!! %s  does not contain known backend format.\n",
 	      secVarFormatLocation);
 
 out:
