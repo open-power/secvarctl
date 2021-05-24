@@ -76,6 +76,7 @@ const char *getSigType(const uuid_t);
 int getSecVar(struct secvar **var, const char *name, const char *fullPath);
 int updateVar(const char *path, const char *var, const unsigned char *buff, size_t size);
 int isVariable(const char *var);
+int getDataFromSecVar(char **out_data, size_t *size, const char *path, const char *variable);
 
 int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key);
 int validateESL(const unsigned char *eslBuf, size_t buflen, const char *key);
@@ -84,7 +85,8 @@ int validatePKCS7(const unsigned char *cert_data, size_t len);
 int validateTS(const unsigned char *data, size_t size);
 int validateTime(struct efi_time *time);
 
-extern struct command edk2_compat_command_table[5];
+int getHashFunction(const char *name, struct hash_funct **returnFunct);
+int getTimestamp(struct efi_time *ts);
 
 // below is for arg parsing for any type of generate signed data (auth/pkcs7) command
 extern struct argp gen_auth_specific_argp;
@@ -103,4 +105,9 @@ struct Auth_specific_args {
 	struct efi_time *time;
 	enum pkcs7_generation_method pkcs7_gen_meth;
 };
+int toAuth(const unsigned char *newESL, size_t eslSize, struct Auth_specific_args *args,
+	   int hashFunct, unsigned char **outBuff, size_t *outBuffSize);
+
+extern struct command edk2_compat_command_table[5];
+
 #endif

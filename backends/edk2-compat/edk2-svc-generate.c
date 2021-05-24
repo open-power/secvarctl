@@ -25,19 +25,15 @@ static int generateHash(const unsigned char *data, size_t size, struct Arguments
 static int validateHashAndAlg(size_t size, const struct hash_funct *alg);
 static int toESL(const unsigned char *data, size_t size, const uuid_t guid, unsigned char **outESL,
 		 size_t *outESLSize);
-static int getHashFunction(const char *name, struct hash_funct **returnFunct);
 static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize,
 			    struct Auth_specific_args *args, int hashFunct, unsigned char **outBuff,
 			    size_t *outBuffSize);
-static int toAuth(const unsigned char *newESL, size_t eslSize, struct Auth_specific_args *args,
-		  int hashFunct, unsigned char **outBuff, size_t *outBuffSize);
 static int generateESL(const unsigned char *buff, size_t size, struct Arguments *args,
 		       const struct hash_funct *hashFunct, unsigned char **outBuff,
 		       size_t *outBuffSize);
 static int generateAuthOrPKCS7(const unsigned char *buff, size_t size, struct Arguments *args,
 			       const struct hash_funct *hashFunct, unsigned char **outBuff,
 			       size_t *outBuffSize);
-static int getTimestamp(struct efi_time *ts);
 static int getOutputData(const unsigned char *buff, size_t size, struct Arguments *args,
 			 const struct hash_funct *hashFunction, unsigned char **outBuff,
 			 size_t *outBuffSize);
@@ -158,7 +154,7 @@ static int auth_specific_parse_opt(int key, char *arg, struct argp_state *state)
 
 struct argp gen_auth_specific_argp = { auth_specific_argp_options, auth_specific_parse_opt, 0, 0,
 				       0 };
-struct argp_child gen_auth_specific_child_parsers[] = {
+static struct argp_child gen_auth_specific_child_parsers[] = {
 	{ &gen_auth_specific_argp, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP,
 	  "Generating Auth/PKCS7 Options:", 7 },
 	{ 0 }
@@ -852,7 +848,7 @@ static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out
  *@param returnFunct, the corresponding hash_funct info array
  *@return SUCCESS or err number if not a valid hash function name
  */
-static int getHashFunction(const char *name, struct hash_funct **returnFunct)
+int getHashFunction(const char *name, struct hash_funct **returnFunct)
 {
 	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct); i++) {
 		if (!strcmp(name, hash_functions[i].name)) {
@@ -892,7 +888,7 @@ static void convert_tm_to_efi_time(struct efi_time *efi_t, struct tm *tm_t)
  *@param ts, the outputted current time
  *@return SUCCESS or errno if generated timestamp is incorrect
  */
-static int getTimestamp(struct efi_time *ts)
+int getTimestamp(struct efi_time *ts)
 {
 	time_t epochTime;
 	struct tm *t;
@@ -1093,8 +1089,8 @@ out:
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int toAuth(const unsigned char *newESL, size_t eslSize, struct Auth_specific_args *args,
-		  int hashFunct, unsigned char **outBuff, size_t *outBuffSize)
+int toAuth(const unsigned char *newESL, size_t eslSize, struct Auth_specific_args *args,
+	   int hashFunct, unsigned char **outBuff, size_t *outBuffSize)
 {
 	int rc;
 	size_t pkcs7Size, offset = 0;

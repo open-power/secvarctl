@@ -167,14 +167,14 @@ static int readFiles(const char *var, const char *file, int hrFlag, const char *
 	return SUCCESS;
 }
 
-/**
- *Does the appropriate read command depending on hrFlag on the file <path>/<var>/data
- *@param path , the path to the file with ending '/'
- *@param variable , variable name one of {db,dbx,KEK,PK,TS}
- *@param hrFlag, 1 for human readable 0 for raw data
- *@return SUCCESS or error number
+/*
+ *Given a path to secvars and a variable, this reads a secvar into a secvar struct and returns its contained data
+ *@param out_data, the returned data contained in path/variable/data
+ *@param size, the size of out_data
+ *@param path, the  the path to the secvars files with ending '/'
+ *@param variable,  variable name one of {db,dbx,KEK,PK,TS}
  */
-static int readFileFromSecVar(const char *path, const char *variable, int hrFlag)
+int getDataFromSecVar(char **out_data, size_t *size, const char *path, const char *variable)
 {
 	int extra = 10, rc;
 	struct secvar *var = NULL;
@@ -191,30 +191,59 @@ static int readFileFromSecVar(const char *path, const char *variable, int hrFlag
 	strcat(fullPath, "/data");
 
 	rc = getSecVar(&var, variable, fullPath);
+	if (rc)
+		goto out;
 
-	free(fullPath);
-
-	if (rc) {
+	*out_data = malloc(var->data_size);
+	if (!*out_data) {
+		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+		rc = ALLOC_FAIL;
 		goto out;
 	}
-	if (hrFlag) {
-		if (var->data_size == 0) {
-			printf("%s is empty\n", var->key);
-			rc = SUCCESS;
-		} else if (strcmp(var->key, "TS") == 0)
-			rc = readTS(var->data, var->data_size);
-		else
-			rc = printReadable(var->data, var->data_size, var->key);
+	memcpy(*out_data, var->data, var->data_size);
+	*size = var->data_size;
+out:
+	free(fullPath);
+	dealloc_secvar(var);
 
-		if (rc)
-			prlog(PR_WARNING, "ERROR: Could not parse file, continuing...\n");
-	} else {
-		printRaw(var->data, var->data_size);
+	return rc;
+}
+
+/**
+ *Does the appropriate read command depending on hrFlag on the file <path>/<var>/data
+ *@param path , the path to the file with ending '/'
+ *@param variable , variable name one of {db,dbx,KEK,PK,TS}
+ *@param hrFlag, 1 for human readable 0 for raw data
+ *@return SUCCESS or error number
+ */
+static int readFileFromSecVar(const char *path, const char *variable, int hrFlag)
+{
+	int rc;
+	size_t data_size;
+	char *data = NULL;
+
+	rc = getDataFromSecVar(&data, &data_size, path, variable);
+	if (rc)
+		return rc;
+
+	if (!hrFlag) {
+		printRaw(data, data_size);
 		rc = SUCCESS;
+		goto out;
 	}
+	if (data_size == 0) {
+		printf("%s is empty\n", variable);
+		rc = SUCCESS;
+	} else if (strcmp(variable, "TS") == 0)
+		rc = readTS(data, data_size);
+	else
+		rc = printReadable(data, data_size, variable);
+
+	if (rc)
+		prlog(PR_WARNING, "ERROR: Could not parse file, continuing...\n");
 
 out:
-	dealloc_secvar(var);
+	free(data);
 
 	return rc;
 }
@@ -263,6 +292,7 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
 	char *sizePath = NULL, *c = NULL;
 	rc = isFile(fullPath);
 	if (rc) {
+		prlog(PR_ERR, "ERROR: The file %s does not exist\n", fullPath);
 		return rc;
 	}
 	sizePath = malloc(strlen(fullPath) + 1);
