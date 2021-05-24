@@ -29,6 +29,8 @@ void usage()
 	       "verify\t\tcompares proposed variable to the current variables,\n\t\t\t"
 	       "use 'secvarctl verify --usage/help' for more information\n"
 #ifdef SECVAR_CRYPTO_WRITE_FUNC
+	       "\tinsert\t\tappends data to preexisting secure variable data\n\t\t\t"
+	       "use 'secvarctl insert --usage/help' for more information\n"
 	       "\tgenerate\tcreates relevant files for secure variable management,\n\t\t\t"
 	       "use 'secvarctl generate --usage/help' for more information\n"
 #endif

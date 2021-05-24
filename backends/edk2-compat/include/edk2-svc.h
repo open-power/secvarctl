@@ -64,6 +64,7 @@ int performVerificationCommand(int argc, char *argv[]);
 int performWriteCommand(int argc, char *argv[]);
 int performValidation(int argc, char *argv[]);
 int performGenerateCommand(int argc, char *argv[]);
+int performInsertCommand(int argc, char *argv[]);
 
 int printCertInfo(crypto_x509 *x509);
 void printESLInfo(EFI_SIGNATURE_LIST *sigList);
@@ -108,6 +109,6 @@ struct Auth_specific_args {
 int toAuth(const unsigned char *newESL, size_t eslSize, struct Auth_specific_args *args,
 	   int hashFunct, unsigned char **outBuff, size_t *outBuffSize);
 
-extern struct command edk2_compat_command_table[5];
+extern struct command edk2_compat_command_table[6];
 
 #endif

@@ -13,7 +13,7 @@ _LDFLAGS += -s
 endif
 
 EDK2OBJDIR = backends/edk2-compat
-_EDK2_OBJ =  edk2-svc-read.o edk2-svc-write.o edk2-svc-validate.o edk2-svc-verify.o edk2-svc-generate.o
+_EDK2_OBJ =  edk2-svc-read.o edk2-svc-write.o edk2-svc-validate.o edk2-svc-verify.o edk2-svc-generate.o edk2-svc-insert.o
 EDK2_OBJ = $(patsubst %,$(EDK2OBJDIR)/%, $(_EDK2_OBJ))
 
 SKIBOOTOBJDIR = external/skiboot/libstb/secvar
