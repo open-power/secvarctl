@@ -31,7 +31,7 @@ struct Arguments {
 	int help_flag, inp_valid;
 	enum output_method output_method;
 	enum input_method input_method;
-	const char *new_esl, *out_file, *current_esl, *hash_alg, *path_to_sec_vars;
+	const char *new_esl, *out_file, *current_esl, *path_to_sec_vars;
 	struct Auth_specific_args auth_args;
 };
 static struct argp_child gen_auth_specific_child_parsers[] = {
@@ -51,7 +51,6 @@ int performInsertCommand(int argc, char *argv[])
 {
 	int rc;
 	size_t out_buff_size, new_esl_size, curr_esl_size, combined_esl_size;
-	struct hash_funct *hash_function;
 	unsigned char *new_esl_buff = NULL, *current_esl_buff = NULL, *combined_esl_buff = NULL,
 		      *out_buff = NULL;
 	struct Arguments args = { .help_flag = 0,
@@ -60,7 +59,6 @@ int performInsertCommand(int argc, char *argv[])
 				  .input_method = READ_FROM_SECVAR_PATH,
 				  .new_esl = NULL,
 				  .current_esl = NULL,
-				  .hash_alg = NULL,
 				  .path_to_sec_vars = NULL,
 				  .auth_args = { .signKeyCount = 0,
 						 .signCertCount = 0,
@@ -73,9 +71,6 @@ int performInsertCommand(int argc, char *argv[])
 	argv[0] = "secvarctl insert";
 
 	struct argp_option options[] = {
-		{ "alg", 'h', "HASH_ALG", 0,
-		  "hash function, use when validating input ESL for dbx"
-		  " currently accepted values: {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}, Default is 'SHA256'" },
 		{ "verbose", 'v', 0, 0, "print more verbose process information" },
 		{ "force", 'f', 0, 0,
 		  "does not do prevalidation on the input file, assumes format is correct" },
@@ -110,15 +105,6 @@ int performInsertCommand(int argc, char *argv[])
 
 	/*fill in fields w/ default data*/
 
-	if (strcmp(args.auth_args.varName, "dbx") == 0) {
-		// default alg is sha256
-		if (args.hash_alg == NULL)
-			args.hash_alg = "SHA256";
-		// get hash function
-		rc = getHashFunction(args.hash_alg, &hash_function);
-		if (rc)
-			goto out;
-	}
 	if (args.auth_args.time == NULL) {
 		args.auth_args.time = calloc(1, sizeof(*args.auth_args.time));
 		if (!args.auth_args.time) {
@@ -296,9 +282,6 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		break;
 	case 'p':
 		args->path_to_sec_vars = arg;
-		break;
-	case 'h':
-		args->hash_alg = arg;
 		break;
 	case ARGP_KEY_INIT:
 		// for first loop around argp requires us to specify which data struct to use for child parsers
