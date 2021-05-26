@@ -340,8 +340,13 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 	for (int i = 0; i < currCount; i += 2) {
 		if (defaultVarsFlag) {
 			// if getting secvar successful add tmp to list
-			if (!getSecVar(&tmp, currentVars[i], currentVars[i + 1]))
-				list_add_tail(variable_bank, &tmp->link);
+			if (!getSecVar(&tmp, currentVars[i], currentVars[i + 1])) {
+				// only worth adding if it contains data
+				if (tmp->data_size > 0)
+					list_add_tail(variable_bank, &tmp->link);
+				else
+					dealloc_secvar(tmp);
+			}
 
 		} else {
 			c = getDataFromFile((char *)currentVars[i + 1], &len);

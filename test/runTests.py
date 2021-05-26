@@ -114,7 +114,8 @@ badEnvCommands=[ #[arr command to skew env, output of first command, arr command
 [["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["read","-p", "./testenv/"], True],# Pk will be empty but other files will have things
 [["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["read","-p", "./testenv/", "PK"], False],# Pk will be empty, nothing else read so overall failure
 [["echo", "16"], "./testenv/TS/size", ["verify", "-v" , "-p", "./testenv/", "-u", "PK", "./testdata/PK_by_PK.auth"], False],
-[["dd", "if=/dev/zero", "of=./testenv/TS/data", "count=4", "bs=16"], None, ["verify", "-p", "./testenv/", "-u", "PK", "testdata/PK_by_PK.auth"], True] #If timestamp entry for a variable is empty than thats okay
+[["dd", "if=/dev/zero", "of=./testenv/TS/data", "count=4", "bs=16"], None, ["verify", "-p", "./testenv/", "-u", "PK", "testdata/PK_by_PK.auth"], True], #If timestamp entry for a variable is empty than thats okay
+[["echo", "0"], "./testenv/KEK/size", ["verify", "-p", "./testenv/", "-u", "db", "./testdata/db_by_PK.auth"], True] #an empty KEK should not interupt db by PK verification
 ]
 
 def command(args, out=None):#stores last log of function into log file
