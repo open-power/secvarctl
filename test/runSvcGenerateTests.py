@@ -80,6 +80,27 @@ toeslCommands=[
 [["-i", "./testdata/db_by_PK.auth"], False],#no output option
 ]
 
+insertCommands = [
+[["--usage"], True],
+[["--help"], True],
+[["-i", "./testdata/db_by_PK.auth", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-i is not an esl
+[["-i", "./testdata/foo", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-i is not file
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.auth", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False] ,#-e is not an esl
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/foo", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False] ,#-e is not a file
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.key", "-k", "testenv/PK/PK.key"], False] ,#-c is not a certificate
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.foo", "-k", "testenv/PK/PK.key"], False] ,#-c is not a file
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-t", "2021-06-24 18:00:00"], False], #-t is invalid
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-t", "2021-06-24T18:00:99"], False], #-t is incorrect
+[["-i", "./testdata/db_by_PK.esl", "-w", "-p",  "./", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-p is not to secvars
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl",  "-k", "testenv/PK/PK.key"], False], #no -c arg
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl"], False], #no signer arg
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt"], False], #no -k arg
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-c", "testenv/PK/PK.crt"], False], #-k != -c
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "TS", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #cannot update TS
+[["-i", "./testdata/db_by_PK.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #no -w or -o
+
+]
+
 def command(args,out=None, addCMDRan=True):#stores last log of function into log file
 		if out:
 			with open(out, "w") as f:
@@ -123,10 +144,10 @@ def compareFiles(a,b):
 		return False
 # def generateESL(path="./generatedTestData/",inp="default.crt",out="default.esl"):
 # 	return command(GEN+["c:e", "-i", path+inp, "-o", path+out])
-# def createSizeFile(path):
-# 	size=os.path.getsize(path+"data")
-# 	with open(path+"size", "w") as f:
-# 		f.write(str(size));
+def createSizeFile(path):
+	size=os.path.getsize(path+"data")
+	with open(path+"size", "w") as f:
+		f.write(str(size));
 # def generateHashESL(path="./generatedTestData/", inp="dbx.crt", out="dbx.esl", hashF = "SHA256"):
 # 	command(GEN + ["f:h", "-h", hashF, "-o", path+"dbx.hash", "-i", path+inp])
 # 	command(GEN + ["h:e", "-h", hashF, "-i", path+"dbx.hash", "-o", path+out])
@@ -459,9 +480,63 @@ class Test(unittest.TestCase):
 			self.assertEqual( getCmdResult(cmd+["-i", file, "-o", postUpdate],out, self), False) #all broken auths should fail to have correct esl
 			self.assertEqual( getCmdResult(["rm",postUpdate],out, self), False) #removal of output file should fail since it was never made
 
+	def test_insert(self):
+		out = "insertlog.txt"
+		cmd = [SECTOOLS, "insert", "-v"]
+		inpDir = "testdata/"
+		timestamp = "2021-06-24T18:00:00"
+		for i in insertCommands:
+			self.assertEqual(getCmdResult(cmd + i[0], out, self), i[1])
+		# goal is to:
+		# add one ESL to the current secvar (KEK signed by PK)
+		# then verify it is a  valid update and submitting it
+		# then we convert auth to esl and set the new esl as updated variable (update PK as if reboot)
+		# make a lower level key be signed with the new update and make sure it verifys, do not commit (make and verify new db update signed with new KEK key)
+		# add another ESL to step one chain and repeat process
+		# eventually all db updates should verify since they are signed with one of the many KEK ESL's
+		required_auth_args = ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "KEK", "-t", timestamp]
+		required_path_args = ["-p", "testenv/"]
+		output_file = "generatedTestData/foo.auth"
+		output_file_esl = "generatedTestData/foo.esl"
+		test_auth = "generatedTestData/new_db.auth"
+		irrelevant_esl = "testdata/db_by_PK.esl" #this is just an ESL, nothing relvant about `db` by `PK` in filename
+		setupTestEnv()
+		#loop through all ESL's contiaing an x509, use as KEK update, test with db update signed with new KEK
+		for file in os.listdir(inpDir):
+			if not file.endswith(".esl") or file.startswith("dbx") or file.startswith("empty"):
+				continue;
+			file = inpDir+file
+			self.assertEqual( getCmdResult(cmd + [ "-i", file, "-w"] + required_path_args + required_auth_args, out, self), True)
+			# start side quest: make sure same result is achieved if ouptut to user defined file
+			self.assertEqual(getCmdResult(cmd + [ "-i", file, "-o", output_file] + required_path_args + required_auth_args, out, self), True)
+			self.assertEqual(compareFiles("testenv/KEK/update", output_file), True)
+			#end side quest
+			#ensure signing was success
+			self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + [ "-u", "KEK", output_file], out, self), True)
+			#create a db update with the new KEK data as signer
+			crt = file[:-3] + "crt" #get new ESL's crt
+			key = file[:-3] + "key" #get new ESL's key
+			self.assertEqual(getCmdResult([SECTOOLS, "generate", "e:a", "-c", crt, "-k", key, "-n", "db", "-i", irrelevant_esl, "-o", test_auth ], out ,self), True)
+			#ensure that `verify` fails since signed by ESL not yet in KEK
+			self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "db", test_auth], out, self), False)
+			#okay not make sure that test_auth DOES verify if the new KEK is updated successfully so that
+			# the signer of test_auth is an entry in KEK ESL chain
+			self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl], out, self), True)
+			#BUZZ BEE BOOP robot noises, pretend reboot w valid KEK update
+			self.assertEqual(getCmdResult(["cp", output_file_esl, "testenv/KEK/data"], out, self), True)
+			createSizeFile("testenv/KEK/")
+			#now verify should pass since db update is signed by the latest entry in KEK
+			self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "db", test_auth], out, self), True)
+			command(["rm", output_file, output_file_esl, test_auth])
+			#keep adding ESL's to KEK and checking with db updates
 
-		
+		setupTestEnv()
 
+		#extra test for force flag
+		#appending and signing two empty files should fail since 0 + 0 is not an esl
+		self.assertEqual(getCmdResult(cmd + required_auth_args + ["-i", "./testdata/empty.esl", "-e", "testdata/empty.esl", "-o", "generatedTestData/empty_w_empy.auth"], out, self ), False)
+		#should pass if forced
+		self.assertEqual(getCmdResult(cmd + required_auth_args + ["-i", "./testdata/empty.esl", "-e", "testdata/empty.esl", "-o", "generatedTestData/empty_w_empy.auth", "-f"], out, self ), True)
 
 
 if __name__ == '__main__':
