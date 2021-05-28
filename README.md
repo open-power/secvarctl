@@ -56,12 +56,13 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 
 
 ## USAGE:    
-  Secvarctl has 5 main commands   
+  Secvarctl has 6 main commands   
     `./secvarctl read [options] [variable]`    
     `./secvarctl write [options] <variable> <file>`    
     `./secvarctl validate [options] [fileType] <file>`  
      `./secvarctl verify [options] -u {update Variables}`  
-     `./secvarctl generate <inputFormat>:<outputFormat> [OPTIONS] -i <inputFile> -o <outputFile` 
+     `./secvarctl generate <inputFormat>:<outputFormat> [OPTIONS] -i <inputFile> -o <outputFile`  
+     `./secvarctl insert [options] {signature requirements} -i <inputFile> -o <outputFile>
 ## SUB COMMAND USAGE:
     
     READ:
@@ -218,6 +219,33 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		To create a variable reset file (one that will remove the current contents of a variable), replace '<inputFormat>:<outputFormat>' with 'reset' and
 		supply a variable name, public and private signer files and an output file with '-n <varName> -k <privKey> -c <crtFile> -o <outFile>'
 		GENERATION OF PKCS7 AND AUTH FILES ARE IN EXPERIMENTAL DEVELEPOMENT PHASE. THEY HAVE NOT BEEN THOROUGHLY TESTED YET.
+
+        INSERT:
+            ./secvarctl insert {signing requirements} -i <inputFile> -o <outputFile>
+            OR
+            ./secvarctl insert {signing requirements} -i <inputFile> -w
+        REQUIRED:
+            -i <inputFile> , the new esl to be appended
+            -w , submit update by writing output to secvar `update` file
+            -o <outputFile>, alternative to -w, write output auth to file
+            signing requirements (see GENERATE):
+                -c <certFile>
+                -k <privKey> OR -s <sigFile>
+                -n <varName>
+        OPTIONAL:
+            --usage
+            --help
+            -v , verbose, gives process info
+            -t <time> , see GENERATE for decription
+            -f , force, do not do validate file formats
+            -e <esl> , specify current ESL to append data to, default is <PATH>/<VAR_NAME>/data
+            -p <path> , specify path to current secvars, default is /sys/firmware/secvar/vars
+
+        The insert command is used to add an ESL entry to a current ESL chain. This command is useful since a secure variable update will completely replace the previous data of that secvar. 
+        By using the insert command, the user can add a new ESL to the secvar while maintaining its current entries. The process invlolves adding a new ESL to the current ESL, and 
+        generating an auth file with the combined ESL. The resulting auth file can be either submitted as a secvar update (with '-w') or output to a file (with '-o'). By default, the current esl is read from the secvar path, but a user given ESL chain can be used with the '-e' option. The secvar path that is used for reading the current ESL and writing the ouput auth (if '-w' is present), can be set to a user defined path with '-p'. If, the '-f' flag is given, the new, current and combined ESL will not be checked for format correctness. Since an auth file is being generated, all required flags for auth generation from the 'secvarctl generate' command are needed, this includes '-k/-s', '-c', '-n'. The '-t' flag has also been used to allow the user to specify the timestamp to use in the auth file metadata.
+
+
 
       
 ## License   

@@ -1,4 +1,4 @@
-.TH secvarctl 1 "1 OCTOBER 2020" "version 0.1"
+.TH secvarctl 1 "28 MAY 2021" "version 0.3"
 .SH NAME
 .B secvarctl
 - A command line tool for simplifying the reading and writing of secure boot variables.
@@ -20,6 +20,9 @@ Commands are:
 .PP
 .B generate 
 - generates several different types of file formats relevant to updating secure variables
+.PP
+.B insert
+- add new key value to secure variable's current data
 .RE
 
 .SH SYNOPSIS
@@ -44,6 +47,9 @@ Commands are:
 .PP
 .B secvarctl generate reset 
 [OPTIONS] -o <outputFile> -k <key> -c <crt> -n <variable>
+.PP
+.B secvarctl insert
+[OPTIONS]  -n <var_name> -k/-s <key/sig> -c <crt> -i <new_esl> {-o <out_file> OR -w}
 
 .SH DESCRIPTION
 .B secvarctl
@@ -58,6 +64,8 @@ The purpose of this tool is to simplify and automate the process of reading, wri
 .B verify
 ,
 .B generate
+,
+.B insert
 )
 
 .RS
@@ -206,8 +214,27 @@ with
 This will generate an auth file around an empty ESL. Thus, no input argument 
 .B -i 
 is required when making a reset file. 
-  NOTE: GENERATION OF PKCS7 AND AUTH FILES ARE IN EXPERIMENTAL DEVELEPOMENT PHASE. THEY HAVE NOT BEEN THOROUGHLY TESTED YET.
-
+.PP
+.B secvarctl insert
+will add a new ESL to a secvars current list of ESLs. This is useful if the user would like to update a secvar without overwriting the previous value. Due to firmware limitations, all secvar updates will overwrite the previous value of the secvar. The only way to retain previous values, is to append the new value to the old value and create an auth file over the combined value. This auth file can either be ouput to a file with
+.B -o
+<outputFile> or submitted as a secvar update with
+.B -w
+By default, the current esl is read from the secvar path, but a user given ESL chain can be used with the 
+.B -e
+option. The secvar path that is used for reading the current ESL and writing the ouput auth (if 
+.B -w
+is present), can be set to a user defined path with 
+.B -p 
+<path>. If, the 
+.B -f
+flag is given, the new, current and combined ESL will not be checked for format correctness. Since an auth file is being generated, all required flags for auth generation from the 
+.B secvarctl generate
+command are needed, this includes 
+.B -k/-s, -c, -n
+The 
+.B -t
+<time> flag has also been used to allow the user to specify the timestamp to use in the auth file metadata.
 .RE
 
 .SH OPTIONS
@@ -406,6 +433,60 @@ format of <time> = 'YYYY-MM-DDThh:mm:ss' where:
 and generates an auth file with an empty ESL (a valid variable reset file), no input file required. Required arguments are output file, signer public and private key and variable name.
 .RE
 .RE
+.PP
+For 
+.B secvarctl insert
+-n <var_name> -k/-s <key/sig> -c <crt> -i <new_esl> {-o <out_file> OR -w}
+.RS
+REQUIRED:
+.RS
+.B -i
+<new_esl> , the esl to be appended to the current esl
+.PP
+.B -w
+, submit update by writing output to secvar `update` file
+.PP
+.B -o 
+<outputFile>, alternative to 
+.B -w
+, write output auth to file
+.PP
+.B -n
+<varName>, one of {"PK", "KEK, "db", "dbx", "TS"}
+.PP
+.B -c 
+<certFile> , see 
+.B secvarctl generate
+.PP
+.B -k 
+<privKey> OR
+.B -s 
+<sigFile>, see 
+.B secvarctl generate
+.RE
+OPTIONAL:
+.RS
+.B --usage
+.PP
+.B --help
+.PP
+.B -v
+, verbose
+.PP
+.B -t 
+<time> , see GENERATE for description
+.PP
+.B -f 
+, force, do not validate file formats
+.PP
+.B -e 
+<esl> , specify current ESL to append data to, default is <PATH>/<VARNAME>/data
+.PP
+.B -p 
+<path> , specify path to current secvars, default is 
+.I "/sys/firmware/secvar/vars/" 
+
+.RE
 .SH EXAMPLES
 
 To read all current variables in default path:
@@ -460,7 +541,9 @@ To create an auth file using an external signing framework for db update:
       $secvarctl generate c:x -n db -t 2021-1-1T1:1:1 -i file.crt -o file.hash
       <user sends file.hash to be signed by external entity, signature is now in file.sig>
       $secvarctl generate c:a -n db -t 2021-1-1T1:1:1 -c signer.crt -s file.sig -i file.crt -o file.auth 
-
+.PP
+To append add a new ESL entry to the current value of the db:
+      $secvarctl insert -i new.esl -k KEK.key -c KEK.crt -n db -w
 .SH AUTHOR
 Nick Child nick.child@ibm.com,
 .PP
