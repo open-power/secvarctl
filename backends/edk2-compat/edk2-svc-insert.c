@@ -10,6 +10,13 @@
 #include "libstb/secvar/crypto/crypto.h"
 #include "backends/edk2-compat/include/edk2-svc.h"
 
+/* child parser for insert and removes child parser */
+static struct argp_child gen_auth_specific_child_parsers[] = {
+	{ &gen_auth_specific_argp, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP,
+	  "Auth Generation Options", 7 },
+	{ 0 }
+};
+
 /*An `insert` command must always accept a new ESL file but it can append it to either an ESL from
  *any of the following means of input:
  *      1. the default secvar sysfs path
@@ -19,7 +26,7 @@
  *The goal is to input and output ESLs with any combination of the above methods
  *Therefore, there are about 9 applications of the insert command
  */
-static int parse_opt(int key, char *arg, struct argp_state *state);
+static int insert_specific_parse_opt(int key, char *arg, struct argp_state *state);
 
 /*the following enums are to keep track of the different applications of this command*/
 enum output_method { NO_SELECTION = 0, SUBMIT_AS_SECVAR_UPDATE, WRITE_TO_FILE };
@@ -28,15 +35,122 @@ enum input_method { READ_FROM_SECVAR_PATH = 0, READ_FROM_FILE };
 struct Arguments {
 	// the optionalOutFile is used if output_method is WRITE_TO_FILE
 	// the optionalInFile is used if input_method is READ_FROM_FILE
+	// new_esl is used for `insert` and serial_number is used for `remove`
 	int help_flag, inp_valid;
 	enum output_method output_method;
 	enum input_method input_method;
-	const char *new_esl, *out_file, *current_esl, *path_to_sec_vars;
+	const char *new_esl, *out_file, *current_esl, *path_to_sec_vars, *serial_number;
 	struct Auth_specific_args auth_args;
 };
-static struct argp_child gen_auth_specific_child_parsers[] = {
-	{ &gen_auth_specific_argp, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP,
-	  "Auth Generation Options", 7 },
+
+/* shared options for both insert and remove command */
+static struct argp_option insert_and_remove_shared_argp_options[] = {
+	{ "verbose", 'v', 0, 0, "print more verbose process information" },
+	{ "force", 'f', 0, 0,
+	  "does not do prevalidation on the input file, assumes format is correct" },
+	{ "esl", 'e', "FILE", 0,
+	  "specify current ESL to append data to, default is to <PATH>/<VAR_NAME>/data" },
+	{ "path", 'p', "PATH", 0,
+	  "specify path to current secvars, default is " SECVARPATH
+	  " expects subdirectory <PATH>/<VAR_NAME> to exist" },
+	// these are hidden because they are mandatory and are described in the help message instead of in the options
+	{ 0, 'o', "FILE", OPTION_HIDDEN, "output file" },
+	{ 0, 'w', 0, OPTION_HIDDEN, "write to secvars" },
+	{ "help", '?', 0, 0, "Give this help list", 1 },
+	{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
+	{ 0 }
+};
+/**
+ *shared parser for both insert and remove command, this parser also has a child parser that parses auth generation flags
+ *@param key , every option that is parsed has a value to identify it
+ *@param arg, if key is an option than arg will hold its value ex: -<key> <arg>
+ *@param state,  argp_state struct that contains useful information about the current parsing state 
+ *@return success or errno
+ */
+static int insert_and_remove_shared_parse_opt(int key, char *arg, struct argp_state *state)
+{
+	struct Arguments *args = state->input;
+	int rc = SUCCESS;
+
+	switch (key) {
+	case '?':
+		args->help_flag = 1;
+		argp_state_help(state, stdout, ARGP_HELP_STD_HELP);
+		break;
+	case ARGP_OPT_USAGE_KEY:
+		args->help_flag = 1;
+		argp_state_help(state, stdout, ARGP_HELP_USAGE);
+		break;
+	case 'f':
+		args->inp_valid = 1;
+		break;
+	case 'v':
+		verbose = PR_DEBUG;
+		break;
+	case 'o':
+		args->output_method = WRITE_TO_FILE;
+		args->out_file = arg;
+		break;
+	case 'w':
+		args->output_method = SUBMIT_AS_SECVAR_UPDATE;
+		break;
+	case 'e':
+		args->input_method = READ_FROM_FILE;
+		args->current_esl = arg;
+		break;
+	case 'p':
+		args->path_to_sec_vars = arg;
+		break;
+	case ARGP_KEY_INIT:
+		// for first loop around argp requires us to specify which data struct to use for child parsers
+		// yes confusion, this child parser has a child parser
+		state->child_inputs[0] = &(args->auth_args);
+		break;
+	case ARGP_KEY_SUCCESS:
+		// check that all essential args are given and valid
+		if (args->help_flag)
+			break;
+		else if (args->auth_args.time && validateTime(args->auth_args.time))
+			prlog(PR_ERR,
+			      "Invalid timestamp flag '-t YYYY-MM-DDThh:mm:ss' , see usage...\n");
+		else if (args->auth_args.varName == NULL || isVariable(args->auth_args.varName) ||
+			 strcmp(args->auth_args.varName, "TS") == 0)
+			prlog(PR_ERR, "ERROR: Invalid variable name, see usage below\n");
+		else if (args->output_method == NO_SELECTION)
+			prlog(PR_ERR,
+			      "ERROR: No output selction given, use either '-w' or ''-o', see usage below...\n");
+		else if (args->auth_args.signCertCount == 0)
+			prlog(PR_ERR,
+			      "ERROR: At least one certificate needed, use '-c', see usage below...\n");
+		else if (args->auth_args.signKeyCount == 0)
+			prlog(PR_ERR,
+			      "ERROR: At least one private key/signature needed, use '-k'/'-s', see usage below...\n");
+		//each signer needs a certificate
+		else if (args->auth_args.signCertCount != args->auth_args.signKeyCount)
+			prlog(PR_ERR,
+			      "ERROR: Number of certificates does not equal number of %s files, %d != %d, see usage below...\n",
+			      args->auth_args.pkcs7_gen_meth == W_EXTERNAL_GEN_SIG ? "signature" :
+											   "private key",
+			      args->auth_args.signCertCount, args->auth_args.signKeyCount);
+		else
+			break;
+		argp_usage(state);
+		rc = ARG_PARSE_FAIL;
+		break;
+	}
+
+	return rc;
+}
+
+// very confusing, child parser has a child parser
+// to summarize: `insert` shares flags w `remove` (ex: {-o, -w, -e, -f, -v, --help, --usage, all auth flags})
+// and `generate auth` shares flags w `insert/remove`(ex: all auth flags {-t, -s , -c, -k})
+static struct argp insert_and_remove_shared_argp = { insert_and_remove_shared_argp_options,
+						     insert_and_remove_shared_parse_opt, 0, 0,
+						     gen_auth_specific_child_parsers };
+
+static struct argp_child insert_remove_shared_child_parsers[] = {
+	{ &insert_and_remove_shared_argp, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, 0 },
 	{ 0 }
 };
 
@@ -60,6 +174,7 @@ int performInsertCommand(int argc, char *argv[])
 				  .new_esl = NULL,
 				  .current_esl = NULL,
 				  .path_to_sec_vars = NULL,
+				  .serial_number = NULL,
 				  .auth_args = { .signKeyCount = 0,
 						 .signCertCount = 0,
 						 .signCerts = NULL,
@@ -71,31 +186,19 @@ int performInsertCommand(int argc, char *argv[])
 	argv[0] = "secvarctl insert";
 
 	struct argp_option options[] = {
-		{ "verbose", 'v', 0, 0, "print more verbose process information" },
-		{ "force", 'f', 0, 0,
-		  "does not do prevalidation on the input file, assumes format is correct" },
-		{ "esl", 'e', "FILE", 0,
-		  "specify current ESL to append data to, default is to <PATH>/<VAR_NAME>/data" },
-		{ "path", 'p', "PATH", 0,
-		  "specify path to current secvars, default is " SECVARPATH
-		  " expects subdirectory <PATH>/<VAR_NAME> to exist" },
 		// these are hidden because they are mandatory and are described in the help message instead of in the options
 		{ 0, 'i', "FILE", OPTION_HIDDEN, "input ESL file to add to current ESL" },
-		{ 0, 'o', "FILE", OPTION_HIDDEN, "output file" },
-		{ 0, 'w', 0, OPTION_HIDDEN, "write to secvars" },
-		{ "help", '?', 0, 0, "Give this help list", 1 },
-		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{ 0 }
 	};
 
 	struct argp argp = {
-		options, parse_opt,
+		options, insert_specific_parse_opt,
 		"-n <var_name> -k/-s <key/sig> -c <crt> -i <new_esl> -o <out_file>\n-n <var_name> -k/-s <key/sig> -c <crt> -i <new_esl> -w",
 		"This command appends an ESL to a current chain of ESL's and uses it to generate an valid Auth"
 		" file. The generated Auth can be output to a file with '-o' or submited as a secvar update with '-w'."
 		" The default location of secvars is " SECVARPATH ", use '-p' for other paths."
 		" At the moment only files containing ESL's are acceptable as input. To generate an ESL, see 'secvarctl generate --help'. ",
-		gen_auth_specific_child_parsers
+		insert_remove_shared_child_parsers
 
 	};
 
@@ -246,75 +349,25 @@ out:
  *@param state,  argp_state struct that contains useful information about the current parsing state 
  *@return success or errno
  */
-static int parse_opt(int key, char *arg, struct argp_state *state)
+static int insert_specific_parse_opt(int key, char *arg, struct argp_state *state)
 {
 	struct Arguments *args = state->input;
 	int rc = SUCCESS;
 
 	switch (key) {
-	case '?':
-		args->help_flag = 1;
-		argp_state_help(state, stdout, ARGP_HELP_STD_HELP);
-		break;
-	case ARGP_OPT_USAGE_KEY:
-		args->help_flag = 1;
-		argp_state_help(state, stdout, ARGP_HELP_USAGE);
-		break;
-	case 'f':
-		args->inp_valid = 1;
-		break;
-	case 'v':
-		verbose = PR_DEBUG;
-		break;
 	case 'i':
 		args->new_esl = arg;
 		break;
-	case 'o':
-		args->output_method = WRITE_TO_FILE;
-		args->out_file = arg;
-		break;
-	case 'w':
-		args->output_method = SUBMIT_AS_SECVAR_UPDATE;
-		break;
-	case 'e':
-		args->input_method = READ_FROM_FILE;
-		args->current_esl = arg;
-		break;
-	case 'p':
-		args->path_to_sec_vars = arg;
-		break;
 	case ARGP_KEY_INIT:
 		// for first loop around argp requires us to specify which data struct to use for child parsers
-		state->child_inputs[0] = &(args->auth_args);
+		state->child_inputs[0] = args;
 		break;
 	case ARGP_KEY_SUCCESS:
 		// check that all essential args are given and valid
 		if (args->help_flag)
 			break;
-		else if (args->auth_args.time && validateTime(args->auth_args.time))
-			prlog(PR_ERR,
-			      "Invalid timestamp flag '-t YYYY-MM-DDThh:mm:ss' , see usage...\n");
 		else if (args->new_esl == NULL || isFile(args->new_esl))
 			prlog(PR_ERR, "ERROR: Input file is invalid, see usage below...\n");
-		else if (args->auth_args.varName == NULL || isVariable(args->auth_args.varName) ||
-			 strcmp(args->auth_args.varName, "TS") == 0)
-			prlog(PR_ERR, "ERROR: Invalid variable name, see usage below\n");
-		else if (args->output_method == NO_SELECTION)
-			prlog(PR_ERR,
-			      "ERROR: No output selction given, use either '-w' or ''-o', see usage below...\n");
-		else if (args->auth_args.signCertCount == 0)
-			prlog(PR_ERR,
-			      "ERROR: At least one certificate needed, use '-c', see usage below...\n");
-		else if (args->auth_args.signKeyCount == 0)
-			prlog(PR_ERR,
-			      "ERROR: At least one private key/signature needed, use '-k'/'-s', see usage below...\n");
-		//each signer needs a certificate
-		else if (args->auth_args.signCertCount != args->auth_args.signKeyCount)
-			prlog(PR_ERR,
-			      "ERROR: Number of certificates does not equal number of %s files, %d != %d, see usage below...\n",
-			      args->auth_args.pkcs7_gen_meth == W_EXTERNAL_GEN_SIG ? "signature" :
-											   "private key",
-			      args->auth_args.signCertCount, args->auth_args.signKeyCount);
 		else
 			break;
 		argp_usage(state);
