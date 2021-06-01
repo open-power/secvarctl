@@ -53,13 +53,16 @@ static struct argp_option insert_and_remove_shared_argp_options[] = {
 	{ "path", 'p', "PATH", 0,
 	  "specify path to current secvars, default is " SECVARPATH
 	  " expects subdirectory <PATH>/<VAR_NAME> to exist" },
-	// these are hidden because they are mandatory and are described in the help message instead of in the options
-	{ 0, 'o', "FILE", OPTION_HIDDEN, "output file" },
-	{ 0, 'w', 0, OPTION_HIDDEN, "write to secvars" },
+	//  since mandatory we use OPTION_NO_USAGE which means they appear in the help message but not usage
+	{ 0, 'o', "FILE", OPTION_NO_USAGE,
+	  "output file, output will be an auth file, either this or '-w' is required" },
+	{ "--write", 'w', 0, OPTION_NO_USAGE,
+	  "if successful, submit output as secvar update, path to secvars is assigned with '-p'" },
 	{ "help", '?', 0, 0, "Give this help list", 1 },
 	{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 	{ 0 }
 };
+
 /**
  *shared parser for both insert and remove command, this parser also has a child parser that parses auth generation flags
  *@param key , every option that is parsed has a value to identify it
@@ -186,8 +189,8 @@ int performInsertCommand(int argc, char *argv[])
 	argv[0] = "secvarctl insert";
 
 	struct argp_option options[] = {
-		// these are hidden because they are mandatory and are described in the help message instead of in the options
-		{ 0, 'i', "FILE", OPTION_HIDDEN, "input ESL file to add to current ESL" },
+		{ 0, 'i', "FILE", OPTION_NO_USAGE,
+		  "required input file, constains new ESL to add to current ESL" },
 		{ 0 }
 	};
 
@@ -199,7 +202,6 @@ int performInsertCommand(int argc, char *argv[])
 		" The default location of secvars is " SECVARPATH ", use '-p' for other paths."
 		" At the moment only files containing ESL's are acceptable as input. To generate an ESL, see 'secvarctl generate --help'. ",
 		insert_remove_shared_child_parsers
-
 	};
 
 	rc = argp_parse(&argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
