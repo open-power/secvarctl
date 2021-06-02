@@ -116,9 +116,18 @@ static int insert_and_remove_shared_parse_opt(int key, char *arg, struct argp_st
 		else if (args->auth_args.time && validateTime(args->auth_args.time))
 			prlog(PR_ERR,
 			      "Invalid timestamp flag '-t YYYY-MM-DDThh:mm:ss' , see usage...\n");
-		else if (args->auth_args.varName == NULL || isVariable(args->auth_args.varName) ||
-			 strcmp(args->auth_args.varName, "TS") == 0)
+		else if (args->auth_args.varName == NULL || isVariable(args->auth_args.varName))
 			prlog(PR_ERR, "ERROR: Invalid variable name, see usage below\n");
+		else if (strcmp(args->auth_args.varName, "TS") == 0)
+			prlog(PR_ERR,
+			      "ERROR: TS is not a valid secvar for editing, see usage below...\n");
+		// not sure if dbx entries are all in one ESL or a chain of single entry ESL's
+		// TODO
+		// seriously come back to this, we are reading dbx's as one per ESL w/ many appended ESLs. is this true?
+		else if (strlen(args->auth_args.varName) > 2 &&
+			 strcmp(args->auth_args.varName, "dbx") == 0)
+			prlog(PR_ERR,
+			      "ERROR: insert/removing entries from dbx not implemented yet, see usage below...\n");
 		else if (args->output_method == NO_SELECTION)
 			prlog(PR_ERR,
 			      "ERROR: No output selction given, use either '-w' or ''-o', see usage below...\n");
