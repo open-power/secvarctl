@@ -25,7 +25,7 @@ OBJ +=$(SKIBOOT_OBJ) $(EDK2_OBJ)
 
 OBJCOV = $(patsubst %.o, %.cov.o,$(OBJ))
 
-MANDIR=usr/local/share/man
+MANDIR=usr/share/man
 #use STATIC=1 for static build
 STATIC = 0
 ifeq ($(STATIC),1)
