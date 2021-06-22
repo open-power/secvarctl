@@ -289,6 +289,11 @@ int crypto_x509_get_pk_bit_len(crypto_x509 *x509)
 	return mbedtls_pk_get_bitlen(&x509->pk);
 }
 
+const unsigned char *crypto_x509_get_serial_number(crypto_x509 *x509, size_t *serial_len)
+{
+	*serial_len = x509->serial.len;
+	return x509->serial.p;
+}
 void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc,
 				size_t max_len)
 {

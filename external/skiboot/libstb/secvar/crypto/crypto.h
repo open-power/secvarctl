@@ -144,6 +144,14 @@ int crypto_x509_get_sig_len(crypto_x509 *x509);
 int crypto_x509_md_is_sha256(crypto_x509 *x509);
 int crypto_x509_oid_is_pkcs1_sha256(crypto_x509 *x509);
 int crypto_x509_get_pk_bit_len(crypto_x509 *x509);
+
+/*
+ *return a pointer to the internal serial number of an x509
+ *@param x509, a pointer to either an openssl or mbedtls x509 struct
+ *@param serial_len, the output length in bytes of the serial number
+ *@return a pointer to the serial number in the x509, DO NOT FREE
+ */
+const unsigned char *crypto_x509_get_serial_number(crypto_x509 *x509, size_t *serial_len);
 /*
  *checks the type of the x509 and ensures that it is of type RSA
  *@param x509, a pointer to either an openssl or mbedtls x509 struct

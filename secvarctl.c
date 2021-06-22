@@ -31,6 +31,8 @@ void usage()
 #ifdef SECVAR_CRYPTO_WRITE_FUNC
 	       "\tinsert\t\tappends data to preexisting secure variable data\n\t\t\t"
 	       "use 'secvarctl insert --usage/help' for more information\n"
+	       "\tremove\t\tremoves data entry from preexisting secure variable data\n\t\t\t"
+	       "use 'secvarctl remove --usage/help' for more information\n"
 	       "\tgenerate\tcreates relevant files for secure variable management,\n\t\t\t"
 	       "use 'secvarctl generate --usage/help' for more information\n"
 #endif
