@@ -326,7 +326,7 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 	// once here, strings should be ready, it is time to fill banks
 	// fill update bank with all updates
 	for (int i = 0; i < updateCount; i += 2) {
-		c = getDataFromFile((char *)updateVars[i + 1], &len);
+		c = getDataFromFile((char *)updateVars[i + 1], SIZE_MAX, &len);
 		if (c) {
 			list_add_tail(update_bank, &new_secvar(updateVars[i],
 							       strlen(updateVars[i]) + 1, c, len, 0)
@@ -349,7 +349,7 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 			}
 
 		} else {
-			c = getDataFromFile((char *)currentVars[i + 1], &len);
+			c = getDataFromFile((char *)currentVars[i + 1], SIZE_MAX, &len);
 			if (c) {
 				list_add_tail(variable_bank,
 					      &new_secvar(currentVars[i],

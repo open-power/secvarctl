@@ -230,7 +230,7 @@ static int readFileFromPath(const char *file, int hrFlag)
 	int rc;
 	size_t size = 0;
 	char *c = NULL;
-	c = getDataFromFile(file, &size);
+	c = getDataFromFile(file, SIZE_MAX, &size);
 	if (!c) {
 		return INVALID_FILE;
 	}
@@ -258,11 +258,9 @@ static int readFileFromPath(const char *file, int hrFlag)
  */
 int getSecVar(struct secvar **var, const char *name, const char *fullPath)
 {
-	int rc, fptr;
-	size_t size;
-	ssize_t read_size;
+	int rc;
+	size_t size, out_size;
 	char *sizePath = NULL, *c = NULL;
-	struct stat fileInfo;
 	rc = isFile(fullPath);
 	if (rc) {
 		return rc;
@@ -290,46 +288,26 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
 
 	if (size == 0) {
 		prlog(PR_WARNING, "Secure Variable has size of zero, (specified by size file)\n");
-		/*rc = INVALID_FILE;
-		return rc;*/
+		out_size = size;
+		c = malloc(size);
+		if (!c) {
+			prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+			return ALLOC_FAIL;
+		}
+	} else {
+		c = getDataFromFile(fullPath, size, &out_size);
+		if (!c)
+			return INVALID_FILE;
 	}
-
-	fptr = open(fullPath, O_RDONLY);
-	if (fptr < 0) {
-		prlog(PR_WARNING, "-----opening %s failed: %s-------\n\n", fullPath,
-		      strerror(errno));
-		return INVALID_FILE;
-	}
-	if (fstat(fptr, &fileInfo) < 0) {
-		return INVALID_FILE;
-	}
-	// if file size is less than expeced size, error
-	if (fileInfo.st_size < size) {
-		prlog(PR_ERR, "ERROR: expected size (%zd) is less than actual size (%ld)\n", size,
-		      fileInfo.st_size);
-		return INVALID_FILE;
-	}
-	prlog(PR_NOTICE, "---opening %s is success: reading %zd bytes---- \n", fullPath, size);
-	c = malloc(size);
-	if (!c) {
-		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		return ALLOC_FAIL;
-	}
-
-	read_size = read(fptr, c, size);
-	if (read_size != size) {
-		prlog(PR_ERR, "ERROR: did not read all data of %s in one go\n", fullPath);
+	if (size != out_size) {
+		prlog(PR_ERR,
+		      "ERROR: expected size of secvar (%zd) is not equal to actual size (%zd)\n",
+		      size, out_size);
 		free(c);
-		close(fptr);
-		return INVALID_FILE;
-	}
-	close(fptr);
-	if (!c) {
-		prlog(PR_ERR, "ERROR: no data in file");
 		return INVALID_FILE;
 	}
 
-	*var = new_secvar(name, strlen(name) + 1, c, size, 0);
+	*var = new_secvar(name, strlen(name) + 1, c, out_size, 0);
 	if (*var == NULL) {
 		prlog(PR_ERR, "ERROR: Could not convert data to secvar\n");
 		free(c);
