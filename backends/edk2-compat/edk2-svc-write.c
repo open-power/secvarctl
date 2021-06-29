@@ -162,7 +162,7 @@ static int updateSecVar(const char *varName, const char *authFile, const char *p
 	}
 
 	// get data to write, if force flag then validate the data is an auth file
-	buff = (unsigned char *)getDataFromFile(authFile, &size);
+	buff = (unsigned char *)getDataFromFile(authFile, SIZE_MAX, &size);
 	// if we are validating and validating fails, quit
 	if (!force) {
 		rc = validateAuth(buff, size, varName);

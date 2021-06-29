@@ -253,7 +253,7 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 	//for every key pair get the data and add the signer to the pkcs7
 	for (int i = 0; i < keyPairs; i++) {
 		// get data of private keys
-		keyPEM = (unsigned char *)getDataFromFile(keyFiles[i],
+		keyPEM = (unsigned char *)getDataFromFile(keyFiles[i], SIZE_MAX,
 							  &keySizePEM);
 		if (!keyPEM) {
 			prlog(PR_ERR,
@@ -271,7 +271,7 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 			goto out;
 		}
 		//get data from crt
-		crtPEM = (unsigned char *)getDataFromFile(crtFiles[i],
+		crtPEM = (unsigned char *)getDataFromFile(crtFiles[i], SIZE_MAX,
 							  &crtSizePEM);
 		if (!keyPEM) {
 			prlog(PR_ERR,

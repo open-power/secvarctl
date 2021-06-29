@@ -8,7 +8,7 @@ struct command {
 	int (*func)(int, char **);
 };
 
-char *getDataFromFile(const char *file, size_t *size);
+char *getDataFromFile(const char *file, size_t max_size, size_t *size);
 int writeData(const char *file, const char *buff, size_t size);
 int createFile(const char *file, const char *buff, size_t size);
 void printRaw(const char *c, size_t size);
