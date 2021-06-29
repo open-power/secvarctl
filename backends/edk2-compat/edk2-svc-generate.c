@@ -193,7 +193,7 @@ int performGenerateCommand(int argc, char *argv[])
 		size = 0;
 	else {
 		// get data from input file
-		buff = (unsigned char *)getDataFromFile(args.inFile, &size);
+		buff = (unsigned char *)getDataFromFile(args.inFile, 0, &size);
 		if (buff == NULL) {
 			prlog(PR_ERR, "ERROR: Could not find data in file %s\n", args.inFile);
 			rc = INVALID_FILE;

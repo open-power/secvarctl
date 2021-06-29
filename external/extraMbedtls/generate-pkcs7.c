@@ -609,7 +609,7 @@ static int toPKCS7(unsigned char **pkcs7, size_t *pkcs7Size, const char** crtFil
 	}
 	for (int i = 0; i < keyPairs; i++) {
 		// get data from public keys
-		crtPEM = (unsigned char *)getDataFromFile(crtFiles[i], &crtSizePEM);
+		crtPEM = (unsigned char *)getDataFromFile(crtFiles[i], 0, &crtSizePEM);
 		if (!crtPEM) {
 			prlog(PR_ERR, "ERROR: failed to get data from pub key file %s\n", crtFiles[i]);
 			rc = INVALID_FILE;
@@ -721,7 +721,7 @@ int to_pkcs7_generate_signature(unsigned char **pkcs7, size_t *pkcs7Size, const 
 
 	for (int i = 0; i < keyPairs; i++) {
 		// get data of private keys
-		keyPEM = (unsigned char *)getDataFromFile(keyFiles[i], &keySizePEM);
+		keyPEM = (unsigned char *)getDataFromFile(keyFiles[i], 0, &keySizePEM);
 
 		if (!keyPEM) {
 			prlog(PR_ERR, "ERROR: failed to get data from priv key file %s\n", keyFiles[i]);
@@ -797,7 +797,7 @@ int to_pkcs7_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const
 
 	for (int i = 0; i < keyPairs; i++) {
 		// get data from signature files
-		sigs[i] = getDataFromFile(sigFiles[i], &sig_sizes[i]);
+		sigs[i] = getDataFromFile(sigFiles[i], 0, &sig_sizes[i]);
 
 		if (!sigs[i]) {
 			prlog(PR_ERR, "ERROR: failed to get data from signature file %s\n", sigFiles[i]);

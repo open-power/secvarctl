@@ -60,12 +60,13 @@ void printRaw(const char *c, size_t size)
 /**
  *This Function returns a pointer to allocated memory that holds the data from the file 
  *@param fullPath string of file with path
+ *@param max number of bytes to read or zero for read entire file
  *@param size address of unitialized int memory that will be filled with length of returned char*
  *@return NULL if cannot open file or read file
- *@return char* to allocted data of file with one extra '\0' for good measure
+ *@return char* to allocted data of file
  *NOTE:REMEMBER TO UNALLOCATE RETURNED DATA
  **/
-char *getDataFromFile(const char *fullPath, size_t *size)
+char *getDataFromFile(const char *fullPath, size_t max_bytes, size_t *size)
 {
 	int fptr;
 	char *c = NULL;
@@ -82,21 +83,27 @@ char *getDataFromFile(const char *fullPath, size_t *size)
 	if (fileInfo.st_size <= 0) {
 		prlog(PR_WARNING, "WARNING: file %s is empty\n", fullPath);
 	}
+
+	if (max_bytes == 0)
+		max_bytes = fileInfo.st_size;
+	else if (max_bytes > fileInfo.st_size)
+		max_bytes = fileInfo.st_size;
+
 	prlog(PR_NOTICE, "----opening %s is success: reading %ld bytes----\n", fullPath,
-	      fileInfo.st_size);
-	c = malloc(fileInfo.st_size);
+	      max_bytes);
+	c = malloc(max_bytes);
 	if (!c) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 		goto out;
 	}
-	read_size = read(fptr, c, fileInfo.st_size);
-	if (read_size != fileInfo.st_size) {
+	read_size = read(fptr, c, max_bytes);
+	if (read_size != max_bytes) {
 		prlog(PR_ERR, "ERROR: failed to read whole contents of %s in one go\n", fullPath);
 		free(c);
 		c = NULL;
 		goto out;
 	}
-	*size = fileInfo.st_size;
+	*size = max_bytes;
 out:
 	close(fptr);
 

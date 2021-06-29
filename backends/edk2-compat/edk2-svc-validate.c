@@ -64,7 +64,7 @@ int performValidation(int argc, char *argv[])
 	if (rc || args.helpFlag)
 		goto out;
 
-	buff = (unsigned char *)getDataFromFile(args.inFile, &size);
+	buff = (unsigned char *)getDataFromFile(args.inFile, 0, &size);
 	if (!buff) {
 		prlog(PR_ERR, "ERROR: failed to get data from %s\n", args.inFile);
 		rc = INVALID_FILE;

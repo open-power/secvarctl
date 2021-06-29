@@ -112,14 +112,21 @@ int main(int argc, char *argv[])
 static struct backend *getBackend()
 {
 	char *buff = NULL, *secVarFormatLocation = "/sys/firmware/secvar/format";
-	size_t buffSize;
+	size_t buffSize, max_buff_size;
 	struct backend *result = NULL;
+	int i;
 	// if file doesnt exist then print warning and keep going
 	if (isFile(secVarFormatLocation)) {
 		prlog(PR_WARNING, "WARNING!! Platform does not support secure variables\n");
 		goto out;
 	}
-	buff = getDataFromFile(secVarFormatLocation, &buffSize);
+	// get max size of backend name
+	max_buff_size = strlen(backends[0].name);
+	for (i = 0; i < sizeof(backends) / sizeof(struct backend); i++)
+		if (strlen(backends[i].name) > max_buff_size)
+			max_buff_size = strlen(backends[i].name);
+
+	buff = getDataFromFile(secVarFormatLocation, max_buff_size, &buffSize);
 	if (!buff) {
 		prlog(PR_WARNING,
 		      "WARNING!! Could not extract data from %s , assuming platform does not support secure variables\n",
@@ -127,7 +134,7 @@ static struct backend *getBackend()
 		goto out;
 	}
 	// loop through all known backends
-	for (int i = 0; i < sizeof(backends) / sizeof(struct backend); i++) {
+	for (i = 0; i < sizeof(backends) / sizeof(struct backend); i++) {
 		if (!strncmp(buff, backends[i].name, strlen(backends[i].name))) {
 			prlog(PR_NOTICE, "Found Backend %s\n", backends[i].name);
 			result = &backends[i];
