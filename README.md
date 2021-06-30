@@ -28,8 +28,8 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 ## BUILDING:  
  |               | Make      | CMake |
  ---             | ----------- | ----------- |
- | Default Build (Mbedtls is cryptolib) | `make [build options]`      | `mdkir build && cd build && cmake [build options] ../ . && cmake --build .`      |
- | Build W OpenSSL as cryptolib | `make OPENSSL=1` | `mdkir build && cd build && cmake -DOPENSSL=1 [build options] ../ . && cmake --build .` |
+ | Default Build (Mbedtls is cryptolib) | `make [build options]`      | `mkdir build && cd build && cmake [build options] ../ . && cmake --build .`      |
+ | Build W OpenSSL as cryptolib | `make OPENSSL=1` | `mkdir build && cd build && cmake -DOPENSSL=1 [build options] ../ . && cmake --build .` |
  | Static Build | `STATIC=1` | `-DSTATIC=1`|
  | Reduced Size Build | default | `-DSTRIP=1` |
  | Build Without Crypto Functions | `NO_CRYPTO=1` | `-DNO_CRYPTO=1` |
