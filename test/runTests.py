@@ -103,6 +103,8 @@ validateCommands=[
 [["-p","./testdata/db_by_PK.auth"], False],#give auth as pkcs7
 ]
 
+
+# these really arnt tests with bad envs, its more so tests that use two commands to run.
 badEnvCommands=[ #[arr command to skew env, output of first command, arr command for sectool, expected result]
 [["rm", "./testenv/KEK/size"],None,["read", "-p", "./testenv/", "KEK"], False], #remove size and it should fail
 [["rm", "./testenv/KEK/size"],None,["read", "-p", "./testenv/"], True], #remove size but as long as one is readable then it is ok
@@ -114,6 +116,7 @@ badEnvCommands=[ #[arr command to skew env, output of first command, arr command
 [["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["read","-p", "./testenv/"], True],# Pk will be empty but other files will have things
 [["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["read","-p", "./testenv/", "PK"], False],# Pk will be empty, nothing else read so overall failure
 [["echo", "16"], "./testenv/TS/size", ["verify", "-v" , "-p", "./testenv/", "-u", "PK", "./testdata/PK_by_PK.auth"], False],
+[["dd", "if=/dev/zero", "of=./testenv/TS/data", "count=4", "bs=16"], None, ["verify", "-p", "./testenv/", "-u", "PK", "testdata/PK_by_PK.auth"], True] #If timestamp entry for a variable is empty than thats okay
 ]
 
 def command(args, out=None):#stores last log of function into log file
