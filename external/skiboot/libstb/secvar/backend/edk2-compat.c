@@ -207,14 +207,14 @@ static int edk2_compat_process(struct list_head *variable_bank,
 			 * hw-key-hash of that firmware. When PK is updated, hw-key-hash
 			 * is updated. And when PK is deleted, delete hw-key-hash as well
 			 */
-			/*if(neweslsize == 0) { //NICK REMOVED BECAUSE NO HW KEYS
+			if(neweslsize == 0) {
 				setup_mode = true;
-				delete_hw_key_hash(&staging_bank);
+				// delete_hw_key_hash(&staging_bank); //NICK REMOVED BECAUSE NO HW KEYS
 			} else  {
 				setup_mode = false;
-				add_hw_key_hash(&staging_bank);
+				// add_hw_key_hash(&staging_bank);
 			}
-			prlog(PR_DEBUG, "setup mode is %d\n", setup_mode);*/
+			prlog(PR_DEBUG, "setup mode is %d\n", setup_mode);
 		}
 	}
 

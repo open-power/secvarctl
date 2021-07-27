@@ -74,11 +74,9 @@ verifyCommands=[
 [["-c", "PK","./testenv/PK/data", "./testenv/KEK/data", "KEK", "-u", "db","./testdata/db_by_PK.auth"], False],#current vars bad format 
 [["-c", "PK", "KEK", "./testenv/PK/data", "./testenv/KEK/data", "-u", "db","./testdata/db_by_PK.auth"], False],#current vars bad format 
 [["-c", "PK", "./testenv/PK/data", "KEK", "-u", "db","./testdata/db_by_PK.auth"], False],#current vars bad format 
-
-
-
-
+[["-c", "KEK", "./testenv/KEK/data", "-u", "PK", "./testdata/PK_by_PK.auth", "db", "./testdata/bad_db_by_db.auth"], False]
 ]
+
 writeCommands=[
 [["--usage"], True],[["--help"], True],
 [["KEK","./testdata/KEK_by_PK.auth", "-p", "./testenv/"], True], #different ordering should still work
