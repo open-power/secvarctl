@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /* Copyright 2021 IBM Corp.*/
-#ifdef MBEDTLS
-// ^extra precaution to not compile with mbedtls unless specified
+#ifdef MBEDTLS_V2
+// ^extra precaution to not compile with mbedtls version 2.x unless specified
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h> // for exit
@@ -11,8 +11,8 @@
 
 #include <mbedtls/pk_internal.h> // for validating cert pk data
 #include <mbedtls/error.h>
-#include "external/extraMbedtls/include/pkcs7.h"
-#include "external/extraMbedtls/include/generate-pkcs7.h"
+#include "external/extraMbedtls/v2.x/include/pkcs7.h"
+#include "external/extraMbedtls/v2.x/include/generate-pkcs7.h"
 #include <mbedtls/platform.h>
 #include "generic.h"
 

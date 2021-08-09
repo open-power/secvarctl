@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 /* Copyright 2021 IBM Corp.*/
+// from Mbedtls file "common.h"
+#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+
 #include <string.h>
 #include <stdlib.h>
 #include <mbedtls/base64.h> // for pem 2 der functions
-#include "external/extraMbedtls/include/generate-pkcs7.h"
+#include "external/extraMbedtls/v3.x/include/generate-pkcs7.h"
 #include "err.h"
 #include "prlog.h"
 #ifndef NO_CRYPTO

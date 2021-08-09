@@ -20,10 +20,16 @@ typedef PKCS7 crypto_pkcs7;
 typedef X509 crypto_x509;
 typedef EVP_MD_CTX crypto_md_ctx;
 
-#elif defined MBEDTLS
+#elif defined (MBEDTLS_V2) || defined (MBEDTLS_V3) 
 
 #include <mbedtls/md.h>
-#include "external/extraMbedtls/include/pkcs7.h"
+#ifdef MBEDTLS_V2
+#include "external/extraMbedtls/v2.x/include/pkcs7.h"
+#endif
+#ifdef MBEDTLS_V3
+#include "external/extraMbedtls/v3.x/include/pkcs7.h"
+#endif
+
 #define CRYPTO_MD_SHA1 MBEDTLS_MD_SHA1
 #define CRYPTO_MD_SHA224 MBEDTLS_MD_SHA224
 #define CRYPTO_MD_SHA256 MBEDTLS_MD_SHA256

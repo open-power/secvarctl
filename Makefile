@@ -49,14 +49,23 @@ ifeq ($(OPENSSL),1)
 	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-openssl.o
 else
 	_LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
-	_CFLAGS += -DMBEDTLS
 
 	EXTRAMBEDTLSDIR = external/extraMbedtls
+	#Build with mbedtls version 3.x vs 2.x
+	#Default is 2.x
+	MBEDTLS_V3 = 0
+	ifeq ($(MBEDTLS_V3),1)
+		MBEDTLS_VERSION = 3
+	else 
+		MBEDTLS_VERSION = 2
+	endif
+
 	_EXTRAMBEDTLS = generate-pkcs7.o pkcs7.o 
-	EXTRAMBEDTLS = $(patsubst %,$(EXTRAMBEDTLSDIR)/%, $(_EXTRAMBEDTLS))
+	EXTRAMBEDTLS = $(patsubst %,$(EXTRAMBEDTLSDIR)/v$(MBEDTLS_VERSION).x/%, $(_EXTRAMBEDTLS))
 	OBJ += $(EXTRAMBEDTLS)
 
-	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-mbedtls.o
+	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-mbedtls-v$(MBEDTLS_VERSION).o
+	_CFLAGS += -DMBEDTLS_V$(MBEDTLS_VERSION)
 
 endif
 

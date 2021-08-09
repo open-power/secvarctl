@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "external/extraMbedtls/include/pkcs7.h"
+#include "external/extraMbedtls/v2.x/include/pkcs7.h"
 #if !defined(MBEDTLS_CONFIG_FILE)
 #include <mbedtls/config.h>
 #else
