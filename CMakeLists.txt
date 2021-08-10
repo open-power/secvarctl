@@ -31,6 +31,15 @@ include_directories(include ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_D
 
 #User specified options 
 
+#MBEDTLS_V3 will compile secvarctl expecting the user to be using mbedtls 
+# with a version 3.x, these API's are different than 2.x
+option( MBEDTLS_V3 "Assume that mbedtls version is 3.x, default is 2.x" OFF )
+if ( MBEDTLS_V3 )
+  set( MBEDTLS_VERSION 3 )
+else()
+  set ( MBEDTLS_VERSION 2 )
+endif()
+
 #OPENSSL compiles with openssl instead of mbedtls = no extra sources
 option( OPENSSL "Compile with OpenSSL as crypto library, default mbedtls")
 if ( OPENSSL )
@@ -40,15 +49,15 @@ if ( OPENSSL )
 else ()
   #sources/dependencies for extra mbedtls functions
   set( EXTRAMBEDTLSDEP generate-pkcs7.h pkcs7.h )
-  set( EXTRAMBEDTLSDEPDIR external/extraMbedtls/include/ )
+  set( EXTRAMBEDTLSDEPDIR external/extraMbedtls/v${MBEDTLS_VERSION}.x/include/ )
   list( TRANSFORM EXTRAMBEDTLSDEP PREPEND ${EXTRAMBEDTLSDEPDIR} )
   set ( EXTRAMBEDTLSSRC generate-pkcs7.c pkcs7.c )
-  set ( EXTRAMBEDTLSSRCDIR  external/extraMbedtls/ )
+  set ( EXTRAMBEDTLSSRCDIR  external/extraMbedtls/v${MBEDTLS_VERSION}.x/ )
   list( TRANSFORM EXTRAMBEDTLSSRC PREPEND ${EXTRAMBEDTLSSRCDIR} )
   list( APPEND DEPEN ${EXTRAMBEDTLSDEP} )
   list( APPEND SRC ${EXTRAMBEDTLSSRC} )
   #sources for crypto function implemented w secvarctl
-  set( CRYPTOSRC crypto-mbedtls.c )
+  set( CRYPTOSRC crypto-mbedtls-v${MBEDTLS_VERSION}.c )
   list( TRANSFORM CRYPTOSRC PREPEND ${CRYPTOSRCDIR} )
 endif()
 list ( APPEND SRC ${CRYPTOSRC} )
@@ -98,7 +107,7 @@ else()
       find_library( MBEDTLS mbedtls HINTS ENV PATH REQUIRED )
   endif (  )
   target_link_libraries( secvarctl ${MBEDTLS} ${MBEDX509} ${MBEDCRYPTO} ${PTHREAD} )
-  target_compile_definitions( secvarctl PRIVATE  MBEDTLS ) 
+  target_compile_definitions( secvarctl PRIVATE  MBEDTLS_V${MBEDTLS_VERSION} ) 
 endif()
 
 
