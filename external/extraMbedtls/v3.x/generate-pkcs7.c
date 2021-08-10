@@ -62,7 +62,8 @@ typedef struct PKCS7Info {
 	mbedtls_md_type_t hashFunct;
 	const char * hashFunctOID; 
 	int alreadySignedFlag; // if this is 1 then then PKCS7Info.keys contains signatures, if 0 then contains siging key in DER format 
-
+	int (*rng_func)(void *, unsigned char *, size_t); // any mbedtls v3 pk funcs require these rng fields
+	void *rng_param;
 } PKCS7Info;
 #endif
 
@@ -150,12 +151,17 @@ out:
  */
 int toHash(const unsigned char* data, size_t size, int hashFunct, unsigned char** outHash, size_t* outHashSize)
 {	
-	const mbedtls_md_info_t *md_info;
+	const mbedtls_md_info_t *md_info = NULL;
 	mbedtls_md_context_t ctx;
 	int rc;
 	
 	
 	md_info = mbedtls_md_info_from_type(hashFunct);
+	if (md_info == NULL) {
+		prlog(PR_ERR, "ERROR: Could not get md info from md function value %d\n", hashFunct);
+		rc = ARG_PARSE_FAIL;
+		goto out;
+	}
 
 	mbedtls_md_init(&ctx);
 
@@ -170,14 +176,14 @@ int toHash(const unsigned char* data, size_t size, int hashFunct, unsigned char*
 		prlog(PR_ERR, "ERROR: Starting hashing context failed mbedtls err #%d\n", rc);
 		goto out;
 	}
-	prlog(PR_INFO, "Creating %s hash of %zd bytes of data, result will be %d bytes\n", md_info->name, size, md_info->size);
+	prlog(PR_INFO, "Creating %s hash of %zd bytes of data, result will be %d bytes\n", mbedtls_md_get_name(md_info), size, (int)mbedtls_md_get_size(md_info));
 	rc = mbedtls_md_update(&ctx, data, size);
 	if (rc) {
 		prlog(PR_ERR, "ERROR: Failed to add %zd bytes of data to hashing context failed mbedtls err #%d\n", size, rc);
 		goto out;
 	}
 
-	*outHash = calloc(1, md_info->size);
+	*outHash = calloc(1, (size_t)mbedtls_md_get_size(md_info));
 	if (!*outHash){
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 		rc = ALLOC_FAIL;
@@ -191,9 +197,9 @@ int toHash(const unsigned char* data, size_t size, int hashFunct, unsigned char*
 		goto out;
 	}
 
-	*outHashSize = md_info->size;
+	*outHashSize = (size_t)mbedtls_md_get_size(md_info);
 	if (verbose){ 
-		printf("Hash generation successful, %s: ", md_info->name);
+		printf("Hash generation successful, %s: ", mbedtls_md_get_name(md_info));
 		printHex(*outHash, *outHashSize);
 	}
 	rc = SUCCESS;
@@ -299,10 +305,6 @@ static int setPKCS7Data(unsigned char **start, size_t *size, unsigned char **ptr
 	return SUCCESS;
 }
 
-
-
-
-
 static int setSignature(unsigned char **start, size_t *size, unsigned char **ptr, PKCS7Info *pkcs7Info, 
 			mbedtls_x509_crt *pub, unsigned char *priv, size_t privSize) {
 	int rc;
@@ -319,13 +321,13 @@ static int setSignature(unsigned char **start, size_t *size, unsigned char **ptr
 	}
 	mbedtls_pk_init(privKey);
 	// make sure private key parses into private key format
-	rc = mbedtls_pk_parse_key(privKey, priv, privSize, NULL, 0);
+	rc = mbedtls_pk_parse_key(privKey, priv, privSize, NULL, 0, pkcs7Info->rng_func, pkcs7Info->rng_param);
 	if (rc) {
 		prlog(PR_ERR, "ERROR: Failed to get context of private key, mbedtls error #%d\n", rc);
 		goto out;
 	}
 	// make sure private key is matched with public key
-	rc = mbedtls_pk_check_pair(&(pub->pk), privKey);
+	rc = mbedtls_pk_check_pair(&(pub->pk), privKey, pkcs7Info->rng_func, pkcs7Info->rng_param);
 	if (rc) {
 		prlog(PR_ERR, "Public and private key are not matched, mbedtls err#%d\n", rc);
 		goto out;
@@ -356,7 +358,7 @@ static int setSignature(unsigned char **start, size_t *size, unsigned char **ptr
 	// sign
 	if (verbose)
 		printf("Signing digest of %zd bytes with %s into %zd bits \n", hashSize, sigType, sigSizeBits);
-	rc = mbedtls_pk_sign(privKey, pkcs7Info->hashFunct, hash, 0, signature, &sigSize, 0, NULL);
+	rc = mbedtls_pk_sign(privKey, pkcs7Info->hashFunct, hash, hashSize, signature, sigSizeBits/8, &sigSize, pkcs7Info->rng_func, pkcs7Info->rng_param);
 	if (rc) {
 		prlog(PR_ERR, "Failed to generate signature, mbedtls err #%d\n", rc);
 		goto out;
@@ -699,10 +701,13 @@ out:
  *@param keyFiles, array of file paths to private keys to sign with
  *@param keyPairs, array length of key/crtFiles
  *@param hashFunct, hash function to use in digest, see mbedtls_md_type_t for values in mbedtls/md.h
+ *@param f_rng, RNG function. This must not be NULL.
+ *@param p_rng, RNG parameter, can be NULL
  *@return SUCCESS or err number 
  */
 int to_pkcs7_generate_signature(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
-	const char** crtFiles, const char** keyFiles,  int keyPairs, int hashFunct)
+	const char** crtFiles, const char** keyFiles,  int keyPairs, int hashFunct, int (*f_rng)(void *, unsigned char *, size_t),
+                               void *p_rng )
 {
 	unsigned char *keyPEM = NULL, **keys = NULL;
 	size_t keySizePEM,  *keySizes = NULL;
@@ -746,6 +751,8 @@ int to_pkcs7_generate_signature(unsigned char **pkcs7, size_t *pkcs7Size, const 
 	info.newData = newData;
 	info.newDataSize = newDataSize;
 	info.alreadySignedFlag = 0;
+	info.rng_func = f_rng;
+	info.rng_param = p_rng;
 
 	rc = toPKCS7(pkcs7, pkcs7Size, crtFiles, keyPairs, hashFunct, &info);
 	if (rc)
@@ -775,10 +782,13 @@ out:
  *@param sigFiles, array of file paths to raw signed data files 
  *@param keyPairs, array length of crt/signatures
  *@param hashFunct, hash function to use in digest, see mbedtls_md_type_t for values in mbedtls/md.h
+ *@param f_rng, RNG function. This must not be NULL.
+ *@param p_rng, RNG parameter, can be NULL
  *@return SUCCESS or err number 
  */
 int to_pkcs7_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData, size_t newDataSize, 
-	const char** crtFiles, const char** sigFiles,  int keyPairs, int hashFunct)
+	const char** crtFiles, const char** sigFiles,  int keyPairs, int hashFunct, int (*f_rng)(void *, unsigned char *, size_t),
+                               void *p_rng)
 {
 	char **sigs = NULL;
 	size_t  *sig_sizes = NULL;
@@ -815,6 +825,8 @@ int to_pkcs7_already_signed_data(unsigned char **pkcs7, size_t *pkcs7Size, const
 	info.newData = newData;
 	info.newDataSize = newDataSize;
 	info.alreadySignedFlag = 1;
+	info.rng_func = f_rng;
+	info.rng_param = p_rng;
 
 	rc = toPKCS7(pkcs7, pkcs7Size, crtFiles, keyPairs, hashFunct, &info);
 	if (rc)

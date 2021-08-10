@@ -73,6 +73,17 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 	return mbedtls_pkcs7_signed_hash_verify(pkcs7, x509, hash, hash_len);
 }
 
+/*
+ * As of mbedtls v3.0.0 most functions involving a pk need a random
+ * number generator function as a parameter. Thus pkcs7 generation
+ * will also need a rng. We will just use this makeshift random generator for now
+ */
+static int rando(void *data, unsigned char *output, size_t len)
+{
+	for (size_t i =0; i < len; i++)
+		output[i] = rand() % 256;
+	return 0;
+}
 int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 				      const unsigned char *newData,
 				      size_t newDataSize, const char **crtFiles,
@@ -81,7 +92,7 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 {
 	return to_pkcs7_generate_signature(pkcs7, pkcs7Size, newData,
 					   newDataSize, crtFiles, keyFiles,
-					   keyPairs, hashFunct);
+					   keyPairs, hashFunct, &rando , NULL);
 }
 
 int crypto_pkcs7_generate_w_already_signed_data(
@@ -91,7 +102,7 @@ int crypto_pkcs7_generate_w_already_signed_data(
 {
 	return to_pkcs7_already_signed_data(pkcs7, pkcs7Size, newData,
 					    newDataSize, crtFiles, sigFiles,
-					    keyPairs, hashFunct);
+					    keyPairs, hashFunct, &rando , NULL);
 }
 
 int crypto_x509_get_der_len(crypto_x509 *x509)
