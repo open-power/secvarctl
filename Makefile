@@ -44,10 +44,16 @@ endif
 
 #Build with crypto library = openssl rather than mbedtls
 OPENSSL = 0
+GNUTLS = 0
 ifeq ($(OPENSSL),1)
 	_LDFLAGS += -lcrypto
 	_CFLAGS += -DSECVAR_CRYPTO_OPENSSL
 	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-openssl.o
+else 
+ifeq ($(GNUTLS),1)
+	_LDFLAGS += -lgnutls
+	_CFLAGS += "-DSECVAR_CRYPTO_GNUTLS"
+	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-gnutls.o
 else
 	_LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
 	_CFLAGS += -DSECVAR_CRYPTO_MBEDTLS
@@ -59,6 +65,7 @@ else
 
 	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-mbedtls.o
 
+endif
 endif
 
 OBJ += $(CRYPTO_OBJ)

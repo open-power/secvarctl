@@ -335,9 +335,10 @@ class Test(unittest.TestCase):
 	def test_genExternalSig(self):
 		out = "genExternalSigLog.txt"
 
-		if OPENSSL:
-			command(['echo' , '"TEST NOT RAN, OPENSSL BUILDS DO NOT HAVE THIS FEATURE"' ], out, False)
+		if OPENSSL or GNUTLS:
+			command(['echo' , '"TEST NOT RAN, OPENSSL/GNUTLS BUILDS DO NOT HAVE THIS FEATURE"' ], out, False)
 			return
+
 		timestamp = ["-t", "2020-1-1T1:1:1"]
 		inpCrt = "./testdata/db_by_KEK.crt"
 		sigCrt = "./testdata/goldenKeys/KEK/KEK.crt"
@@ -469,10 +470,13 @@ if __name__ == '__main__':
 	 	MEMCHECK = True
 	else: 
 	 	MEMCHECK = False
+
+	OPENSSL = False
+	GNUTLS = False
 	if 'OPENSSL_TESTS_ONLY' in sys.argv:
 		OPENSSL = True
-	else:
-		OPENSSL = False
+	if 'GNUTLS_TESTS_ONLY' in sys.argv:
+		GNUTLS = True
 	del sys.argv[1:]
 	createEnvironment()
 	setupTestEnv()
