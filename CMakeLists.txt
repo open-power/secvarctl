@@ -31,12 +31,18 @@ include_directories(include ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_D
 
 #User specified options 
 
-#OPENSSL compiles with openssl instead of mbedtls = no extra sources
-option( OPENSSL "Compile with OpenSSL as crypto library, default mbedtls")
+#OPENSSL compiles with openssl instead of mbedtls
+option( OPENSSL "Compile with OpenSSL as crypto library, default mbedtls" )
+#GNUTLS compiles with gnutls instead of mbedtls
+option( GNUTLS "Compile with GnuTLS as crypto library, default mbedtls" )
 if ( OPENSSL )
-  #sources for crypto function implemented w
+  #sources for crypto function implemented w openssl
   set( CRYPTOSRC crypto-openssl.c )
   list( TRANSFORM CRYPTOSRC PREPEND ${CRYPTOSRCDIR} )
+elseif( GNUTLS )
+   #sources for crypto function implemented w gnutls
+   set( CRYPTOSRC crypto-gnutls.c )
+   list( TRANSFORM CRYPTOSRC PREPEND ${CRYPTOSRCDIR} )
 else ()
   #sources for extra mbedtls functions
   set ( EXTRAMBEDTLSSRC pkcs7_write.c pkcs7.c )
@@ -76,10 +82,14 @@ endif(  )
 LIST( APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.0" ".a" ".so" )
 
 #if compiling with openssl, get libraries
-if (OPENSSL)
-  find_package(OpenSSL REQUIRED)
-  target_link_libraries(secvarctl OpenSSL::SSL)
+if ( OPENSSL )
+  find_package( OpenSSL REQUIRED )
+  target_link_libraries( secvarctl OpenSSL::SSL )
   target_compile_definitions( secvarctl PRIVATE  SECVAR_CRYPTO_OPENSSL )
+elseif ( GNUTLS )
+  find_package( GnuTLS REQUIRED )
+  target_link_libraries( secvarctl GnuTLS::GnuTLS )
+  target_compile_definitions( secvarctl PRIVATE  SECVAR_CRYPTO_GNUTLS )
 #else get mbedtls libraries
 else()
   #get mbedtls if custom path defined

@@ -30,6 +30,7 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
  ---             | ----------- | ----------- |
  | Default Build (Mbedtls is cryptolib) | `make [build options]`      | `mkdir build && cd build && cmake [build options] ../ . && cmake --build .`      |
  | Build W OpenSSL as cryptolib | `make OPENSSL=1` | `mkdir build && cd build && cmake -DOPENSSL=1 [build options] ../ . && cmake --build .` |
+ | Build W GnuTLS as cryptolib | `GNUTLS=1` | `-DGNUTLS=1` |
  | Static Build | `STATIC=1` | `-DSTATIC=1`|
  | Reduced Size Build | default | `-DSTRIP=1` |
  | Build Without Crypto Write Functions | `CRYPTO_READ_ONLY=1` | `-CRYPTO_READ_ONLY=1` |

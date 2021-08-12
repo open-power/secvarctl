@@ -22,9 +22,15 @@ else
 	OPENSSL_TESTS =
 endif
 
+GNUTLS = 0
+ifeq ($(GNUTLS),1)
+        GNUTLS_TESTS = "GNUTLS_TESTS_ONLY"
+else
+        GNUTLS_TESTS =
+endif
 all: $(data) ../secvarctl-cov
 	$(py) runTests.py $(MEMARGS)
-	$(py) runSvcGenerateTests.py $(MEMARGS) $(OPENSSL_TESTS)
+	$(py) runSvcGenerateTests.py $(MEMARGS) $(OPENSSL_TESTS) $(GNUTLS_TESTS)
 
 	
 

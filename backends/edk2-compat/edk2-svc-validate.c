@@ -544,7 +544,8 @@ static int validateCertStruct(crypto_x509 *x509, const char *varName)
 	if (varName == NULL || strncmp(varName, "db", strlen(varName))) {
 		if (crypto_x509_md_is_sha256(x509) || crypto_x509_oid_is_pkcs1_sha256(x509) ||
 		    crypto_x509_get_pk_bit_len(x509) != 2048) {
-			x509_info = malloc(CERT_BUFFER_SIZE);
+			// calloc to ensure null terminator
+			x509_info = calloc(CERT_BUFFER_SIZE, 1);
 			if (!x509_info) {
 				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 				return CERT_FAIL;
