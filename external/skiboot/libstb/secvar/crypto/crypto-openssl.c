@@ -125,18 +125,19 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 	if (pk == NULL || pk_ctx == NULL) {
 		prlog(PR_ERR,
 		      "ERROR: Failed to create public key context from x509\n");
-		return CERT_FAIL;
+		rc = ERR_get_error();
+		return !rc ? ERR_R_INTERNAL_ERROR : rc;
 	}
 	if (EVP_PKEY_verify_init(pk_ctx) <= 0) {
 		prlog(PR_ERR,
 		      "ERROR: Failed to initialize pk context for x509 pk \n");
-		rc = CERT_FAIL;
+		rc = ERR_get_error();
 		goto out;
 	}
 	if (EVP_PKEY_CTX_set_rsa_padding(pk_ctx, RSA_PKCS1_PADDING) <= 0) {
 		prlog(PR_ERR,
 		      "ERROR: Failed to setup pk context with RSA padding\n");
-		rc = CERT_FAIL;
+		rc = ERR_get_error();
 		goto out;
 	}
 	//extract signer algorithms from pkcs7
@@ -144,7 +145,7 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 	if (!alg) {
 		prlog(PR_ERR,
 		      "ERROR: Could not extract message digest identifiers from PKCS7\n");
-		rc = PKCS7_FAIL;
+		rc = ERR_get_error();
 		goto out;
 	}
 	//extract nid from algorithms
@@ -154,13 +155,13 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 	if (!evp_md) {
 		prlog(PR_ERR, "ERROR: Unknown NID (%d) for MD found in PKCS7\n",
 		      md_nid);
-		rc = PKCS7_FAIL;
+		rc = ERR_get_error();
 		goto out;
 	}
 
 	if (EVP_PKEY_CTX_set_signature_md(pk_ctx, evp_md) <= 0) {
 		prlog(PR_ERR, "ERROR: Failed to set signature md for pk ctx\n");
-		rc = CERT_FAIL;
+		rc = ERR_get_error();
 		goto out;
 	}
 	//assume hash length if none given
@@ -170,6 +171,9 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 
 	//verify on all signatures in pkcs7
 	num_signers = sk_PKCS7_SIGNER_INFO_num(PKCS7_get_signer_info(pkcs7));
+	if (num_signers <= 0)
+		rc = num_signers;
+
 	for (int s = 0; s < num_signers; s++) {
 		//make sure we can get the signature data
 		signer_info = sk_PKCS7_SIGNER_INFO_value(
@@ -178,7 +182,7 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 		if (!signer_info) {
 			prlog(PR_ERR,
 			      "ERROR: Could not get PKCS7 signer information\n");
-			rc = PKCS7_FAIL;
+			rc = ERR_get_error();
 			goto out;
 		}
 
@@ -187,7 +191,7 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 
 		if (exp_size <= 0 || !exp_sig) {
 			prlog(PR_ERR, "ERROR: No data found in PKCS7\n");
-			rc = PKCS7_FAIL;
+			rc = ERR_get_error();
 			goto out;
 		}
 		rc = EVP_PKEY_verify(pk_ctx, exp_sig, exp_size, hash, hash_len);
@@ -195,6 +199,7 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 		//if successfull then exit
 		if (rc == 1)
 			goto out;
+		rc = ERR_get_error();
 	}
 out:
 	EVP_PKEY_free(pk);
@@ -202,7 +207,8 @@ out:
 
 	if (rc == 1)
 		return SUCCESS;
-	return PKCS7_FAIL;
+
+	return !rc ? ERR_R_INTERNAL_ERROR : rc;
 }
 
 int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
