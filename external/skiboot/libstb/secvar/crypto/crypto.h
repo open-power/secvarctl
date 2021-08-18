@@ -10,6 +10,7 @@
 #include <openssl/x509.h>
 #include <openssl/evp.h>
 
+#define OPENSSL_SUCCESS 0
 #define CRYPTO_MD_SHA1 NID_sha1
 #define CRYPTO_MD_SHA224 NID_sha224
 #define CRYPTO_MD_SHA256 NID_sha256
