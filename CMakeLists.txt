@@ -56,8 +56,13 @@ list ( APPEND SRC ${CRYPTOSRC} )
 option( STATIC "Create statically linked executable" OFF )
 if ( STATIC )
   set( BUILD_SHARED_LIBRARIES OFF )
+  #append possible extensions for library
+  set( CMAKE_FIND_LIBRARY_SUFFIXES ".a")
   set( CMAKE_EXE_LINKER_FLAGS "-static" )
   set( PTHREAD "pthread" )
+else( )
+  #append possible extensions for library
+  LIST( APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.0" )
 endif(  )
 
 #Strip resulting executable for minimal size
@@ -75,9 +80,6 @@ option( NO_CRYPTO "Build without crypto functions for smaller executable, some f
 if ( NO_CRYPTO )
   target_compile_definitions( secvarctl PRIVATE  NO_CRYPTO )
 endif(  )
-
-#append possible extensions for library
-LIST( APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.0" ".a" ".so" )
 
 #if compiling with openssl, get libraries
 if (OPENSSL)

@@ -26,14 +26,6 @@ OBJ +=$(SKIBOOT_OBJ) $(EDK2_OBJ)
 OBJCOV = $(patsubst %.o, %.cov.o,$(OBJ))
 
 MANDIR=usr/share/man
-#use STATIC=1 for static build
-STATIC = 0
-ifeq ($(STATIC),1)
-	STATICFLAG=-static
-	_LDFLAGS +=-lpthread
-else 
-	STATICFLAG=
-endif
 
 #use NO_CRYPTO for smaller executable but limited functionality
 NO_CRYPTO = 0 
@@ -61,6 +53,15 @@ else
 endif
 
 OBJ += $(CRYPTO_OBJ)
+
+#use STATIC=1 for static build
+STATIC = 0
+ifeq ($(STATIC),1)
+	STATICFLAG=-static
+	_LDFLAGS += -pthread -lpthread -ldl
+else
+	STATICFLAG=
+endif
 
 secvarctl: $(OBJ) 
 	$(CC) $(CFLAGS) $(_CFLAGS) $(STATICFLAG) $^  -o $@ $(LDFLAGS) $(_LDFLAGS)
