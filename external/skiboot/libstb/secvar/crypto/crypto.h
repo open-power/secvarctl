@@ -11,6 +11,8 @@
 #include <openssl/evp.h>
 
 #define OPENSSL_SUCCESS 0
+#define CRYPTO_SUCCESS OPENSSL_SUCCESS
+
 #define CRYPTO_MD_SHA1 NID_sha1
 #define CRYPTO_MD_SHA224 NID_sha224
 #define CRYPTO_MD_SHA256 NID_sha256
@@ -30,6 +32,8 @@ typedef EVP_MD_CTX crypto_md_ctx;
 #include "external/extraMbedtls/include/pkcs7.h"
 
 #define MBEDTLS_SUCCESS MBEDTLS_EXIT_SUCCESS
+#define CRYPTO_SUCCESS MBEDTLS_SUCCESS
+
 #define CRYPTO_MD_SHA1 MBEDTLS_MD_SHA1
 #define CRYPTO_MD_SHA224 MBEDTLS_MD_SHA224
 #define CRYPTO_MD_SHA256 MBEDTLS_MD_SHA256
@@ -46,6 +50,8 @@ typedef mbedtls_md_context_t crypto_md_ctx;
 #include <gnutls/pkcs7.h>
 
 #define GNUTLS_SUCCESS GNUTLS_E_SUCCESS
+#define CRYPTO_SUCCESS GNUTLS_SUCCESS
+
 #define CRYPTO_MD_SHA1 GNUTLS_DIG_SHA1
 #define CRYPTO_MD_SHA224 GNUTLS_DIG_SHA224
 #define CRYPTO_MD_SHA256 GNUTLS_DIG_SHA256

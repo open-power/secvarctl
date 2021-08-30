@@ -564,7 +564,7 @@ static int generateESL(const unsigned char *buff, size_t size, struct Arguments 
 	case 'f':
 		rc = crypto_md_generate_hash(buff, size, hashFunct->crypto_md_funct,
 					     &intermediateBuff, &intermediateBuffSize);
-		if (rc) {
+		if (rc != CRYPTO_SUCCESS) {
 			prlog(PR_ERR, "Failed to generate hash from file\n");
 			break;
 		}
@@ -589,7 +589,7 @@ static int generateESL(const unsigned char *buff, size_t size, struct Arguments 
 		rc = crypto_convert_pem_to_der(*inpPtr, inpSize,
 					       (unsigned char **)&intermediateBuff,
 					       &intermediateBuffSize);
-		if (rc) {
+		if (rc != CRYPTO_SUCCESS) {
 			prlog(PR_ERR, "ERROR: Could not convert PEM to DER\n");
 			break;
 		}
@@ -687,7 +687,7 @@ static int generateHash(const unsigned char *data, size_t size, struct Arguments
 		}
 	}
 	rc = crypto_md_generate_hash(data, size, alg->crypto_md_funct, outHash, outHashSize);
-	if (rc) {
+	if (rc != CRYPTO_SUCCESS) {
 		prlog(PR_ERR, "Failed to generate hash\n");
 		return rc;
 	}
@@ -897,7 +897,7 @@ static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size, str
 		goto out;
 	}
 	rc = crypto_md_generate_hash(preHash, preHash_size, CRYPTO_MD_SHA256, outBuff, outBuffSize);
-	if (rc) {
+	if (rc != CRYPTO_SUCCESS) {
 		prlog(PR_ERR, "Failed to generate hash\n");
 		goto out;
 	}
@@ -1039,7 +1039,7 @@ static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize, struc
 						       actualData, totalSize, args->signCerts,
 						       args->signKeys, args->signKeyCount,
 						       CRYPTO_MD_SHA256);
-	if (rc) {
+	if (rc != CRYPTO_SUCCESS) {
 		prlog(PR_ERR, "ERROR: making PKCS7 failed\n");
 		rc = PKCS7_FAIL;
 		goto out;
