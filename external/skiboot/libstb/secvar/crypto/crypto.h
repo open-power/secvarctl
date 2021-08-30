@@ -24,10 +24,12 @@ typedef EVP_MD_CTX crypto_md_ctx;
 #elif defined SECVAR_CRYPTO_MBEDTLS
 
 #include <mbedtls/md.h>
+#include <mbedtls/platform.h>
 // NICK CHILD was here
 //#include "libstb/crypto/pkcs7/pkcs7.h"
 #include "external/extraMbedtls/include/pkcs7.h"
 
+#define MBEDTLS_SUCCESS MBEDTLS_EXIT_SUCCESS
 #define CRYPTO_MD_SHA1 MBEDTLS_MD_SHA1
 #define CRYPTO_MD_SHA224 MBEDTLS_MD_SHA224
 #define CRYPTO_MD_SHA256 MBEDTLS_MD_SHA256

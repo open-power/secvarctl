@@ -14,7 +14,6 @@
 // commented out by Nick Child
 //#include "secvar_crypto_err.h" // for err codes
 // added by Nick Child
-#include "err.h"
 
 #include <mbedtls/pk_internal.h> // for validating cert pk data
 #include <mbedtls/error.h>
@@ -47,7 +46,7 @@ crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen)
 		prlog(PR_ERR,
 		      "ERROR: parsing pkcs7 failed mbedtls error #%04x\n", rc);
 	else
-		rc = SUCCESS;
+		rc = MBEDTLS_SUCCESS;
 
 	if (rc) {
 		mbedtls_pkcs7_free(pkcs7);
@@ -100,21 +99,21 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 	// if no keys given
 	if (keyPairs == 0) {
 		prlog(PR_ERR, "ERROR: missing private key / certificate... use -k <privateKeyFile> -c <certificateFile>\n");
-		rc = ARG_PARSE_FAIL;
+		rc = MBEDTLS_ERR_PKCS7_BAD_INPUT_DATA;
 		goto out;
 	}
 	keys = calloc(1, sizeof(unsigned char*) * keyPairs);
 	keySizes = calloc(1, sizeof(size_t) * keyPairs);
 	if (!keys || !keySizes) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		rc = ALLOC_FAIL;
+		rc = MBEDTLS_ERR_PKCS7_ALLOC_FAILED;
 		goto out;	
 	}
 	crts = calloc (1, sizeof(unsigned char*) * keyPairs);
 	crtSizes = calloc(1, sizeof(size_t) * keyPairs);
 	if (!crts || !crtSizes) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		rc = ALLOC_FAIL;
+		rc = MBEDTLS_ERR_PKCS7_ALLOC_FAILED;
 		goto out;
 	}
 	for (int i = 0; i < keyPairs; i++) {
@@ -122,7 +121,6 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 		rc = mbedtls_pk_load_file(keyFiles[i], &keys[i], &keySizes[i]);
 		if (rc) {
 			prlog(PR_ERR, "ERROR: failed to get data from priv key file %s\n", keyFiles[i]);
-			rc = INVALID_FILE;
 			goto out;
 		}
 		if (keyPEM) free(keyPEM);
@@ -132,7 +130,6 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 		rc = mbedtls_pkcs7_load_file(crtFiles[i], &crtPEM, &crtSizePEM);
 		if (rc) {
 			prlog(PR_ERR, "ERROR: failed to get data from x509 file %s\n", crtFiles[i]);
-			rc = INVALID_FILE;
 			goto out;
 		}
 		// get der format of that crt
@@ -172,21 +169,21 @@ int crypto_pkcs7_generate_w_already_signed_data(
 	// if no keys given
 	if (keyPairs == 0) {
 		prlog(PR_ERR, "ERROR: missing signature / certificate pairs... use -s <signedDataFile> -c <certificateFile>\n");
-		rc = ARG_PARSE_FAIL;
+		rc = MBEDTLS_ERR_PKCS7_BAD_INPUT_DATA;
 		goto out;
 	}
 	sigs = calloc(1, sizeof(unsigned char*) * keyPairs);
 	sigSizes = calloc(1, sizeof(size_t) * keyPairs);
 	if (!sigs || !sigSizes) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		rc = ALLOC_FAIL;
+		rc = MBEDTLS_ERR_PKCS7_ALLOC_FAILED;
 		goto out;	
 	}
 	crts = calloc (1, sizeof(unsigned char*) * keyPairs);
 	crtSizes = calloc(1, sizeof(size_t) * keyPairs);
 	if (!crts || !crtSizes) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		rc = ALLOC_FAIL;
+		rc = MBEDTLS_ERR_PKCS7_ALLOC_FAILED;
 		goto out;
 	}
 	for (int i = 0; i < keyPairs; i++) {
@@ -195,7 +192,6 @@ int crypto_pkcs7_generate_w_already_signed_data(
 		rc = mbedtls_pkcs7_load_file(sigFiles[i], &sigs[i], &sigSizes[i]);
 		if (!sigs[i]) {
 			prlog(PR_ERR, "ERROR: failed to get data from signature file %s\n", sigFiles[i]);
-			rc = INVALID_FILE;
 			goto out;
 		}
 		// get data from x509
@@ -203,7 +199,6 @@ int crypto_pkcs7_generate_w_already_signed_data(
 		rc = mbedtls_pkcs7_load_file(crtFiles[i], &crtPEM, &crtSizePEM);
 		if (rc) {
 			prlog(PR_ERR, "ERROR: failed to get data from x509 file %s\n", crtFiles[i]);
-			rc = INVALID_FILE;
 			goto out;
 		}
 		// get der format of that crt
@@ -259,9 +254,9 @@ int crypto_x509_is_RSA(crypto_x509 *x509)
 	pk_type = x509->pk.pk_info->type;
 	if (pk_type != MBEDTLS_PK_RSA)
 		//zero is also a pk type (MBEDTLS_PK_NONE) so return generic failure if zero so it doesnt look like a success
-		return (pk_type == 0 ? CERT_FAIL : pk_type);
+		return (pk_type == 0 ? MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG : pk_type);
 	else
-		return SUCCESS;
+		return MBEDTLS_SUCCESS;
 }
 
 int crypto_x509_get_sig_len(crypto_x509 *x509)
@@ -272,16 +267,16 @@ int crypto_x509_get_sig_len(crypto_x509 *x509)
 int crypto_x509_md_is_sha256(crypto_x509 *x509)
 {
 	if (x509->sig_md == MBEDTLS_MD_SHA256)
-		return SUCCESS;
+		return MBEDTLS_SUCCESS;
 	else
-		return CERT_FAIL;
+		return MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG;
 }
 
 int crypto_x509_oid_is_pkcs1_sha256(crypto_x509 *x509)
 {
 	if (MBEDTLS_OID_CMP(MBEDTLS_OID_PKCS1_SHA256, &x509->sig_oid))
-		return CERT_FAIL;
-	return SUCCESS;
+		return MBEDTLS_ERR_X509_UNKNOWN_OID;
+	return MBEDTLS_SUCCESS;
 }
 
 int crypto_x509_get_pk_bit_len(crypto_x509 *x509)
@@ -339,13 +334,13 @@ int crypto_md_ctx_init(crypto_md_ctx **ctx, int md_id)
 	*ctx = malloc(sizeof(mbedtls_md_context_t));
 	if (!*ctx) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
-		return ALLOC_FAIL;
+		return MBEDTLS_ERR_MD_ALLOC_FAILED;
 	}
 	md_info = mbedtls_md_info_from_type(md_id);
 	mbedtls_md_init(*ctx);
 	rc = mbedtls_md_setup(*ctx, md_info, 0);
 	if (rc)
-		return HASH_FAIL;
+		return rc;
 	return mbedtls_md_starts(*ctx);
 }
 
@@ -379,12 +374,12 @@ int crypto_md_generate_hash(const unsigned char *data, size_t size,
     if( md_info == NULL ) {
         prlog(PR_ERR,  "ERROR: Invalid hash function %u, see mbedtls_md_type_t\n",
                         hashFunct );
-        rc = PKCS7_FAIL;
+        rc = MBEDTLS_ERR_MD_BAD_INPUT_DATA;
         goto out;
     }
     *outHash = calloc( 1, md_info->size );
     if( *outHash == NULL ) {
-        rc = ALLOC_FAIL;
+        rc = MBEDTLS_ERR_MD_ALLOC_FAILED;
         goto out;
     }
     rc = mbedtls_md( md_info, data, size, *outHash );
@@ -399,7 +394,6 @@ int crypto_md_generate_hash(const unsigned char *data, size_t size,
     for (i = 0; i < *outHashSize - 1; i++)
         mbedtls_printf("%02x:", (*outHash)[i]);
     mbedtls_printf("%02x\n", (*outHash)[i]);
-    rc = 0;
 
 out:
     return ( rc );
