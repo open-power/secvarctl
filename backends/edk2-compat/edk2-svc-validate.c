@@ -521,14 +521,10 @@ static int validateCertStruct(crypto_x509 *x509, const char *varName)
 	}
 	// if public key type is not RSA, then quit (example failures: DSA, ECDSA, RSA_PCC)
 	rc = crypto_x509_is_RSA(x509);
-	if (rc) {
-		// openssl implementation for crypto_x509_is_RSA could return secvarctl's CERT_FAL no type found
-		if (rc == CERT_FAIL)
-			prlog(PR_ERR, "ERROR: public key type not able to be parsed from x509\n");
-		else
-			prlog(PR_ERR,
-			      "ERROR: public key type not supported, expected RSA, found type ID %d (defined by crypto lib)\n",
-			      rc);
+	if (rc != CRYPTO_SUCCESS) {
+		prlog(PR_ERR,
+		      "ERROR: public key type not supported, expected RSA, found type ID %d (defined by crypto lib)\n",
+		      rc);
 		return CERT_FAIL;
 	}
 

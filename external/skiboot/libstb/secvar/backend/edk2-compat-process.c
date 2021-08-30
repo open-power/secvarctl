@@ -587,7 +587,7 @@ static int verify_signature(const struct efi_variable_authentication_2 *auth,
 		// rc = mbedtls_pkcs7_signed_hash_verify(pkcs7, &x509, (unsigned char *)newcert, new_data_size);
 		rc = crypto_pkcs7_signed_hash_verify(pkcs7, x509, (unsigned char *)newcert, new_data_size);
 		/* If you find a signing certificate, you are done */
-		if (rc == 0) {
+		if (rc == CRYPTO_SUCCESS) {
 			prlog(PR_INFO, "Signature Verification passed\n");
 			//NICK CHILD removed direct mbedtls call, use general crypto
 			// mbedtls_x509_crt_free(&x509);
@@ -664,7 +664,7 @@ static char *get_hash_to_verify(const char *key, const char *new_data,
 	// rc = mbedtls_md_starts(&ctx);
 	rc = crypto_md_ctx_init(&ctx, CRYPTO_MD_SHA256);
 
-	if (rc)
+	if (rc != CRYPTO_SUCCESS)
 		goto out;
 
 	if (key_equals(key, "PK")
@@ -685,20 +685,20 @@ static char *get_hash_to_verify(const char *key, const char *new_data,
 	rc = crypto_md_update(ctx, (const unsigned char *)wkey, varlen);
 
 	free(wkey);
-	if (rc) 
+	if (rc != CRYPTO_SUCCESS)
 		goto out;
 
 	//NICK CHILD removed direct mbedtls call, use general crypt
 	//rc = mbedtls_md_update(&ctx, (const unsigned char *)&guid, sizeof(guid));
 	rc = crypto_md_update(ctx, (const unsigned char *)&guid, sizeof(guid));
 
-	if (rc)
+	if (rc != CRYPTO_SUCCESS)
 		goto out;
 	//NICK CHILD removed direct mbedtls call, use general crypt
 	//rc = mbedtls_md_update(&ctx, (const unsigned char *)&attr, sizeof(attr));
 	rc = crypto_md_update(ctx, (const unsigned char *)&attr, sizeof(attr));
 
-	if (rc)
+	if (rc != CRYPTO_SUCCESS)
 		goto out;
 
 	//NICK CHILD removed direct mbedtls call, use general crypt
@@ -707,14 +707,14 @@ static char *get_hash_to_verify(const char *key, const char *new_data,
 	rc = crypto_md_update(ctx, (const unsigned char *)timestamp,
 			       sizeof(struct efi_time));
 
-	if (rc)
+	if (rc != CRYPTO_SUCCESS)
 		goto out;
 
 	//NICK CHILD removed direct mbedtls call, use general crypt	
 	// rc = mbedtls_md_update(&ctx, (const unsigned char *)new_data, new_data_size);
 	rc = crypto_md_update(ctx, (const unsigned char *)new_data, new_data_size);
 
-	if (rc)
+	if (rc != CRYPTO_SUCCESS)
 		goto out;
 
 	hash = zalloc(32);
@@ -724,7 +724,7 @@ static char *get_hash_to_verify(const char *key, const char *new_data,
 	//rc = mbedtls_md_finish(&ctx, hash);
 	rc = crypto_md_finish(ctx, hash);
 
-	if (rc) {
+	if (rc != CRYPTO_SUCCESS) {
 		free(hash);
 		hash = NULL;
 	}
