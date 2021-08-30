@@ -45,6 +45,7 @@ typedef mbedtls_md_context_t crypto_md_ctx;
 #include <gnutls/gnutls.h>
 #include <gnutls/pkcs7.h>
 
+#define GNUTLS_SUCCESS GNUTLS_E_SUCCESS
 #define CRYPTO_MD_SHA1 GNUTLS_DIG_SHA1
 #define CRYPTO_MD_SHA224 GNUTLS_DIG_SHA224
 #define CRYPTO_MD_SHA256 GNUTLS_DIG_SHA256

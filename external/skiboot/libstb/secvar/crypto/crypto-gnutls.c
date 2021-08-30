@@ -7,7 +7,6 @@
 #include <stdlib.h> // for exit
 #include "crypto.h"
 #include "include/prlog.h"
-#include "include/err.h"
 
 #include <gnutls/x509.h>
 #include <gnutls/pkcs7.h>
@@ -61,9 +60,9 @@ int crypto_pkcs7_md_is_sha256(crypto_pkcs7 *pkcs7)
         return rc;
     
     if (pkcs7_info.algo != GNUTLS_SIGN_RSA_SHA256)
-        rc = PKCS7_FAIL;
+        rc = GNUTLS_E_UNIMPLEMENTED_FEATURE;
     else
-        rc = SUCCESS;
+        rc = GNUTLS_SUCCESS;
 
     gnutls_pkcs7_signature_info_deinit(&pkcs7_info);
     return rc;
@@ -250,7 +249,7 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
     if (keyPairs == 0) {
         prlog(PR_ERR,
               "ERROR: No signers given, cannot generate PKCS7\n");
-        return PKCS7_FAIL;
+        return GNUTLS_E_FILE_ERROR;
     }
 
     rc = gnutls_pkcs7_init(&pkcs7_st);
@@ -346,7 +345,7 @@ int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
             goto out;
         }
         if (memcmp(key_id, crt_id, id_len) != 0){
-            rc = INVALID_FILE;
+            rc = GNUTLS_E_CERTIFICATE_KEY_MISMATCH;
             prlog(PR_ERR,
                   "ERROR: Public and private keys are not correlated\n");
             gnutls_x509_privkey_deinit(x509_key);
@@ -388,18 +387,6 @@ out:
     return rc;
 }
 
-/*
- *generates a PKCS7 with given signed data
- *@param pkcs7, the resulting PKCS7, newData not appended, NOTE: REMEMBER TO UNALLOC THIS MEMORY
- *@param pkcs7Size, the length of pkcs7
- *@param newData, data to be added to be used in digest
- *@param dataSize , length of newData
- *@param crtFiles, array of file paths to public keys that were used in signing with(PEM)
- *@param sigFiles, array of file paths to raw signed data files
- *@param keyPairs, array length of crt/signatures
- *@param hashFunct, hash function to use in digest, see crypto_hash_funct for values
- *@return SUCCESS or err number
- */
 int crypto_pkcs7_generate_w_already_signed_data(
     unsigned char **pkcs7, size_t *pkcs7Size, const unsigned char *newData,
     size_t newDataSize, const char **crtFiles, const char **sigFiles,
@@ -407,7 +394,7 @@ int crypto_pkcs7_generate_w_already_signed_data(
 {
     prlog(PR_ERR,
           "ERROR: Currently unable to support generation of PKCS7 with externally generated signatures when compiling with GNUTLS\n");
-    return PKCS7_FAIL;
+    return GNUTLS_E_UNIMPLEMENTED_FEATURE;
 }
 
 int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
@@ -441,7 +428,7 @@ int crypto_x509_get_der_len(crypto_x509 *x509)
     // is this a good way to prevent against unsigned -> signed cast issues?
     if (INT_MAX - data_struct.size < 0) {
         gnutls_free(data_struct.data);
-        return CERT_FAIL;
+        return GNUTLS_E_X509_CERTIFICATE_ERROR;
     }
 
     gnutls_free(data_struct.data);
@@ -459,7 +446,7 @@ int crypto_x509_get_tbs_der_len(crypto_x509 *x509)
 
     if (INT_MAX - data_struct.size < 0) {
         gnutls_free(data_struct.data);
-        return CERT_FAIL;
+        return GNUTLS_E_X509_CERTIFICATE_ERROR;
     }
 
     gnutls_free(data_struct.data);
@@ -478,9 +465,10 @@ int crypto_x509_is_RSA(crypto_x509 *x509)
 
     algo = gnutls_x509_crt_get_pk_algorithm(*x509, &bits);
     if (algo != GNUTLS_PK_RSA)
-        return algo;
+        // can return 0 (our success value) if PK_UNKNOWN
+        return algo == GNUTLS_PK_UNKNOWN ? GNUTLS_E_UNKNOWN_PK_ALGORITHM : algo;
 
-    return SUCCESS;
+    return GNUTLS_SUCCESS;
 }
 
 int crypto_x509_get_sig_len(crypto_x509 *x509)
@@ -503,7 +491,7 @@ int crypto_x509_get_sig_len(crypto_x509 *x509)
     if (rc != GNUTLS_E_SUCCESS)
         return rc;
     if (INT_MAX - sig_size < 0)
-        return CERT_FAIL;
+        return GNUTLS_E_X509_CERTIFICATE_ERROR;
 
     return sig_size;
 }
@@ -512,9 +500,9 @@ int crypto_x509_md_is_sha256(crypto_x509 *x509)
 {
     gnutls_sign_algorithm_t alg = gnutls_x509_crt_get_signature_algorithm (*x509);
     if (alg == GNUTLS_SIGN_RSA_SHA256)
-        return SUCCESS;
+        return GNUTLS_SUCCESS;
 
-    return CERT_FAIL;
+    return GNUTLS_E_UNKNOWN_HASH_ALGORITHM;
 }
 
 int crypto_x509_oid_is_pkcs1_sha256(crypto_x509 *x509)
@@ -557,7 +545,6 @@ int crypto_x509_get_long_desc(char *x509_info, size_t max_len, const char *delim
                   crypto_x509 *x509)
 {
     int rc;
-    // gnutls_datum_t data_struct = {.data = NULL, .size = 0};
     gnutls_datum_t data_struct;
     long data_to_copy;
     
@@ -630,14 +617,14 @@ int crypto_md_ctx_init(crypto_md_ctx **ctx, int md_id)
     new_ctx = gnutls_malloc(sizeof(*new_ctx));
     if (!new_ctx) {
         prlog(PR_ERR, "ERROR: Failed to allocate data\n");
-        return ALLOC_FAIL;
+        return GNUTLS_E_MEMORY_ERROR;
     }
     new_ctx->tbh_buf.data = NULL;
     new_ctx->tbh_buf.size = 0;
     new_ctx->hash_type = md_id;
 
     *ctx = new_ctx;
-    return GNUTLS_E_SUCCESS;
+    return GNUTLS_SUCCESS;
 }
 
 int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data,
@@ -649,12 +636,12 @@ int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data,
         ctx->tbh_buf.data = gnutls_realloc(ctx->tbh_buf.data, ctx->tbh_buf.size + data_len);
 
     if (!ctx->tbh_buf.data)
-        return ALLOC_FAIL;
+        return GNUTLS_E_MEMORY_ERROR;
 
     memcpy(ctx->tbh_buf.data + ctx->tbh_buf.size, data, data_len);
 
     ctx->tbh_buf.size += data_len;
-    return GNUTLS_E_SUCCESS;
+    return GNUTLS_SUCCESS;
 }
 
 
@@ -665,7 +652,7 @@ int crypto_md_finish(crypto_md_ctx *ctx, unsigned char *hash)
     
     exp_hash_size = get_hash_len(ctx->hash_type);
     if (exp_hash_size == 0)
-        return HASH_FAIL;
+        return GNUTLS_E_UNKNOWN_HASH_ALGORITHM;
 
     // function uses returned_hash_len to get max len of `hash` and also writes bytes written
     returned_hash_len = exp_hash_size;
@@ -674,7 +661,7 @@ int crypto_md_finish(crypto_md_ctx *ctx, unsigned char *hash)
         return rc;
 
     if (returned_hash_len != exp_hash_size)
-        return HASH_FAIL;
+        return GNUTLS_E_HASH_FAILED;
 
     return rc;
 }
@@ -697,12 +684,12 @@ int crypto_md_generate_hash(const unsigned char *data, size_t size,
 
     hash_len = get_hash_len(hashFunct);
      if (hash_len == 0)
-        return HASH_FAIL;
+        return GNUTLS_E_UNKNOWN_HASH_ALGORITHM;
 
     *outHash = malloc(hash_len);
     if (!*outHash) {
         prlog(PR_ERR, "ERROR: Failed to allocate data\n");
-        return ALLOC_FAIL;
+        return GNUTLS_E_MEMORY_ERROR;
     }
 
     rc = gnutls_fingerprint(hashFunct, &data_struct, *outHash, &hash_len);
