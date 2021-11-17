@@ -128,37 +128,38 @@ jobs:
           asset_path: ${{env.srpm}}
           asset_name: secvarctl-${{env.version}}.src.rpm
           asset_content_type: application/octet-stream
-          
-      # build rpm's for ppc64le
-      - name: install dependencies for cross compiling
-        run:  sudo dnf install -y gcc-ppc64le-linux-gnu
-      # not really sure why we have to specify the exact filename of the man page this time but it fixes the issues
-      - name: build rpm's for ppc64le
-        run: |
-             cd ~/rpmbuild
-             sed -i s/1\\*/1.gz/g SPECS/secvarctl.spec
-             rpmbuild --target=powerpc64le --define '_smp_build_ncpus `nproc`' -ba SPECS/secvarctl.spec
-             ls -la RPMS/x86_64/
-             echo "ppc64le_rpm=`ls -d ~/rpmbuild/RPMS/powerpc64le/* | head -1`" >> $GITHUB_ENV             
+# TODO building rpm's for power (on x86 and ubuntu) not working correctly
+# for now users can install from source rpm
+#       # build rpm's for ppc64le
+#       - name: install dependencies for cross compiling
+#         run:  sudo dnf install -y gcc-ppc64le-linux-gnu
+#       # not really sure why we have to specify the exact filename of the man page this time but it fixes the issues
+#       - name: build rpm's for ppc64le
+#         run: |
+#              cd ~/rpmbuild
+#              sed -i s/1\\*/1.gz/g SPECS/secvarctl.spec
+#              rpmbuild --target=powerpc64le --define '_smp_build_ncpus `nproc`' -ba SPECS/secvarctl.spec
+#              ls -la RPMS/x86_64/
+#              echo "ppc64le_rpm=`ls -d ~/rpmbuild/RPMS/powerpc64le/* | head -1`" >> $GITHUB_ENV             
              
-     # ---------- perform the entire above uploading process again but with power assets this time ---------
-      - name: upload ppc rpm's to github action artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: secvarctl-${{env.version}}.powerpc64le.rpm
-          path: ${{env.ppc64le_rpm}}
+#      # ---------- perform the entire above uploading process again but with power assets this time ---------
+#       - name: upload ppc rpm's to github action artifacts
+#         uses: actions/upload-artifact@v2
+#         with:
+#           name: secvarctl-${{env.version}}.powerpc64le.rpm
+#           path: ${{env.ppc64le_rpm}}
       
-      # if new release upload rpm to release
-      - name: upload ppc64le rpm's to new release
-        if: env.version != ''
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{env.ppc64le_rpm}}
-          asset_name: secvarctl-${{env.version}}.powerpc64le.rpm
-          asset_content_type: application/octet-stream
+#       # if new release upload rpm to release
+#       - name: upload ppc64le rpm's to new release
+#         if: env.version != ''
+#         uses: actions/upload-release-asset@v1
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         with:
+#           upload_url: ${{ github.event.release.upload_url }}
+#           asset_path: ${{env.ppc64le_rpm}}
+#           asset_name: secvarctl-${{env.version}}.powerpc64le.rpm
+#           asset_content_type: application/octet-stream
 
        
              
