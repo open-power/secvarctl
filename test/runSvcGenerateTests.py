@@ -654,6 +654,49 @@ class Test(unittest.TestCase):
 		final_KEK_size = subprocess.run(['cat', 'testenv/KEK/size'], stdout=subprocess.PIPE).stdout.decode('utf-8')
 		self.assertEqual(final_KEK_size, '0')
 		setupTestEnv()
+
+		# extra test for dbx
+		#make new esl entry appended to current dbx
+		new_dbx_esl=inpDir+"dbx_by_PK.esl"
+		with open(output_file_esl, 'wb') as out_file:
+			for dbx_esl in ['testenv/dbx/data', new_dbx_esl]:
+					with open(dbx_esl, 'rb') as in_file:
+						out_file.write(in_file.read())
+		old_dbx_esl = "generatedTestData/old_dbx.esl"
+		self.assertEqual(getCmdResult(["cp", "testenv/dbx/data", old_dbx_esl], out, self), True)
+		self.assertEqual(getCmdResult(["cp", output_file_esl, "testenv/dbx/data"], out, self), True)
+		createSizeFile("testenv/dbx/")
+		# dbx now has two hashes in it
+		# we first need to extract them from the old values
+		read_dbx_output = subprocess.run([SECTOOLS, 'validate', '-v', '-x', '-e', old_dbx_esl], stdout=subprocess.PIPE).stdout.decode('utf-8')
+		if read_dbx_output is None:
+			self.fail(f'could not extract hash from {old_dbx_esl}')
+		old_dbx_hash = re.search(r'(?i)Hash\s*:\s+(\S+)', read_dbx_output).group(1)
+		read_dbx_output = subprocess.run([SECTOOLS, 'validate', '-v', '-x', '-e', new_dbx_esl], stdout=subprocess.PIPE).stdout.decode('utf-8')
+		if read_dbx_output is None:
+			self.fail(f'could not extract hash from {new_dbx_esl}')
+		new_dbx_hash = re.search(r'(?i)Hash\s*:\s+(\S+)', read_dbx_output).group(1)
+		# removing the recently added dbx entry, should result in an esl equivalent to the old dbx
+		self.assertEqual(getCmdResult(cmd + [ "-x", new_dbx_hash, "-o", output_file] + required_path_args + ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "dbx"], out, self), True)
+		#run `secvarctl verify` to ensure it would be successful
+		self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "dbx", output_file], out, self), True)
+		#the new ESL should equal the old ESL
+		self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl, "-n", "dbx"], out, self), True)
+		self.assertEqual(compareFiles(output_file_esl, old_dbx_esl), True)
+		# similarly, 
+		# removing the older dbx entry, should result in an esl equivalent to the newer dbx
+		self.assertEqual(getCmdResult(cmd + [ "-x", old_dbx_hash, "-o", output_file] + required_path_args + ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "dbx"], out, self), True)
+		#run `secvarctl verify` to ensure it would be successful
+		self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "dbx", output_file], out, self), True)
+		#the new ESL should equal the old ESL
+		self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl, "-n", "dbx"], out, self), True)
+		self.assertEqual(compareFiles(output_file_esl, new_dbx_esl), True)
+		# if we remove again we should have an empty ESL
+		self.assertEqual(getCmdResult(cmd + [ "-x", new_dbx_hash, "-e", output_file_esl, "-o", output_file] + required_path_args + ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "dbx"], out, self), True)
+		self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl, "-n", "dbx"], out, self), True)
+		self.assertEqual(compareFiles(output_file_esl, inpDir+"empty.esl"), True)
+		setupTestEnv()
+		command(["rm", output_file, output_file_esl, old_dbx_esl])
 if __name__ == '__main__':
 	if "MEMCHECK" in sys.argv:
 	 	MEMCHECK = True

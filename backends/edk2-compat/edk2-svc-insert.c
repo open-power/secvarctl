@@ -408,14 +408,14 @@ static int convert_ascii_hex_to_raw_hex(const char *ascii, unsigned char *raw, s
 		else
 			tmp_hex = strtok(NULL, ":");
 		if (!tmp_hex || strlen(tmp_hex) != 2) {
-			prlog(PR_ERR, "ERROR: Failed to parse given serial number %s, unparsed string segment = %s\n",
+			prlog(PR_ERR, "ERROR: Failed to parse given number %s, unparsed string segment = %s\n",
 						ascii, ascii + (3*i) );
 			free(ascii_cpy);
 			return ARG_PARSE_FAIL;
 		}
 		raw[i] = (unsigned char) strtoul(tmp_hex, &end_ptr, 16);
 		if (*end_ptr != '\0'){
-			prlog(PR_ERR, "Parsing %s segment of serial %s failed\n", tmp_hex, ascii);
+			prlog(PR_ERR, "Parsing %s segment of %s failed\n", tmp_hex, ascii);
 			free(ascii_cpy);
 			return ARG_PARSE_FAIL;
 		}
@@ -423,32 +423,59 @@ static int convert_ascii_hex_to_raw_hex(const char *ascii, unsigned char *raw, s
 	free(ascii_cpy);
 	return SUCCESS;
 }
-// WHERE NICK LEFT OFF, NOT COMPILING, CHECK FORMAT OF RETURNED SERIAL NUMBER, CLEANUP RETURN CODE
+
 /*
  *removes an ESL from a chain of ESLs and returns the ESL without the ESL containing the given serial number
+ *@param var_name, the secure variable being worked on, important for figuring out if dbx or not
  *@param esl_chain, pointer to chains of ESL buffer, esl's must contain x509s
  *@param chain_size, length of esl_chain in bytes
  *@param sn, pointer to serial number string, should be 20 bytes sperated by a colon, XX:...:XX
+ * 	UNLESS variable is dbx, then it is a pointer to a hash string that can be 20, 28, 32, 48, or 64 bytes, same format though
  *@param ret_esl, a pointer to already allocarted memory to fill with the new ESL chain w/o the matching esl 
  *@param ret_esl_size, size of the esl pointed to by ret_esl
  *@return SUCCESS if an ESL with the serial number exists, else errno.
  */
-static int remove_esl_with_serial(unsigned char *esl_chain, size_t chain_size, const char *sn, unsigned char **ret_esl, size_t *ret_esl_size)
+static int remove_esl_with_serial(const char *var_name, unsigned char *esl_chain, size_t chain_size, const char *sn, unsigned char **ret_esl, size_t *ret_esl_size)
 {
-    size_t remaining_esl_size, offset = 0, serial_len;
+    size_t remaining_esl_size, offset = 0, expected_serial_len, serial_len;
     int rc, esl_data_size, itr_esl_size = 0, count = 1;
-    unsigned char *esl_data = NULL, sn_raw[20];
+    unsigned char *esl_data = NULL, *sn_raw = NULL;
     const unsigned char *itr_serial = NULL;
     EFI_SIGNATURE_LIST *itr_esl;
     crypto_x509 *x509 = NULL;
     bool found_flag = false;
+    // only used on dbx
+    struct hash_funct *hash_f = NULL;
 
     *ret_esl_size = 0;
-    // convert ascii serial number string to raw buffer
-    rc = convert_ascii_hex_to_raw_hex(sn, sn_raw, 20);
-    if (rc)
+    
+    // if dbx, chceck given hash is a valid length for hashes
+    if (strcmp(var_name, "dbx") == 0) {
+    	// number of bytes of representation XX:XX:..XX = 3 chars per byte - 1
+    	expected_serial_len = (strlen(sn) + 1) / 3;
+    	for (int i = 0; i < sizeof(hash_functions) / sizeof(struct hash_funct); i++) {
+			if (expected_serial_len == hash_functions[i].size)
+				hash_f = (struct hash_funct *)&hash_functions[i];
+		}
+		if (hash_f == NULL) {
+			prlog(PR_ERR, "ERROR: Given hash value %s of %zd bytes, does not map to a supported hash function", sn, expected_serial_len);
+			return ARG_PARSE_FAIL;
+		}
+    }
+	else
+		expected_serial_len = 20;
+    sn_raw = malloc(expected_serial_len);
+    if (!sn_raw) {
+    	prlog(PR_ERR, "ERROR: failed to allocate memory\n");
+    	return ALLOC_FAIL;
+    }
+    // convert ascii serial number (or hash for dbx) string to raw buffer
+    rc = convert_ascii_hex_to_raw_hex(sn, sn_raw, expected_serial_len);
+    if (rc) {
+    	free(sn_raw);
     	return rc;
-    // loop through esl chain, if SN matches, don't add it
+    }
+    // loop through esl chain, if SN (or hash for dbx) matches, don't add it
     for (remaining_esl_size = chain_size; remaining_esl_size > 0; 
         remaining_esl_size -= itr_esl_size, offset += itr_esl_size, count++) {
         // get nex sig list size
@@ -465,39 +492,54 @@ static int remove_esl_with_serial(unsigned char *esl_chain, size_t chain_size, c
         // get data from esl
         esl_data_size = get_esl_cert((char *)esl_chain + offset, remaining_esl_size, (char **)&esl_data);
         if (esl_data_size <= 0) {
-            prlog(PR_ERR, "\tERROR: Failed to extract certificate from ESL, no data\n");
+            prlog(PR_ERR, "\tERROR: Failed to extract contents of ESL, no data\n");
             break;
         }
-        // get x509 from data
-        rc = parseX509(&x509, esl_data, (size_t)esl_data_size);
-        if (rc)
-            break;
-        // get serial number from x509
-        itr_serial = crypto_x509_get_serial_number(x509, &serial_len);
-        if (verbose >= PR_INFO) {
-        	prlog(PR_INFO,"Comparing serial against serial = ");
-        	printHex((unsigned char *)itr_serial, serial_len);
+
+        // for dbx, the hash is the entire data section of ESL
+        if (strcmp(var_name, "dbx") == 0) {
+        		itr_serial = esl_data;
+        		serial_len = esl_data_size;
         }
-        // compare
-        if (serial_len != 20) {
-        	prlog(PR_ERR, "ERROR: Serial number has length %zd, expected 20\n", serial_len);
-        	break;
-        }
-        //if not the ESL we want to remove,  add it to the new ESL
-        if (memcmp(itr_serial, sn_raw, serial_len) != 0) {
+        // for other variables we need to parse the X509 for the SN
+        else {
+	        // get x509 from data
+	        rc = parseX509(&x509, esl_data, (size_t)esl_data_size);
+	        if (rc)
+	            break;
+	        // get serial number from x509
+	        itr_serial = crypto_x509_get_serial_number(x509, &serial_len);
+	        if (verbose >= PR_INFO) {
+	        	prlog(PR_INFO,"Comparing serial against serial = ");
+	        	printHex((unsigned char *)itr_serial, serial_len);
+	        }
+	        // compare
+	        if (serial_len != expected_serial_len) {
+	        	prlog(PR_ERR, "ERROR: Serial number has length %zd, expected %zd\n", serial_len, expected_serial_len);
+	        	break;
+	        }
+	    }
+	    // check lengths again because dbx hash comparisons dont require the lengths to match
+	    // if expected serial number / hash and found SN/hash match then don't copy to new ESL
+	    if (serial_len == expected_serial_len && memcmp(itr_serial, sn_raw, serial_len) == 0) {
+	    	prlog(PR_INFO, "Found matching ESL. Removing now...\n");
+        	found_flag = true;
+	    }
+        //else it is not the ESL we want to remove,  add it to the new ESL
+        else {
         	memcpy(*ret_esl + *ret_esl_size, itr_esl, itr_esl_size);
         	*ret_esl_size += itr_esl_size;
         }
-        else {
-        	prlog(PR_INFO, "Found matching ESL. Removing now...\n");
-        	found_flag = true;
+
+        if (strcmp(var_name, "dbx") != 0) {
+        	crypto_x509_free(x509);
+    		x509 = NULL;
         }
         free(esl_data);
         esl_data = NULL;
-    	crypto_x509_free(x509);
-    	x509 = NULL;
     }
-
+    
+    free(sn_raw);
     if (esl_data)
     	free(esl_data);
     if (x509)
@@ -507,10 +549,7 @@ static int remove_esl_with_serial(unsigned char *esl_chain, size_t chain_size, c
     	return SUCCESS;
 
     return ESL_FAIL;
-
 }
-// WHEERE NICK LEFT OFF, I THINK ITS WORKING KINDA. IF REMOVE THE ONLY ESL THEN RETURNED IS 0 BYTES DO THE RIGHT THING W THAT! 
-// I DIDNT GE TTO GENERATE NOTHIN SO TEST THAT
 
 /*
  *called from main()
@@ -555,7 +594,9 @@ int performRemoveCommand(int argc, char *argv[])
 		"This command removes an ESL from a current chain of ESL's and uses it to generate an valid Auth"
 		" file. The generated Auth can be output to a file with '-o' or submited as a secvar update with '-w'."
 		" The default location of secvars is " SECVARPATH ", use '-p' for other paths."
-		" At the moment only ESl's containing X509s can be removed. To see an x509 serial number contained in ESLs, see 'secvarctl read/validate --help'. ",
+		" If the secure variable is PK, KEK, or db then the serial number of the X509 to be removed should be given in the '-x' argument."
+		" If the secure variable is a dbx, then the hash contained in the ESL to be removed should be given in the '-x' argument."
+		" To see the serial number/hash contained in ESLs, see 'secvarctl read/validate --help'. ",
 		insert_remove_shared_child_parsers
 	};
 
@@ -581,7 +622,7 @@ int performRemoveCommand(int argc, char *argv[])
 		args.path_to_sec_vars = SECVARPATH;
 
 	// generate helpful info string
-	prlog(PR_INFO, "Looking for ESL containing X509 with Serial Number %s in", args.serial_number);
+	prlog(PR_INFO, "Looking for ESL containing %s %s in", strcmp(args.auth_args.varName, "dbx") ? "X509 with Serial Number" : "ESL with hash", args.serial_number);
 	if (args.input_method == READ_FROM_SECVAR_PATH)
 		prlog(PR_INFO, "%s%s/data", args.path_to_sec_vars, args.auth_args.varName);
 	else
@@ -622,10 +663,10 @@ int performRemoveCommand(int argc, char *argv[])
         prlog(PR_ERR, "ERROR: Failed to allocate memory\n");
         goto out;
     }
-    // 2. remove esl with serial number
-    rc = remove_esl_with_serial(current_esl_buff, curr_esl_size, args.serial_number, &updated_esl_buf, &updated_esl_size);
+    // 2. remove esl with serial number (or hash for dbx)
+    rc = remove_esl_with_serial(args.auth_args.varName, current_esl_buff, curr_esl_size, args.serial_number, &updated_esl_buf, &updated_esl_size);
     if (rc) {
-        prlog(PR_ERR, "ERROR: Could not find ESL with serial number %s in ESL chain\n", args.serial_number);
+        prlog(PR_ERR, "ERROR: Could not find %s %s in ESL chain\n", strcmp(args.auth_args.varName, "dbx") ? "X509 with Serial Number" : "ESL with hash", args.serial_number);
         goto out;
     }
 	if (args.inp_valid)
@@ -711,10 +752,11 @@ static int remove_specific_parse_opt(int key, char *arg, struct argp_state *stat
         // check that all essential args are given and valid
         if (args->help_flag)
             break;
-        // serial number must be 20 hex bytes, all caps, each byte seperated by ':' = 20*2 + 19
         else if (args->serial_number == NULL)
              prlog(PR_ERR, "ERROR: Missing serial number of ESL to remove, use '-x <XX:XX..:XX> `, see usage below...\n");
-        else if (strlen(args->serial_number) != 59)
+        // for x509s, serial number must be 20 hex bytes, all caps, each byte seperated by ':' = 20*2 + 19
+         // for dbx. this argument is a hash, we will check the hash length later
+        else if (strcmp(args->auth_args.varName, "dbx") != 0 && strlen(args->serial_number) != 59)
             prlog(PR_ERR, "ERROR: Input serial number format is invalid, needs 20 hex bytes seprated by ':' (59 chars total, found %lu)  see usage below...\n", strlen(args->serial_number));
         else
             break;
