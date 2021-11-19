@@ -555,7 +555,21 @@ class Test(unittest.TestCase):
 			#keep adding ESL's to KEK and checking with db updates
 
 		setupTestEnv()
-
+		#add test for appending to dbx
+		#make auth file with new dbx entry appended to current dbx
+		new_dbx=inpDir+"dbx_by_PK.esl"
+		self.assertEqual(getCmdResult(cmd + [ "-i", new_dbx, "-o", output_file] + required_path_args + ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "dbx"], out, self), True)
+		#run `secvarctl verify` to ensure it would be successful
+		self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "dbx", output_file], out, self), True)
+		#the contained ESL should equal dbx entry in sysfs appended with new ESL
+		self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl, "-n", "dbx"], out, self), True)
+		dbx_expected ="generatedTestData/foo_expected.esl"
+		with open(dbx_expected, 'wb') as out_file:
+			for dbx_esl in ['testenv/dbx/data', new_dbx]:
+					with open(dbx_esl, 'rb') as in_file:
+						out_file.write(in_file.read())
+		self.assertEqual(compareFiles(output_file_esl, dbx_expected), True)
+		command(["rm", output_file, output_file_esl, dbx_expected])
 		#extra test for force flag
 		#appending and signing two empty files should fail since 0 + 0 is not an esl
 		self.assertEqual(getCmdResult(cmd + required_auth_args + ["-i", "./testdata/empty.esl", "-e", "testdata/empty.esl", "-o", "generatedTestData/empty_w_empy.auth"], out, self ), False)
