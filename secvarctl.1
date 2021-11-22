@@ -22,7 +22,10 @@ Commands are:
 - generates several different types of file formats relevant to updating secure variables
 .PP
 .B insert
-- add new key value to secure variable's current data
+- add new ESL to secure variable's current data
+.PP
+.B remove
+- remove an ESL from secure variable's current data 
 .RE
 
 .SH SYNOPSIS
@@ -50,6 +53,9 @@ Commands are:
 .PP
 .B secvarctl insert
 [OPTIONS]  -n <var_name> -k/-s <key/sig> -c <crt> -i <new_esl> {-o <out_file> OR -w}
+.PP
+.B secvarctl remove
+[OPTIONS] -n <var_name> -k/-s <key/sig> -c <crt> -x <serial_number> {-o <out_file> OR -w}
 
 .SH DESCRIPTION
 .B secvarctl
@@ -66,6 +72,8 @@ The purpose of this tool is to simplify and automate the process of reading, wri
 .B generate
 ,
 .B insert
+,
+.B remove
 )
 
 .RS
@@ -216,7 +224,7 @@ This will generate an auth file around an empty ESL. Thus, no input argument
 is required when making a reset file. 
 .PP
 .B secvarctl insert
-will add a new ESL to a secvars current list of ESLs. This is useful if the user would like to update a secvar without overwriting the previous value. Due to firmware limitations, all secvar updates will overwrite the previous value of the secvar. The only way to retain previous values, is to append the new value to the old value and create an auth file over the combined value. This auth file can either be ouput to a file with
+will add a new ESL to a secvars current list of ESLs. This is useful if the user would like to update a secvar without overwriting the previous value. Due to firmware limitations, all secvar updates will overwrite the previous value of the secvar. The only way to retain previous values, is to append the new value to the old value and create an auth file over the combined value. This auth file can either be output to a file with
 .B -o
 <outputFile> or submitted as a secvar update with
 .B -w
@@ -235,6 +243,35 @@ command are needed, this includes
 The 
 .B -t
 <time> flag has also been used to allow the user to specify the timestamp to use in the auth file metadata.
+.PP
+.B secvarctl remove
+will remove an ESL entry from a secvars current list of ESLs. This is useful if the user would like to delete only a portion of the secure variables data without completely removing it (for this use 
+.B secvarctl generate reset
+). This command is very similar to 
+.B secvarctl insert
+except instead of using the
+.B -i
+flag to recieve a new ESL, the 
+.B remove
+command uses
+.B -x
+<serial_number> to identify the ESL which is to be removed. All of the other arguments 
+.B -o, -w, -e, -p, -f, -k/s, -c, -k, -n, -t
+are identical to their use in 
+.B secvarctl insert
+command. The argument
+.B -x
+<serial_number> is required and must contain a valid 20 byte serial number that is contained in an X509 of one of the ESL's in the current secure variable. The format of this serial number must be in hexadecimal octets seperated by a ':' . To see the serial numbers in an ESL, either 
+.B secvarctl read
+or 
+.B secvarctl validate -v -e <esl_file>
+can be used. Since the dbx variable does not contain X509's, the
+.B -x <serial_number>
+argument can accept a hash instead. This hash must be one of the hashes being stored in one of the dbx's ESLs. The format of the argument is the same and finding available hashes to extract can be done with either the
+.B secvarctl read dbx
+or
+.B secvarctl validate -v -x -e <esl_file>
+commands.
 .RE
 
 .SH OPTIONS
@@ -452,7 +489,7 @@ REQUIRED:
 , write output auth to file
 .PP
 .B -n
-<varName>, one of {"PK", "KEK, "db", "dbx", "TS"}
+<varName>, one of {"PK", "KEK, "db", "dbx"}
 .PP
 .B -c 
 <certFile> , see 
@@ -477,7 +514,7 @@ OPTIONAL:
 <time> , see GENERATE for description
 .PP
 .B -f 
-, force, do not validate file formats
+, force, does not validate file formats
 .PP
 .B -e 
 <esl> , specify current ESL to append data to, default is <PATH>/<VARNAME>/data
@@ -485,7 +522,59 @@ OPTIONAL:
 .B -p 
 <path> , specify path to current secvars, default is 
 .I "/sys/firmware/secvar/vars/" 
-
+.RE
+.RE
+.PP
+.B secvarctl remove
+-n <var_name> -k/-s <key/sig> -c <crt> -x <serial_number> {-o <out_file> OR -w}
+.RS
+REQUIRED:
+.RS
+.B -x
+<serial_number> , the serial number in the X509 of the ESL to remove from the current esl. If variable being updated is dbx, then this is a hash instead of a serial number
+.PP
+.B -w
+, submit update by writing output to secvar `update` file
+.PP
+.B -o 
+<outputFile>, alternative to 
+.B -w
+, write output auth to file
+.PP
+.B -n
+<varName>, one of {"PK", "KEK, "db", "dbx"}
+.PP
+.B -c 
+<certFile> , see 
+.B secvarctl generate
+.PP
+.B -k 
+<privKey> OR
+.B -s 
+<sigFile>, see 
+.B secvarctl generate
+.RE
+OPTIONAL:
+.RS
+.B --usage
+.PP
+.B --help
+.PP
+.B -v
+, verbose
+.PP
+.B -t 
+<time> , see GENERATE for description
+.PP
+.B -f 
+, force, does not validate file formats
+.PP
+.B -e 
+<esl> , specify current ESL to remove data from, default is <PATH>/<VARNAME>/data
+.PP
+.B -p 
+<path> , specify path to current secvars, default is 
+.I "/sys/firmware/secvar/vars/"
 .RE
 .SH EXAMPLES
 
@@ -542,8 +631,11 @@ To create an auth file using an external signing framework for db update:
       <user sends file.hash to be signed by external entity, signature is now in file.sig>
       $secvarctl generate c:a -n db -t 2021-1-1T1:1:1 -c signer.crt -s file.sig -i file.crt -o file.auth 
 .PP
-To append add a new ESL entry to the current value of the db:
+Submit an update to append a new ESL entry to the current value of the db:
       $secvarctl insert -i new.esl -k KEK.key -c KEK.crt -n db -w
+.PP
+Submit an update to remove an ESL entry from the current KEK:
+      $secvarctl remove -k PK.key -c PK.crt -n KEK -w -x DE:AD:BE:EF:DE:AD:BE:EF:DE:AD:DE:AD:BE:EF:DE:AD:BE:EF:DE:AD
 .SH AUTHOR
 Nick Child nick.child@ibm.com,
 .PP

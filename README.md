@@ -56,13 +56,14 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 
 
 ## USAGE:    
-  Secvarctl has 6 main commands   
+  Secvarctl has 7 main commands   
     `./secvarctl read [options] [variable]`    
     `./secvarctl write [options] <variable> <file>`    
     `./secvarctl validate [options] [fileType] <file>`  
      `./secvarctl verify [options] -u {update Variables}`  
      `./secvarctl generate <inputFormat>:<outputFormat> [OPTIONS] -i <inputFile> -o <outputFile`  
-     `./secvarctl insert [options] {signature requirements} -i <inputFile> -o <outputFile>
+     `./secvarctl insert [options] {signature requirements} -i <inputFile> -o <outputFile>`     
+      `./secvarctl remove [options] {signature requirements} -x <serial_number> -o <outputFile>`    
 ## SUB COMMAND USAGE:
     
     READ:
@@ -219,12 +220,11 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		To create a variable reset file (one that will remove the current contents of a variable), replace '<inputFormat>:<outputFormat>' with 'reset' and
 		supply a variable name, public and private signer files and an output file with '-n <varName> -k <privKey> -c <crtFile> -o <outFile>'
 		GENERATION OF PKCS7 AND AUTH FILES ARE IN EXPERIMENTAL DEVELEPOMENT PHASE. THEY HAVE NOT BEEN THOROUGHLY TESTED YET.
-
-        INSERT:
+    INSERT:
             ./secvarctl insert {signing requirements} -i <inputFile> -o <outputFile>
             OR
             ./secvarctl insert {signing requirements} -i <inputFile> -w
-        REQUIRED:
+    REQUIRED:
             -i <inputFile> , the new esl to be appended
             -w , submit update by writing output to secvar `update` file
             -o <outputFile>, alternative to -w, write output auth to file
@@ -232,7 +232,7 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
                 -c <certFile>
                 -k <privKey> OR -s <sigFile>
                 -n <varName>
-        OPTIONAL:
+    OPTIONAL:
             --usage
             --help
             -v , verbose, gives process info
@@ -245,6 +245,51 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
         By using the insert command, the user can add a new ESL to the secvar while maintaining its current entries. The process invlolves adding a new ESL to the current ESL, and 
         generating an auth file with the combined ESL. The resulting auth file can be either submitted as a secvar update (with '-w') or output to a file (with '-o'). By default, the current esl is read from the secvar path, but a user given ESL chain can be used with the '-e' option. The secvar path that is used for reading the current ESL and writing the ouput auth (if '-w' is present), can be set to a user defined path with '-p'. If, the '-f' flag is given, the new, current and combined ESL will not be checked for format correctness. Since an auth file is being generated, all required flags for auth generation from the 'secvarctl generate' command are needed, this includes '-k/-s', '-c', '-n'. The '-t' flag has also been used to allow the user to specify the timestamp to use in the auth file metadata.
 
+    REMOVE:
+            ./secvarctl remove {signing requirements} -x <serial_number> -o <outputFile>
+            OR
+            ./secvarctl remove {signing requirements} -x <serial_number> -w
+    REQUIRED:
+            -x <serial_number> , the serial number in the X509 of the
+                ESL to remove from the current esl. If variable being up‐
+                dated is dbx, then this is a hash instead of a serial
+                number
+            -w , submit update by writing output to secvar `update` file
+            -o <outputFile>, alternative to -w, write output auth to file
+            signing requirements (see GENERATE):
+                -c <certFile>
+                -k <privKey> OR -s <sigFile>
+                -n <varName>
+    OPTIONAL:
+            --usage
+            --help
+            -v , verbose, gives process info
+            -t <time> , see GENERATE for decription
+            -f , force, do not do validate file formats
+            -e <esl> , specify current ESL to remove data from, default is <PATH>/<VAR_NAME>/data
+            -p <path> , specify path to current secvars, default is /sys/firmware/secvar/vars
+
+              This command will remove an ESL entry from a secvars current
+              list of ESLs. This is useful if the user would like to delete
+              only a portion of the secure variables data  without completely
+              removing it (for this use secvarctl generate reset ). This com‐
+              mand is very similar to secvarctl insert except instead of using
+              the -i flag to recieve a new ESL, the remove command uses -x
+              <serial_number> to identify the ESL which is to be removed. All
+              of  the other arguments -o, -w, -e, -p, -f, -k/s, -c, -k, -n, -t
+              are identical to their use in secvarctl insert command. The  ar‐
+              gument -x <serial_number> is required and must contain a valid
+              20 byte serial number that is contained in an X509 of one of the
+              ESL's in the current secure variable. The format of this serial
+              number must be in hexadecimal octets seperated by a ':' . To see
+              the serial numbers in an ESL, either secvarctl read or secvarctl
+              validate -v -e <esl_file> can be used. Since the dbx variable
+              does not contain X509's, the -x <serial_number> argument can ac‐
+              cept a hash instead. This hash must be one of the  hashes  being
+              stored in one of the dbx's ESLs. The format of the argument is
+              the same and finding available hashes to  extract  can  be  done
+              with either the secvarctl read dbx or secvarctl validate -v -x
+              -e <esl_file> commands.
 
 
       
