@@ -527,6 +527,15 @@ int crypto_x509_get_pk_bit_len(crypto_x509 *x509)
 	return length;
 }
 
+const unsigned char *crypto_x509_get_serial_number(crypto_x509 *x509, size_t *serial_len)
+{	
+
+ 	ASN1_INTEGER * sn;
+ 	sn = X509_get_serialNumber(x509);
+ 	*serial_len = (size_t)sn->length;
+	return sn->data;
+}
+
 void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc,
 				size_t max_len)
 {

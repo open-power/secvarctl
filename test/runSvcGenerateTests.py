@@ -8,6 +8,8 @@ import sys
 import time
 import unittest
 import filecmp
+import re
+import random
 
 MEM_ERR = 101
 SECTOOLS="../secvarctl-cov"
@@ -80,6 +82,49 @@ toeslCommands=[
 [["-i", "./testdata/db_by_PK.auth"], False],#no output option
 ]
 
+insertCommands = [
+[["--usage"], True],
+[["--help"], True],
+[["-i", "./testdata/db_by_PK.auth", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-i is not an esl
+[["-i", "./testdata/foo", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-i is not file
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.auth", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False] ,#-e is not an esl
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/foo", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False] ,#-e is not a file
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.key", "-k", "testenv/PK/PK.key"], False] ,#-c is not a certificate
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.foo", "-k", "testenv/PK/PK.key"], False] ,#-c is not a file
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-t", "2021-06-24 18:00:00"], False], #-t is invalid
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-t", "2021-06-24T18:00:99"], False], #-t is incorrect
+[["-i", "./testdata/db_by_PK.esl", "-w", "-p",  "./", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-p is not to secvars
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl",  "-k", "testenv/PK/PK.key"], False], #no -c arg
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl"], False], #no signer arg
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt"], False], #no -k arg
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-c", "testenv/PK/PK.crt"], False], #-k != -c
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "TS", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #cannot update TS
+[["-i", "./testdata/db_by_PK.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #no -w or -o
+]
+
+removeCommands = [
+[["--usage"], True],
+[["--help"], True],
+[["-i", "./testdata/db_by_PK.esl", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-i is not an valid flag in remove
+[["-x", "23/47/63/D4/D8/7E/4F/72/DC/78/23/0F/45/88/6B/86/B9/B8/23/5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-x is not an proper format
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:55", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-x is not in esl
+[["-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #no -x flag
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5Z", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-x is not in hex
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.auth", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False] ,#-e is not an esl
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/foo", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False] ,#-e is not a file
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.key", "-k", "testenv/PK/PK.key"], False] ,#-c is not a certificate
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.foo", "-k", "testenv/PK/PK.key"], False] ,#-c is not a file
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-t", "2021-06-24 18:00:00"], False], #-t is invalid
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-t", "2021-06-24T18:00:99"], False], #-t is incorrect
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-w", "-p",  "./", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #-p is not to secvars
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl",  "-k", "testenv/PK/PK.key"], False], #no -c arg
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl"], False], #no signer arg
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt"], False], #no -k arg
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-c", "testenv/PK/PK.crt"], False], #-k != -c
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-o", "foo.esl", "-n", "TS", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #cannot update TS
+[["-x", "23:47:63:D4:D8:7E:4F:72:DC:78:23:0F:45:88:6B:86:B9:B8:23:5B", "-n", "db", "-e" "./testdata/db_by_PK.esl", "-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key"], False], #no -w or -o
+]
+
 def command(args,out=None, addCMDRan=True):#stores last log of function into log file
 		if out:
 			with open(out, "w") as f:
@@ -123,10 +168,10 @@ def compareFiles(a,b):
 		return False
 # def generateESL(path="./generatedTestData/",inp="default.crt",out="default.esl"):
 # 	return command(GEN+["c:e", "-i", path+inp, "-o", path+out])
-# def createSizeFile(path):
-# 	size=os.path.getsize(path+"data")
-# 	with open(path+"size", "w") as f:
-# 		f.write(str(size));
+def createSizeFile(path):
+	size=os.path.getsize(path+"data")
+	with open(path+"size", "w") as f:
+		f.write(str(size));
 # def generateHashESL(path="./generatedTestData/", inp="dbx.crt", out="dbx.esl", hashF = "SHA256"):
 # 	command(GEN + ["f:h", "-h", hashF, "-o", path+"dbx.hash", "-i", path+inp])
 # 	command(GEN + ["h:e", "-h", hashF, "-i", path+"dbx.hash", "-o", path+out])
@@ -459,11 +504,199 @@ class Test(unittest.TestCase):
 			self.assertEqual( getCmdResult(cmd+["-i", file, "-o", postUpdate],out, self), False) #all broken auths should fail to have correct esl
 			self.assertEqual( getCmdResult(["rm",postUpdate],out, self), False) #removal of output file should fail since it was never made
 
+	def test_insert(self):
+		out = "insertlog.txt"
+		cmd = [SECTOOLS, "insert", "-v"]
+		inpDir = "testdata/"
+		timestamp = "2021-06-24T18:00:00"
+		for i in insertCommands:
+			self.assertEqual(getCmdResult(cmd + i[0], out, self), i[1])
+		# goal is to:
+		# add one ESL to the current secvar (KEK signed by PK)
+		# then verify it is a  valid update and submitting it
+		# then we convert auth to esl and set the new esl as updated variable (update PK as if reboot)
+		# make a lower level key be signed with the new update and make sure it verifys, do not commit (make and verify new db update signed with new KEK key)
+		# add another ESL to step one chain and repeat process
+		# eventually all db updates should verify since they are signed with one of the many KEK ESL's
+		required_auth_args = ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "KEK", "-t", timestamp]
+		required_path_args = ["-p", "testenv/"]
+		output_file = "generatedTestData/foo.auth"
+		output_file_esl = "generatedTestData/foo.esl"
+		test_auth = "generatedTestData/new_db.auth"
+		irrelevant_esl = "testdata/db_by_PK.esl" #this is just an ESL, nothing relvant about `db` by `PK` in filename
+		setupTestEnv()
+		#loop through all ESL's contiaing an x509, use as KEK update, test with db update signed with new KEK
+		for file in os.listdir(inpDir):
+			if not file.endswith(".esl") or file.startswith("dbx") or file.startswith("empty"):
+				continue;
+			file = inpDir+file
+			self.assertEqual( getCmdResult(cmd + [ "-i", file, "-w"] + required_path_args + required_auth_args, out, self), True)
+			# start side quest: make sure same result is achieved if ouptut to user defined file
+			self.assertEqual(getCmdResult(cmd + [ "-i", file, "-o", output_file] + required_path_args + required_auth_args, out, self), True)
+			self.assertEqual(compareFiles("testenv/KEK/update", output_file), True)
+			#end side quest
+			#ensure signing was success
+			self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + [ "-u", "KEK", output_file], out, self), True)
+			#create a db update with the new KEK data as signer
+			crt = file[:-3] + "crt" #get new ESL's crt
+			key = file[:-3] + "key" #get new ESL's key
+			self.assertEqual(getCmdResult([SECTOOLS, "generate", "e:a", "-c", crt, "-k", key, "-n", "db", "-i", irrelevant_esl, "-o", test_auth ], out ,self), True)
+			#ensure that `verify` fails since signed by ESL not yet in KEK
+			self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "db", test_auth], out, self), False)
+			#okay now make sure that test_auth DOES verify if the new KEK is updated successfully so that
+			# the signer of test_auth is an entry in KEK ESL chain
+			self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl], out, self), True)
+			#BUZZ BEE BOOP robot noises, pretend reboot w valid KEK update
+			self.assertEqual(getCmdResult(["cp", output_file_esl, "testenv/KEK/data"], out, self), True)
+			createSizeFile("testenv/KEK/")
+			#now verify should pass since db update is signed by the latest entry in KEK
+			self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "db", test_auth], out, self), True)
+			command(["rm", output_file, output_file_esl, test_auth])
+			#keep adding ESL's to KEK and checking with db updates
 
-		
+		setupTestEnv()
+		#add test for appending to dbx
+		#make auth file with new dbx entry appended to current dbx
+		new_dbx=inpDir+"dbx_by_PK.esl"
+		self.assertEqual(getCmdResult(cmd + [ "-i", new_dbx, "-o", output_file] + required_path_args + ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "dbx"], out, self), True)
+		#run `secvarctl verify` to ensure it would be successful
+		self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "dbx", output_file], out, self), True)
+		#the contained ESL should equal dbx entry in sysfs appended with new ESL
+		self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl, "-n", "dbx"], out, self), True)
+		dbx_expected ="generatedTestData/foo_expected.esl"
+		with open(dbx_expected, 'wb') as out_file:
+			for dbx_esl in ['testenv/dbx/data', new_dbx]:
+					with open(dbx_esl, 'rb') as in_file:
+						out_file.write(in_file.read())
+		self.assertEqual(compareFiles(output_file_esl, dbx_expected), True)
+		command(["rm", output_file, output_file_esl, dbx_expected])
+		#extra test for force flag
+		#appending and signing two empty files should fail since 0 + 0 is not an esl
+		self.assertEqual(getCmdResult(cmd + required_auth_args + ["-i", "./testdata/empty.esl", "-e", "testdata/empty.esl", "-o", "generatedTestData/empty_w_empy.auth"], out, self ), False)
+		#should pass if forced
+		self.assertEqual(getCmdResult(cmd + required_auth_args + ["-i", "./testdata/empty.esl", "-e", "testdata/empty.esl", "-o", "generatedTestData/empty_w_empy.auth", "-f"], out, self ), True)
 
+	def test_remove(self):
+		out = "removelog.txt"
+		cmd = [SECTOOLS, "remove", "-v"]
+		inpDir = "testdata/"
+		timestamp = "2021-06-24T18:00:00"
+		for i in removeCommands:
+			self.assertEqual(getCmdResult(cmd + i[0], out, self), i[1])
+		# goal is to:
+		# create dictionary of serial numbers that map to private/public/esl 
+		# create a large KEK contianing all serial numbers in previous step
+		# select random entry from dictionary, sign a db update with it
+		# ensure this db update will be successful with secvarctl verify
+		# remove the selected entry from the KEK with output file and -w flag (ensure these two result in the same auth file)
+		# update the KEK with removed entry
+		# ensure the db update is no longer successful with secvarctl verify (since its signer has been removed)
+		required_auth_args = ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "KEK", "-t", timestamp]
+		required_path_args = ["-p", "testenv/"]
+		output_file = "generatedTestData/foo.auth"
+		output_file_esl = "generatedTestData/foo.esl"
+		test_auth = "generatedTestData/new_db.auth"
+		irrelevant_esl = "testdata/db_by_PK.esl" #this is just an ESL, nothing relvant about `db` by `PK` in filename
+		setupTestEnv()
+		# dictionary with serial # = [esl,crt, key]
+		serial_dict = {}
+		#loop through all ESL's contiaing an x509, add it to a dictionary with its public/private/esl files
+		for esl in os.listdir(inpDir):
+			if not esl.endswith(".esl") or esl.startswith("dbx") or esl.startswith("empty"):
+				continue;
+			esl = inpDir+esl
+			crt = esl[:-3] + "crt" #get new ESL's crt
+			key = esl[:-3] + "key" #get new ESL's key
+			# extract serial number from X509 in ESL
+			read_crt_output = subprocess.run([SECTOOLS, 'validate', '-v', '-c', crt], stdout=subprocess.PIPE).stdout.decode('utf-8')
+			if read_crt_output is None:
+				self.fail(f'could not extract serial number from {crt}')
+			serial = re.search(r'(?i)serial number\s*:\s+(\S+)', read_crt_output)
+			serial_dict[serial.group(1)] = [esl, crt, key]
+		#append all found esl's to one esl list, make sure it is valid, pretend it is our KEK
+		with open(output_file_esl, 'wb') as out_file:
+			for serial in serial_dict:
+				with open(serial_dict[serial][0], 'rb') as in_file:
+					out_file.write(in_file.read())
+		self.assertEqual(getCmdResult([SECTOOLS, 'validate', "-v", "-e", output_file_esl], out, self ), True)
+		self.assertEqual(getCmdResult(["cp", output_file_esl, "testenv/KEK/data"], out, self), True)
+		createSizeFile("testenv/KEK/")
 
+		# setup is done, we now have a KEK with many ESL's in it
+		# now we can test 'secvarctl remove'
+		for i in range(len(serial_dict)):
+			serial, files = random.choice(list(serial_dict.items()))
+			crt = files[1]
+			key = files[2]
+			self.assertEqual( getCmdResult(cmd + [ "-x", serial, "-w"] + required_path_args + required_auth_args, out, self), True)
+			# start side quest: make sure same result is achieved if ouptut to user defined file
+			self.assertEqual(getCmdResult(cmd + [ "-x", serial, "-o", output_file] + required_path_args + required_auth_args, out, self), True)
+			self.assertEqual(compareFiles("testenv/KEK/update", output_file), True)
+			#end side quest
+			#ensure signing was success
+			self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + [ "-u", "KEK", output_file], out, self), True)
+			# make db update signed with random entry in KEK
+			self.assertEqual(getCmdResult([SECTOOLS, "generate", "e:a", "-c", crt, "-k", key, "-n", "db", "-i", irrelevant_esl, "-o", test_auth ], out ,self), True)
+			#ensure that `verify` passes since update is signed by ESL in KEK
+			self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "db", test_auth], out, self), True)
+			#okay now make sure that test_auth DOES NOT verify if the new KEK is updated successfully so that
+			# the signer of test_auth is no longer an entry in KEK ESL chain
+			self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl], out, self), True)
+			#BUZZ BEE BOOP robot noises, pretend reboot w valid KEK update
+			self.assertEqual(getCmdResult(["cp", output_file_esl, "testenv/KEK/data"], out, self), True)
+			createSizeFile("testenv/KEK/")
+			#now verify should fail since db update is no longer signed by the latest entry in KEK
+			self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "db", test_auth], out, self), False)
+			command(["rm", output_file, output_file_esl, test_auth])
+			del serial_dict[serial]
 
+		# at this point the KEK should now be empty
+		final_KEK_size = subprocess.run(['cat', 'testenv/KEK/size'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+		self.assertEqual(final_KEK_size, '0')
+		setupTestEnv()
+
+		# extra test for dbx
+		#make new esl entry appended to current dbx
+		new_dbx_esl=inpDir+"dbx_by_PK.esl"
+		with open(output_file_esl, 'wb') as out_file:
+			for dbx_esl in ['testenv/dbx/data', new_dbx_esl]:
+					with open(dbx_esl, 'rb') as in_file:
+						out_file.write(in_file.read())
+		old_dbx_esl = "generatedTestData/old_dbx.esl"
+		self.assertEqual(getCmdResult(["cp", "testenv/dbx/data", old_dbx_esl], out, self), True)
+		self.assertEqual(getCmdResult(["cp", output_file_esl, "testenv/dbx/data"], out, self), True)
+		createSizeFile("testenv/dbx/")
+		# dbx now has two hashes in it
+		# we first need to extract them from the old values
+		read_dbx_output = subprocess.run([SECTOOLS, 'validate', '-v', '-x', '-e', old_dbx_esl], stdout=subprocess.PIPE).stdout.decode('utf-8')
+		if read_dbx_output is None:
+			self.fail(f'could not extract hash from {old_dbx_esl}')
+		old_dbx_hash = re.search(r'(?i)Hash\s*:\s+(\S+)', read_dbx_output).group(1)
+		read_dbx_output = subprocess.run([SECTOOLS, 'validate', '-v', '-x', '-e', new_dbx_esl], stdout=subprocess.PIPE).stdout.decode('utf-8')
+		if read_dbx_output is None:
+			self.fail(f'could not extract hash from {new_dbx_esl}')
+		new_dbx_hash = re.search(r'(?i)Hash\s*:\s+(\S+)', read_dbx_output).group(1)
+		# removing the recently added dbx entry, should result in an esl equivalent to the old dbx
+		self.assertEqual(getCmdResult(cmd + [ "-x", new_dbx_hash, "-o", output_file] + required_path_args + ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "dbx"], out, self), True)
+		#run `secvarctl verify` to ensure it would be successful
+		self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "dbx", output_file], out, self), True)
+		#the new ESL should equal the old ESL
+		self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl, "-n", "dbx"], out, self), True)
+		self.assertEqual(compareFiles(output_file_esl, old_dbx_esl), True)
+		# similarly, 
+		# removing the older dbx entry, should result in an esl equivalent to the newer dbx
+		self.assertEqual(getCmdResult(cmd + [ "-x", old_dbx_hash, "-o", output_file] + required_path_args + ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "dbx"], out, self), True)
+		#run `secvarctl verify` to ensure it would be successful
+		self.assertEqual(getCmdResult([SECTOOLS, "verify", "-v"] + required_path_args + ["-u", "dbx", output_file], out, self), True)
+		#the new ESL should equal the old ESL
+		self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl, "-n", "dbx"], out, self), True)
+		self.assertEqual(compareFiles(output_file_esl, new_dbx_esl), True)
+		# if we remove again we should have an empty ESL
+		self.assertEqual(getCmdResult(cmd + [ "-x", new_dbx_hash, "-e", output_file_esl, "-o", output_file] + required_path_args + ["-c", "testenv/PK/PK.crt", "-k", "testenv/PK/PK.key", "-n", "dbx"], out, self), True)
+		self.assertEqual(getCmdResult([SECTOOLS, "generate", "a:e", "-i", output_file, "-o", output_file_esl, "-n", "dbx"], out, self), True)
+		self.assertEqual(compareFiles(output_file_esl, inpDir+"empty.esl"), True)
+		setupTestEnv()
+		command(["rm", output_file, output_file_esl, old_dbx_esl])
 if __name__ == '__main__':
 	if "MEMCHECK" in sys.argv:
 	 	MEMCHECK = True
