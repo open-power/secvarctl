@@ -1,0 +1,21 @@
+name: Test Source Code Formatting
+
+on: ['push']
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+  
+    - name: install clang format
+      run: sudo apt install clang-format
+
+    - name: test if formatting is appropriate
+      run: |
+           make format
+           git status
+           git diff
+           [[ -z $(git status -s) ]]
