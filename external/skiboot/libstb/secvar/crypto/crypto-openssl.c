@@ -447,12 +447,28 @@ int crypto_x509_get_version(crypto_x509 *x509)
 
 int crypto_x509_is_RSA(crypto_x509 *x509)
 {
-	int pk_type;
-	pk_type = X509_get_signature_type(x509);
-	if (pk_type != EVP_PK_RSA)
-		return pk_type;
+	int rc, pk_type;
+	EVP_PKEY *pub = NULL;
+
+	pub = X509_get_pubkey(x509);
+	if (!pub) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to extract public key from x509\n");
+		return CERT_FAIL;
+	}
+	pk_type = EVP_PKEY_base_id(pub);
+	if (pk_type == NID_undef) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to extract key type from x509\n");
+		rc = CERT_FAIL;
+	}
+	else if (pk_type != EVP_PKEY_RSA)
+		rc = pk_type;
 	else
-		return SUCCESS;
+		rc = SUCCESS;
+
+	EVP_PKEY_free(pub);
+	return rc;
 }
 
 int crypto_x509_get_sig_len(crypto_x509 *x509)
