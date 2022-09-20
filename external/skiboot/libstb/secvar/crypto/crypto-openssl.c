@@ -176,6 +176,7 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
 
 	//verify on all signatures in pkcs7
 	num_signers = sk_PKCS7_SIGNER_INFO_num(PKCS7_get_signer_info(pkcs7));
+	rc = PKCS7_FAIL;
 	for (int s = 0; s < num_signers; s++) {
 		//make sure we can get the signature data
 		signer_info = sk_PKCS7_SIGNER_INFO_value(
