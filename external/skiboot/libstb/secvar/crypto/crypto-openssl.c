@@ -507,7 +507,6 @@ int crypto_x509_oid_is_pkcs1_sha256(crypto_x509 *x509)
 int crypto_x509_get_pk_bit_len(crypto_x509 *x509)
 {
 	EVP_PKEY *pub = NULL;
-	RSA *rsa = NULL;
 	int length;
 
 	pub = X509_get_pubkey(x509);
@@ -516,14 +515,39 @@ int crypto_x509_get_pk_bit_len(crypto_x509 *x509)
 		      "ERROR: Failed to extract public key from x509\n");
 		return CERT_FAIL;
 	}
+
+#if OPENSSL_VERSION_MAJOR < 3
+	RSA *rsa = NULL;
+
 	rsa = EVP_PKEY_get1_RSA(pub);
 	if (!rsa) {
 		prlog(PR_ERR,
 		      "ERROR: Failed to extract RSA information from public key of x509\n");
+		EVP_PKEY_free(pub);
 		return CERT_FAIL;
 	}
+
 	length = RSA_bits(rsa);
 	RSA_free(rsa);
+#else
+
+	if (EVP_PKEY_get_base_id(pub) != EVP_PKEY_RSA) {
+		prlog(PR_ERR,
+		"ERROR: Public key of x509 is not of type RSA\n");
+		EVP_PKEY_free(pub);
+		return CERT_FAIL;
+	}
+
+	length = EVP_PKEY_get_bits(pub);
+#endif
+	if (!length) {
+		prlog(PR_ERR,
+		      "ERROR: Failed to extract key length from RSA public key of x509\n");
+		EVP_PKEY_free(pub);
+		return CERT_FAIL;
+	}
+
+
 	EVP_PKEY_free(pub);
 	return length;
 }
