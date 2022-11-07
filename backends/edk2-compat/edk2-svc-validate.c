@@ -46,8 +46,8 @@ int performValidation(int argc, char *argv[])
 		{ "cert", 'c', 0, 0, "file is an x509 cert (DER or PEM format)" },
 		{ "auth", 'a', 0, 0,
 		  "file is a properly generated authenticated variable, DEFAULT" },
-		{ "dbx", 'x', 0, 0,
-		  "file is for the dbx (allows for data to contain a hash not an x509), Note: user still should specify the file type" },
+		{ "var", 'n', "VAR_NAME", 0,
+		  "name of a secure boot variable, used when validating an CERT/ESL/Auth file."},
 		{ "help", '?', 0, 0, "Give this help list", 1 },
 		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{ 0 }
@@ -119,8 +119,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		verbose = PR_DEBUG;
 		break;
 	// set varname as dbx, important for validating ESL
-	case 'x':
-		args->varName = "dbx";
+	case 'n':
+		args->varName = arg;
 		break;
 	case 'a':
 		args->inForm = AUTH_FILE;
@@ -144,6 +144,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			break;
 		if (!args->inFile)
 			prlog(PR_ERR, "ERROR: missing input file, see usage...\n");
+		else if (args->varName && isVariable(args->varName))
+			prlog(PR_ERR, "ERROR: %s is not a valid variable name\n", args->varName);
 		else
 			break;
 		argp_usage(state);
@@ -161,7 +163,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
  *given an pointer to auth data, determines if containing fields, pkcs7,esl and certs are valid
  *@param authBuf pointer to auth file data
  *@param buflen length of buflen
- *@param key, variable name {"db","dbx","KEK", "PK"} b/c dbx is a different format
+ *@param key, variable name {"sbat","db","dbx","KEK", "PK"} b/c dbx is a different format
  *@return PKCS7_FAIL if validate validatePKCS7 returns PKCS7_FAIL
  *@return whatever is returned from validateESl
  */
@@ -296,7 +298,7 @@ out:
  *gets ESL from ESL data buffer and validates ESL fields and contained certificates, expects chained esl's each with one certificate
  *@param eslBuf pointer to ESL all ESL data, could be appended ESL's
  *@param buflen length of eslBuf
- *@param key, variable name {"db","dbx","KEK", "PK"} b/c dbx is a different format
+ *@param key, variable name {"sbat","db","dbx","KEK", "PK"} b/c dbx is a different format
  *@return ESL_FAIL if the less than one ESL could be validated
  *@return CERT_FAIL if validateCertificate fails
  *@return SUCCESS if at least one ESL validates
@@ -332,13 +334,42 @@ int validateESL(const unsigned char *eslBuf, size_t buflen, const char *key)
 	return SUCCESS;
 }
 
+static int validate_sbat (uint8_t *sbat_data)
+{
+        char *new_line = NULL, *context = NULL;
+        char *data = strdup((char*)sbat_data);
+        int number_of_commas = 0, i =0;
+
+        for (new_line = strtok_r(data, "\n", &context);
+              new_line != NULL;
+              new_line = strtok_r(NULL, "\n", &context)) {
+
+                number_of_commas = 0;
+                i = 0;
+                while (new_line[i] != '\0') {
+                        if (new_line[i] == ',')
+                                number_of_commas++;
+			i++;
+                }
+
+		if (number_of_commas != 1) {
+			free(data);
+			return 0;
+		}
+	}
+
+	free(data);
+
+	return 1;
+}
+
 /*
  *checks fields of the struct to ensure that the buffer was correctly into a sig list
  *for now, only checks that sizes of field are valid
  *@param bytesRead will be filled with the number of bytes read during this function (eslsize)
  *@param esl, pointer to start of esl
  *@param eslvarsize, remaining size of eslbuf
- *@param varName, variable name {"db","dbx","KEK", "PK"} b/c dbx is a different format
+ *@param varName, variable name {"sbat","db","dbx","KEK", "PK"} b/c dbx is a different format
  *@return SUCCESS if cetificate and header info is valid, errno otherwise
  */
 static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size_t eslvarsize,
@@ -429,6 +460,17 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 			prlog(PR_INFO, "\tHash: ");
 			printHex(cert, cert_size);
 		}
+	}else if (varName && !strcmp(varName, "sbat")) {
+		if (!validate_sbat(cert)) {
+			prlog(PR_ERR,
+			      "ERROR: sbat data format is invalid\n");
+			rc = SBAT_FAIL;
+		} else
+			rc = SUCCESS;
+
+		if (verbose >= PR_INFO) {
+			prlog(PR_INFO, "\tSBAT: \n%s\n", cert);
+		}
 	} else {
 		rc = validateCert(cert, cert_size, varName);
 	}
@@ -454,7 +496,7 @@ static bool validate_hash(uuid_t type, size_t size)
  *parses x509 certficate buffer into certificate and verifies it
  *@param certBuf pointer to certificate data
  *@param buflen length of certBuf
- *@param varName,  variable name {"db","dbx","KEK", "PK"} b/c db allows for any RSA len, if NULL expect RSA-2048
+ *@param varName,  variable name {"sbat","db","dbx","KEK", "PK"} b/c db allows for any RSA len, if NULL expect RSA-2048
  *@return CERT_FAIL if certificate had incorrect data
  *@return SUCCESS if certificate is valid
  */
@@ -485,7 +527,7 @@ out:
 /**
  *takes a pointer to the x509 struct and validates the content for secvar specific requirements
  *@param x509, a pointer to either an openssl or a mbedtls x509 struct, already filled with data
- *@param varName ,  variable name {"db","dbx","KEK", "PK"} b/c db allows for any RSA len, if NULL expect RSA-2048
+ *@param varName ,  variable name {"sbat","db","dbx","KEK", "PK"} b/c db allows for any RSA len, if NULL expect RSA-2048
  *@return SUCCESS or errno depending on if x509 is valid
  */
 static int validateCertStruct(crypto_x509 *x509, const char *varName)
@@ -621,7 +663,7 @@ int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen)
 	prlog(PR_INFO, "Failed to parse x509 as DER, trying PEM...\n");
 	// if failed, maybe input is PEM and so try converting PEM to DER, if conversion fails then we know it was DER and it failed
 	*x509 = parseX509_PEM(certBuf, buflen);
-	if (!x509) {
+	if (!*x509) {
 		prlog(PR_ERR, "ERROR: Failed to parse x509 (tried DER and PEM formats). \n");
 		return CERT_FAIL;
 	}

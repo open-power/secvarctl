@@ -16,7 +16,7 @@
 static int readFiles(const char *var, const char *file, int hrFlag, const char *path);
 static int printReadable(const char *c, size_t size, const char *key);
 static int readFileFromSecVar(const char *path, const char *variable, int hrFlag);
-static int readFileFromPath(const char *path, int hrFlag);
+static int readFileFromPath(const char *path, int hrFlag, const char *var);
 static int getSizeFromSizeFile(size_t *returnSize, const char *path);
 static int readTS(const char *data, size_t size);
 
@@ -47,7 +47,7 @@ int performReadCommand(int argc, char *argv[])
 		{ "verbose", 'v', 0, 0, "print more verbose process information" },
 		{ "file", 'f', "FILE", 0, "navigates to ESL file from working directiory" },
 		{ "path", 'p', "PATH", 0,
-		  "looks for key directories {'PK','KEK','db','dbx', 'TS'} in PATH, default is " SECVARPATH },
+		  "looks for key directories {'PK','KEK','db','dbx', 'sbat', 'TS'} in PATH, default is " SECVARPATH },
 		{ "help", '?', 0, 0, "Give this help list", 1 },
 		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{ 0 }
@@ -56,11 +56,11 @@ int performReadCommand(int argc, char *argv[])
 	struct argp argp = {
 		options, parse_opt, "[VARIABLE]",
 		"This program command is created to easily view secure variables. The current variables"
-		" that are able to be observed are the PK, KEK, db, dbx, TS. If no options are"
+		" that are able to be observed are the PK, KEK, db, dbx, sbat, TS. If no options are"
 		" given, then the information for the keys in the default path will be printed."
 		" If the user would like to print the information for another ESL file,"
 		" then the '-f' command would be appropriate."
-		"\vvalues for [VARIABLES] = {'PK','KEK','db','dbx', 'TS'} type one of the following to get info on that key, default is all. NOTE does not work when -f option is present"
+		"\vvalues for [VARIABLES] = {'PK','KEK','db','dbx', 'sbat', 'TS'} type one of the following to get info on that key, default is all. NOTE does not work when -f option is present"
 	};
 	rc = argp_parse(&argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
 	if (rc || args.helpFlag)
@@ -123,7 +123,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
  *@param var  string to variable wanted if <variable> option is given, NULL if not
  *@param file string to filename with path if -f option, NULL if not
  *@param hrFLag 1 if -hr for human readable output, 0 for raw data
- *@param path string to path where {PK,KEK,db,dbx,TS} subdirectories are, default SECVARPATH if none given
+ *@param path string to path where {PK,KEK,db,dbx,sbat,TS} subdirectories are, default SECVARPATH if none given
  *@return succcess if at least one file was successfully read
  */
 static int readFiles(const char *var, const char *file, int hrFlag, const char *path)
@@ -154,7 +154,7 @@ static int readFiles(const char *var, const char *file, int hrFlag, const char *
 				successCount++;
 		}
 	} else {
-		rc = readFileFromPath(file, hrFlag);
+		rc = readFileFromPath(file, hrFlag, var);
 		if (rc == SUCCESS)
 			successCount++;
 	}
@@ -170,7 +170,7 @@ static int readFiles(const char *var, const char *file, int hrFlag, const char *
 /**
  *Does the appropriate read command depending on hrFlag on the file <path>/<var>/data
  *@param path , the path to the file with ending '/'
- *@param variable , variable name one of {db,dbx,KEK,PK,TS}
+ *@param variable , variable name one of {sbat,db,dbx,KEK,PK,TS}
  *@param hrFlag, 1 for human readable 0 for raw data
  *@return SUCCESS or error number
  */
@@ -225,7 +225,7 @@ out:
  *@param hrFlag, 1 for human readable 0 for raw data
  *@return SUCCESS or error number
  */
-static int readFileFromPath(const char *file, int hrFlag)
+static int readFileFromPath(const char *file, int hrFlag, const char *var)
 {
 	int rc;
 	size_t size = 0;
@@ -235,7 +235,7 @@ static int readFileFromPath(const char *file, int hrFlag)
 		return INVALID_FILE;
 	}
 	if (hrFlag) {
-		rc = printReadable(c, size, NULL);
+		rc = printReadable(c, size, var);
 		if (rc)
 			prlog(PR_WARNING, "ERROR: Could not parse file\n");
 		else
@@ -252,7 +252,7 @@ static int readFileFromPath(const char *file, int hrFlag)
 /**
  *gets the secvar struct from a file
  *@param var , returned secvar
- *@param name , secure variable name {db,dbx,KEK,PK}
+ *@param name , secure variable name {sbat,db,dbx,KEK,PK}
  *@param fullPath, file and path <path>/<varname>/data
  *NOTE: THIS IS ALLOCATING DATA AND var STILL NEEDS TO BE DEALLOCATED
  */
@@ -322,7 +322,7 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
  *prints human readable data in of ESL buffer
  *@param c , buffer containing ESL data
  *@param size , length of buffer
- *@param key, variable name {"db","dbx","KEK", "PK"} b/c dbx is a different format
+ *@param key, variable name {"sbat","db","dbx","KEK", "PK"} b/c dbx is a different format
  *@return SUCCESS or error number if failure
  */
 static int printReadable(const char *c, size_t size, const char *key)
@@ -374,6 +374,8 @@ static int printReadable(const char *c, size_t size, const char *key)
 		if (key && !strcmp(key, "dbx")) {
 			printf("\tHash: ");
 			printHex(cert, cert_size);
+		} else if (key && !strcmp(key, "sbat")) {
+			printf("\tFound sbat Info:\n%s\n", cert);
 		} else {
 			rc = parseX509(&x509, cert, (size_t)cert_size);
 			if (rc)

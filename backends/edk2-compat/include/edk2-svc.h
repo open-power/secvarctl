@@ -24,7 +24,7 @@
 #define variables                                                                                  \
 	(char *[])                                                                                 \
 	{                                                                                          \
-		"PK", "KEK", "db", "dbx", "TS"                                                     \
+		"PK", "KEK", "db", "dbx", "sbat", "TS"                                             \
 	}
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 #define uuid_equals(a, b) (!memcmp(a, b, UUID_SIZE))
