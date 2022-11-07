@@ -48,11 +48,13 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
      - From an x509 : `$secvarctl generate c:e -i <inputCert> -o <out.esl>`  
      - From a hash: `$secvarctl generate h:e -h <hashAlgUsed> -i <inputHash> -o <out.esl>`  
      - From a generic file (hash done internally) : `$secvarctl generate f:e -h <hashAlgToUse> -i <inputFile> -o <out.esl>`   
+     - From a sbat file : `$secvarctl generate f:e -i <inputFile> -o <out.esl> -n sbat`
    + Signed Auth File (EXPERIMENTAL):    
      - From an ESL: `$secvarctl generate e:a -k <signerPrivate.key> -c <signerPublic.crt> -n <varName> -i <inputESL> -o <out.auth> `   
      - From an x509 (ESL created internally): `$secvarctl generate c:a -k <signerPrivate.key> -c <signerPublic.crt> -n <varName> -i <inputCert> -o <out.auth> `   
      - From a hash (ESL created internally): `$secvarctl generate h:a -k <signerPrivate.key> -c <signerPublic.crt> -n <varName> -h <hashAlgUsed> -i <inputHash> -o <out.auth> `   
      - From a file (hash->ESL created internally): `$secvarctl generate f:a -k <signerPrivate.key> -c <signerPublic.crt> -n <varName> -h <hashAlgUsed> -i <inputFile> -o <out.auth> `  
+     - From a sbat file (ESL created internally): `$secvarctl generate f:a -k <signerPrivate.key> -c <signerPublic.crt> -n sbat -i <inputFile> -o <out.auth> `
      - To create a variable reset file: `$secvarctl generate reset -k <signerPrivate.key> -c <signerPublic.crt> -n <varName> -o <out.auth> `
 
 
@@ -72,15 +74,15 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		--help
 		-r , raw output
 		-f <input.esl> , read from file
-		-p </path/to/vars/> , read from path (subdirectories {"PK", "KEK, "db", "dbx", "TS"} each with files {"data", "size"} expected)
-		[variable] , one of {"PK", "KEK, "db", "dbx", "TS"}
+		-p </path/to/vars/> , read from path (subdirectories {"PK", "KEK, "db", "dbx", "sbat", "TS"} each with files {"data", "size"} expected)
+		[variable] , one of {"PK", "KEK, "db", "dbx", "sbat", "TS"}
 		
        The read command will read from the secure variable directory and print out information on their current contents.
        By default, the program assumes the data is an EFI Signature List and prints the contents in human readable form.  
        To print the raw data, use "-r".
        The default secure variable directiory is "/sys/firmware/secvar/vars/"
-       To specify a path to the variables, use "-p <newPath>".Expected variable subdirectory names :{"PK", "KEK", "db", "dbx", "TS"} with contained data file "<varName>/data"
-       If no variable name is given, the program will try to print the data for any variable named one of the following 	{'PK','KEK','db','dbx','TS'}	
+       To specify a path to the variables, use "-p <newPath>".Expected variable subdirectory names :{"PK", "KEK", "db", "dbx", "sbat", "TS"} with contained data file "<varName>/data"
+       If no variable name is given, the program will try to print the data for any variable named one of the following 	{'PK','KEK','db','dbx', 'sbat', 'TS'}
        Type one of the variable names to get info on that key, NOTE does not work when -f option is present NOTE 'TS' variable is not an ESL, it is 4 timestamps (64 bytes total) for each of the other variables
        To read the data of any esl file use "-f <eslFileName>"
        
@@ -118,7 +120,7 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		--usage
 		--help
 		-v , verbose output
-		-x , filetype is for a dbx update, allows data to contain a hash not an x509
+		-n <varName> , name of secure boot variable, used when validating CERT/ESL/Auth file.
 	
          The validate command will print "SUCCESS" or "FAILURE" depending if the format and basic content requirements are met for the given file
         The default type of "<file>" is an auth file containing a PKCS7/Signed Data and attatched esl.
@@ -172,7 +174,7 @@ For any questions regarding secvarctl, feel free to reach out: [Nick Child](nick
 		--usage
 		--help
 		-v , verbose, gives process info
-		-n <varName> , name of secure boot variable, used when generating an auth file, PKCS7, or when the input file contains hashed data rather than x509 (use '-n dbx'), current <varName> are: {'PK','KEK','db','dbx'}
+		-n <varName> , name of secure boot variable, used when generating an auth file, PKCS7, or when the input file contains hashed data rather than x509 (use '-n dbx'), current <varName> are: {'PK','KEK','db','dbx', 'sbat'}
 		-f force generation, skips validation of input file, assumes format to be correct
 		-t <time> , where <time> is of the format described below. creates a custom timestamp used when generating an auth or PKCS7 file, if not given then current time is used, all times are in UTC
                     format of <time> = 'YYYY-MM-DDThh:mm:ss' where:

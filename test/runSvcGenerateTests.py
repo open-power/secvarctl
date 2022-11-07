@@ -156,11 +156,11 @@ class Test(unittest.TestCase):
 			#first do it with file to has to ESL
 			self.assertEqual( getCmdResult(cmd + ["f:h", "-i", "./testdata/" + efiGen + ".crt", "-o" ,hashMade], out, self), True) #assert the hashfile can be made
 			self.assertEqual( getCmdResult(cmd + ["h:e", "-i", hashMade, "-o" , eslMade], out, self), True) #assert the ESL is valid
-			self.assertEqual( getCmdResult([SECTOOLS ,"validate", "-e", "-x", eslMade], out, self), True) #assert the ESL is correctly formated
+			self.assertEqual( getCmdResult([SECTOOLS ,"validate", "-e", "-n", "dbx", eslMade], out, self), True) #assert the ESL is correctly formated
 			# self.assertEqual( compareFile(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 			#then do it with the file to ESL (hash generation done internally)
 			self.assertEqual( getCmdResult(cmd + ["f:e", "-i", "./testdata/" + efiGen + ".crt", "-o" ,eslMade], out, self), True) #assert the esl can be made from a file
-			self.assertEqual( getCmdResult([SECTOOLS ,"validate", "-e", "-x", eslMade], out, self), True) #assert the ESL is correctly formated
+			self.assertEqual( getCmdResult([SECTOOLS ,"validate", "-e", "-n", "dbx", eslMade], out, self), True) #assert the ESL is correctly formated
 			# self.assertEqual( compareFile(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 	def test_genEsl(self):
 			out = "genEslLog.txt"
@@ -236,14 +236,14 @@ class Test(unittest.TestCase):
 
 			#all files should be valid format, check if dbx though
 			if i[1] =="dbx":
-				self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", genE2A], out, self), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "validate", "-n", i[1], genE2A], out, self), True)
 				#validate pkcs7
-				self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", "-p", genE2P], out, self), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "validate", "-n", i[1], "-p", genE2P], out, self), True)
 				#validate auth/pkcs7 from certs
 				if not i[0].startswith("empty"):
-					self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", genC2A], out, self), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "validate", "-n", i[1], genC2A], out, self), True)
 					#validate pkcs7
-					self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", "-p", genC2P], out, self), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "validate", "-n", i[1], "-p", genC2P], out, self), True)
 			else:
 				self.assertEqual( getCmdResult([SECTOOLS, "validate", genE2A], out, self), True)
 				#validate pkcs7

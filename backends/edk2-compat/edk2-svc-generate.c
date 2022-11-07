@@ -93,7 +93,7 @@ int performGenerateCommand(int argc, char *argv[])
 		{ "var", 'n', "VAR_NAME", 0,
 		  "name of a secure boot variable, used when generating an PKCS7/Auth file."
 		  " Also, when an ESL or Auth file contains hashed data use '-n dbx'."
-		  " currently accepted values: {'PK','KEK','db','dbx'}" },
+		  " currently accepted values: {'PK','KEK','db','dbx', 'sbat'}" },
 		{ "alg", 'h', "HASH_ALG", 0,
 		  "hash function, use when '[h]ash' is input/output format."
 		  " currently accepted values: {'SHA256', 'SHA224', 'SHA1', 'SHA384', 'SHA512'}, Default is 'SHA256'" },
@@ -155,6 +155,8 @@ int performGenerateCommand(int argc, char *argv[])
 		"\t'... e:a -k <file> -c <file> -n <varName> -i <file> -o <file>'\n"
 		"  -create an auth file from an x509:\n"
 		"\t'... c:a -k <file> -c <file> -n <varName> -i <file> -o <file>'\n"
+		"  -create an auth file from sbat file:\n"
+		"\t'... f:a -k <file> -c <file> -n sbat -i <file> -o <file>'\n"
 		"  -create a valid dbx update (auth) file from a binary file:\n"
 		"\t'... f:a -h <hashAlg> -k <file> -c <file> -n dbx -i <file> -o <file>'\n"
 		"  -retrieve the ESL from an auth file:\n"
@@ -562,6 +564,10 @@ static int generateESL(const unsigned char *buff, size_t size, struct Arguments 
 
 	switch (args->inForm[0]) {
 	case 'f':
+		if (args->varName != NULL && key_equals(args->varName, "sbat")) {
+			rc = SUCCESS;
+			break;
+		}
 		rc = crypto_md_generate_hash(buff, size, hashFunct->crypto_md_funct,
 					     &intermediateBuff, &intermediateBuffSize);
 		if (rc != CRYPTO_SUCCESS) {
@@ -972,6 +978,8 @@ static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const u
 		guid = EFI_GLOBAL_VARIABLE_GUID;
 	else if (key_equals(args->varName, "db") || key_equals(args->varName, "dbx"))
 		guid = EFI_IMAGE_SECURITY_DATABASE_GUID;
+	else if (args->varName != NULL && key_equals(args->varName, "sbat"))
+		guid = SBAT_VENDOR_GUID;
 	else {
 		prlog(PR_ERR, "ERROR: unknown update variable %s\n", args->varName);
 		rc = ARG_PARSE_FAIL;

@@ -209,7 +209,6 @@ class Test(unittest.TestCase):
 			with open(out, "w") as f:
 				f.write("POWER SECVAR LOCATION ( "+ SECVARPATH  + " ) DOES NOT EXIST SO NO TESTS RAN\n")
 				f.close();
-
 	def test_verify(self):
 		out="verifylog.txt"
 		cmd=[SECTOOLS, "verify"]
@@ -233,14 +232,14 @@ class Test(unittest.TestCase):
 				
 				self.assertEqual( getCmdResult(cmd+[file],out, self), True)
 			else:
-				self.assertEqual( getCmdResult(cmd+[file, "-x"],out, self), True)
+				self.assertEqual( getCmdResult(cmd+[file, "-n", i[1]],out, self), True)
 		for i in goodESLs:
 			file="./testdata/"+i[0]
 			if i[1] != "dbx":
 				file="./testdata/"+i[0]
 				self.assertEqual( getCmdResult(cmd+["-e",file],out, self), True)
 			else:
-				self.assertEqual( getCmdResult(cmd+["-e", file, "-x"],out, self), True)
+				self.assertEqual( getCmdResult(cmd+["-e", file, "-n", i[1]],out, self), True)
 		for i in goodCRTs:
 			file="./testdata/"+i[0]
 			self.assertEqual( getCmdResult(cmd+["-v","-c",file],out, self), True)
@@ -297,4 +296,3 @@ if __name__ == '__main__':
 	setupArrays()
 	setupTestEnv()
 	unittest.main()
-    
