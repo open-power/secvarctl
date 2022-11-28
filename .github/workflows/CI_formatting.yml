@@ -1,6 +1,6 @@
 name: Test Source Code Formatting
 
-on: ['push']
+on: ['push', 'pull_request']
 
 jobs:
   build:
