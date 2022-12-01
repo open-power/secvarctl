@@ -375,7 +375,8 @@ static int printReadable(const char *c, size_t size, const char *key)
 			printf("\tHash: ");
 			printHex(cert, cert_size);
 		} else if (key && !strcmp(key, "sbat")) {
-			printf("\tFound sbat Info:\n%s\n", cert);
+			printf("\tFound sbat Info: ");
+			printRaw((char *)cert, cert_size);
 		} else {
 			rc = parseX509(&x509, cert, (size_t)cert_size);
 			if (rc)

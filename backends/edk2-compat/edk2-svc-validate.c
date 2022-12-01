@@ -18,6 +18,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state);
 static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size_t eslvarsize,
 			       const char *varName);
 static int validateCertStruct(crypto_x509 *x509, const char *varName);
+static int validate_sbat(const uint8_t *sbat_data, size_t sbat_len);
 
 enum fileTypes { AUTH_FILE = 'a', PKCS7_FILE = 'p', ESL_FILE = 'e', CERT_FILE = 'c' };
 
@@ -47,7 +48,7 @@ int performValidation(int argc, char *argv[])
 		{ "auth", 'a', 0, 0,
 		  "file is a properly generated authenticated variable, DEFAULT" },
 		{ "var", 'n', "VAR_NAME", 0,
-		  "name of a secure boot variable, used when validating an CERT/ESL/Auth file."},
+		  "name of a secure boot variable, used when validating an CERT/ESL/Auth file." },
 		{ "help", '?', 0, 0, "Give this help list", 1 },
 		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{ 0 }
@@ -334,32 +335,18 @@ int validateESL(const unsigned char *eslBuf, size_t buflen, const char *key)
 	return SUCCESS;
 }
 
-static int validate_sbat (uint8_t *sbat_data)
+static int validate_sbat(const uint8_t *sbat_data, size_t sbat_len)
 {
-        char *new_line = NULL, *context = NULL;
-        char *data = strdup((char*)sbat_data);
-        int number_of_commas = 0, i =0;
-
-        for (new_line = strtok_r(data, "\n", &context);
-              new_line != NULL;
-              new_line = strtok_r(NULL, "\n", &context)) {
-
-                number_of_commas = 0;
-                i = 0;
-                while (new_line[i] != '\0') {
-                        if (new_line[i] == ',')
-                                number_of_commas++;
-			i++;
-                }
-
-		if (number_of_commas != 1) {
-			free(data);
-			return 0;
+	int number_of_commas = 0;
+	for (size_t i = 0; i < sbat_len; i++) {
+		if (sbat_data[i] == ',')
+			number_of_commas++;
+		if (sbat_data[i] == '\n') {
+			if (number_of_commas != 1)
+				return 0;
+			number_of_commas = 0;
 		}
 	}
-
-	free(data);
-
 	return 1;
 }
 
@@ -460,16 +447,16 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 			prlog(PR_INFO, "\tHash: ");
 			printHex(cert, cert_size);
 		}
-	}else if (varName && !strcmp(varName, "sbat")) {
-		if (!validate_sbat(cert)) {
-			prlog(PR_ERR,
-			      "ERROR: sbat data format is invalid\n");
+	} else if (varName && !strcmp(varName, "sbat")) {
+		if (!validate_sbat(cert, cert_size)) {
+			prlog(PR_ERR, "ERROR: sbat data format is invalid\n");
 			rc = SBAT_FAIL;
 		} else
 			rc = SUCCESS;
 
 		if (verbose >= PR_INFO) {
-			prlog(PR_INFO, "\tSBAT: \n%s\n", cert);
+			prlog(PR_INFO, "\tSBAT: ");
+			printRaw((char *)cert, cert_size);
 		}
 	} else {
 		rc = validateCert(cert, cert_size, varName);

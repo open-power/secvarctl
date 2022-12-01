@@ -531,9 +531,9 @@ static int generateAuthOrPKCS7(const unsigned char *buff, size_t size, struct Ar
 
 	if (rc) {
 		prlog(PR_ERR, "Failed to generate %s file, use `--help` for more info\n",
-		      args->outForm[0] == 'a' ?
-			      "Auth" :
-			      args->outForm[0] == 'x' ? "pre-signed hash" : "PKCS7");
+		      args->outForm[0] == 'a' ? "Auth" :
+		      args->outForm[0] == 'x' ? "pre-signed hash" :
+						      "PKCS7");
 		goto out;
 	}
 out:
