@@ -1,8 +1,12 @@
-// SPDX-License-Identifier: Apache-2.0
-/* Copyright 2021 IBM Corp.*/
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright 2021 IBM Corp.
+ */
 #ifndef ERR_H
 #define ERR_H
-enum errors {
+
+enum errors
+{
 	SUCCESS = 0,
 	AUTH_FAIL = -1,
 	PKCS7_FAIL = -2,
@@ -17,4 +21,5 @@ enum errors {
 	ALLOC_FAIL = -11,
 	UNKNOWN_COMMAND = -12
 };
+
 #endif

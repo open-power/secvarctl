@@ -8,7 +8,7 @@
 #include <stdlib.h> // for exit
 #include <argp.h>
 #include "secvarctl.h"
-#include "backends/edk2-compat/include/edk2-svc.h"
+#include "host_svc_backend.h"
 
 static int updateSecVar(const char *var, const char *authFile, const char *path, int force);
 
@@ -24,7 +24,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state);
  *@param argc, number of argument
  *@param arv, array of params
  *@return SUCCESS or err number
-*/
+ */
 int performWriteCommand(int argc, char *argv[])
 {
 	int rc;
@@ -32,7 +32,7 @@ int performWriteCommand(int argc, char *argv[])
 		.helpFlag = 0, .inpValid = 0, .pathToSecVars = NULL, .inFile = NULL, .varName = NULL
 	};
 	// combine command and subcommand for usage/help messages
-	argv[0] = "secvarctl write";
+	argv[0] = "secvarctl -m host write";
 
 	struct argp_option options[] = {
 		{ "verbose", 'v', 0, 0, "print more verbose process information" },
@@ -46,8 +46,10 @@ int performWriteCommand(int argc, char *argv[])
 
 	struct argp argp = {
 		options, parse_opt, "<VARIABLE> <AUTH_FILE>",
-		"This command updates a given secure variable with a new key contained in an auth file"
-		" It is recommended that 'secvarctl verify' is tried on the update file before submitting."
+		"This command updates a given secure variable with a new key contained in "
+		"an auth file"
+		" It is recommended that 'secvarctl verify' is tried on the update file "
+		"before submitting."
 		" This will ensure that the submission will be successful upon reboot."
 		"\vvalues for <VARIABLE> = type one of {'PK','KEK','db','dbx'}\n"
 		"<AUTH_FILE> must be a properly generated authenticated variable file"
@@ -69,7 +71,7 @@ out:
 /**
  *@param key , every option that is parsed has a value to identify it
  *@param arg, if key is an option than arg will hold its value ex: -<key> <arg>
- *@param state,  argp_state struct that contains useful information about the current parsing state 
+ *@param state,  argp_state struct that contains useful information about the current parsing state
  *@return success or errno
  */
 static int parse_opt(int key, char *arg, struct argp_state *state)
@@ -113,8 +115,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			prlog(PR_ERR, "ERROR: Unrecognized variable name %s, see usage...\n",
 			      args->varName);
 		else if (strcmp(args->varName, "TS") == 0)
-			prlog(PR_ERR,
-			      "ERROR: Cannot update TimeStamp (TS) variable, see usage...\n");
+			prlog(PR_ERR, "ERROR: Cannot update TimeStamp (TS) variable, see "
+				      "usage...\n");
 		else
 			break;
 		argp_usage(state);
@@ -162,13 +164,13 @@ static int updateSecVar(const char *varName, const char *authFile, const char *p
 	}
 
 	// get data to write, if force flag then validate the data is an auth file
-	buff = (unsigned char *)getDataFromFile(authFile, SIZE_MAX, &size);
+	buff = (unsigned char *) get_data_from_file (authFile, SIZE_MAX, &size);
 	// if we are validating and validating fails, quit
 	if (!force) {
 		rc = validateAuth(buff, size, varName);
 		if (rc) {
-			prlog(PR_ERR,
-			      "ERROR: validating update file (Signed Auth) failed, not updating\n");
+			prlog(PR_ERR, "ERROR: validating update file (Signed Auth) failed, "
+				      "not updating\n");
 			free(buff);
 			return rc;
 		}
@@ -206,7 +208,7 @@ int updateVar(const char *path, const char *var, const unsigned char *buff, size
 	strcat(fullPathWithCommand, var);
 	strcat(fullPathWithCommand, "/update");
 
-	rc = writeData(fullPathWithCommand, (const char *)buff, size);
+	rc = write_data_to_file (fullPathWithCommand, (const char *)buff, size);
 	free(fullPathWithCommand);
 
 	return rc;

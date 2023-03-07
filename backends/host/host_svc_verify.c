@@ -6,9 +6,9 @@
 #include <fcntl.h> // O_RDONLY
 #include <unistd.h> // has read/open functions
 #include <argp.h>
-#include "external/skiboot/include/opal-api.h"
-#include "external/skiboot/libstb/secvar/secvar.h"
-#include "backends/edk2-compat/include/edk2-svc.h"
+#include "opal-api.h"
+#include "secvar/secvar.h"
+#include "host_svc_backend.h"
 
 struct Arguments {
 	int helpFlag, writeFlag, currVarCount, updateVarCount;
@@ -32,11 +32,11 @@ static void printBanks(struct list_head *variable_bank, struct list_head *update
 static int commitUpdateBank(struct list_head *update_bank, const char *path);
 
 /**
-*performs verification command, called from main
-*@param argc number of items in arg command
-*@param argv arguments array
-*@return SUCCESS if everything works, error code if not
-*/
+ *performs verification command, called from main
+ *@param argc number of items in arg command
+ *@param argv arguments array
+ *@return SUCCESS if everything works, error code if not
+ */
 int performVerificationCommand(int argc, char *argv[])
 {
 	int rc;
@@ -48,13 +48,13 @@ int performVerificationCommand(int argc, char *argv[])
 				  .updateVars = NULL,
 				  .currentVars = 0 };
 	// combine command and subcommand for usage/help messages
-	argv[0] = "secvarctl verify";
+	argv[0] = "secvarctl -m host verify";
 
 	struct argp_option options[] = {
 		{ "verbose", 'v', 0, 0, "print more verbose process information" },
 		{ "path", 'p', "PATH", 0,
-		  "manually set path to current variables, looks for .../<var>/data file in PATH, default is " SECVARPATH
-		  " . Cannot be used with `-c` " },
+		  "manually set path to current variables, looks for .../<var>/data file "
+		  "in PATH, default is " SECVARPATH " . Cannot be used with `-c` " },
 		{ "current", 'c', "{CURRENT VAR LIST}", 0,
 		  "manually set current vars to be contents of CURRENT VAR LIST (see below for format)" },
 		{ "write", 'w', 0, 0,
@@ -69,19 +69,23 @@ int performVerificationCommand(int argc, char *argv[])
 	struct argp argp = {
 		options, parse_opt, "-u {UPDATE LIST}",
 		"This command ensures that the proposed variable updates are"
-		" correctly signed by the current variables. If successful, then the user can run the same"
-		" command with the '-w' flag or use 'secvarctl write' to submit the updates to be"
+		" correctly signed by the current variables. If successful, then the user "
+		"can run the same"
+		" command with the '-w' flag or use 'secvarctl write' to submit the "
+		"updates to be"
 		" committed upon reboot\v"
 		"UPDATE LIST:\nAt least one variable-file pair is required. Formatted as:"
 		" ' -u <varName_1> <authFileForVar_1> <varName_2> <authFileForVar_2> ... '"
 		" Where <varName> is one of {'PK','KEK','db','dbx'}"
-		" and <authFileForVar> is a properly generated authenticated variable file that is"
+		" and <authFileForVar> is a properly generated authenticated variable file "
+		"that is"
 		" signed by a current variable with priviledges to approve the update\n\n"
 		"CURRENT_VAR_LIST:\nOptional, only used when -c is used. Formatted as:"
 		" ' -c <varName_1> <eslFileForVar_1> <varName_2> <eslFileForVar_2> ... '"
 		" Where <varName> is one of {'PK','KEK','db','dbx', 'TS'} and"
 		" <eslFileForVar> is an EFI Signature List."
-		" unless variable is TS (in which case it would contain 4 16 byte timestamps)"
+		" unless variable is TS (in which case it would contain 4 16 byte "
+		"timestamps)"
 	};
 
 	rc = argp_parse(&argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
@@ -106,7 +110,7 @@ out:
 /**
  *@param key , every option that is parsed has a value to identify it
  *@param arg, if key is an option than arg will hold its value ex: -<key> <arg>
- *@param state,  argp_state struct that contains useful information about the current parsing state 
+ *@param state,  argp_state struct that contains useful information about the current parsing state
  *@return success or errno
  */
 static int parse_opt(int key, char *arg, struct argp_state *state)
@@ -177,26 +181,31 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		if (args->helpFlag)
 			break;
 		if (!args->updateVarCount || args->updateVarCount <= 1)
-			prlog(PR_ERR,
-			      "ERROR: No update variables/files given, use -u <varName_1> <authFileForVar_1>...\n\t\t"
-			      "Where <varName> is one of {'PK','KEK','db','dbx'} and <authFileForVar> is "
-			      "a properly generated authenticated variable file\n");
+		argp_usage(state);
+		//	prlog(PR_ERR, "ERROR: No update variables/files given, use -u "
+		//		      "<varName_1> <authFileForVar_1>...\n\t\t"
+		//		      "Where <varName> is one of {'PK','KEK','db','dbx'} "
+		//		      "and <authFileForVar> is "
+		//		      "a properly generated authenticated variable file\n");
 		else if (validateVarsArg(args->updateVars, args->updateVarCount))
-			prlog(PR_ERR,
-			      "ERROR: Update vars list not in right format: "
-			      "-u <varName_1> <authFileForVar_1> <varName_2> <authFileForVar_2> ...\n\t\t"
-			      "Where <varName> is one of {'PK','KEK','db','dbx'} and <authFileForVar> is "
-			      "a properly generated authenticated variable file\n");
+			prlog(PR_ERR, "ERROR: Update vars list not in right format: "
+				      "-u <varName_1> <authFileForVar_1> <varName_2> "
+				      "<authFileForVar_2> ...\n\t\t"
+				      "Where <varName> is one of {'PK','KEK','db','dbx'} "
+				      "and <authFileForVar> is "
+				      "a properly generated authenticated variable file\n");
 		else if (args->currVarCount) {
 			if (args->writeFlag)
-				prlog(PR_ERR,
-				      "ERROR: Cannot update files if current variable files are given. remove -w\n");
+				prlog(PR_ERR, "ERROR: Cannot update files if current variable "
+					      "files are given. remove -w\n");
 			else if (validateVarsArg((const char **)args->currentVars,
 						 args->currVarCount))
 				prlog(PR_ERR,
 				      "ERROR: Current vars list not in right format: "
-				      "<varName_1> <eslFileForVar_1> <varName_2> <eslFileForVar_2> ...\n\t\t"
-				      "Where <varName> is one of {'PK','KEK','db','dbx', 'TS'} and <eslFileForVar> is an"
+				      "<varName_1> <eslFileForVar_1> <varName_2> "
+				      "<eslFileForVar_2> ...\n\t\t"
+				      "Where <varName> is one of {'PK','KEK','db','dbx', 'TS'} "
+				      "and <eslFileForVar> is an"
 				      " EFI Signature List file (unless TS variable)\n");
 			else
 				break;
@@ -326,7 +335,7 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 	// once here, strings should be ready, it is time to fill banks
 	// fill update bank with all updates
 	for (int i = 0; i < updateCount; i += 2) {
-		c = getDataFromFile((char *)updateVars[i + 1], SIZE_MAX, &len);
+		c = get_data_from_file ((char *)updateVars[i + 1], SIZE_MAX, &len);
 		if (c) {
 			list_add_tail(update_bank, &new_secvar(updateVars[i],
 							       strlen(updateVars[i]) + 1, c, len, 0)
@@ -347,9 +356,8 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 				else
 					dealloc_secvar(tmp);
 			}
-
 		} else {
-			c = getDataFromFile((char *)currentVars[i + 1], SIZE_MAX, &len);
+			c = get_data_from_file ((char *)currentVars[i + 1], SIZE_MAX, &len);
 			if (c) {
 				list_add_tail(variable_bank,
 					      &new_secvar(currentVars[i],
@@ -419,8 +427,8 @@ static int validateBanks(struct list_head *update_bank, struct list_head *variab
 			}
 		}
 	} else
-		prlog(PR_WARNING,
-		      "WARNING: No PK, entering setup mode, no validation on current keys will be done\n");
+		prlog(PR_WARNING, "WARNING: No PK, entering setup mode, no validation on "
+				  "current keys will be done\n");
 
 	// print current contents of banks
 	if (verbose >= PR_INFO) {
@@ -448,8 +456,8 @@ static int validateBanks(struct list_head *update_bank, struct list_head *variab
 static int validateVarsArg(const char *vars[], int size)
 {
 	if (size % 2) {
-		prlog(PR_ERR,
-		      "ERROR: when parsing variable list, expected every variable name to have exactly one corresponding file\n");
+		prlog(PR_ERR, "ERROR: when parsing variable list, expected every "
+			      "variable name to have exactly one corresponding file\n");
 		return ARG_PARSE_FAIL;
 	}
 	for (int i = 0; i < size; i++) {
@@ -500,7 +508,7 @@ static int getCurrentVars(char *newCurr[], int *size, const char *path)
 		offset += strlen(variables[i]);
 		strncpy(fullPath + offset, ext, strlen(ext) + 1);
 		// if it is a file then add variable name and data file to newCurr
-		if (!isFile(fullPath)) {
+		if (!is_file (fullPath)) {
 			newCurr[lenCtr] = malloc(strlen(variables[i]) + 1);
 			if (!newCurr[lenCtr]) {
 				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
@@ -570,7 +578,7 @@ static int commitUpdateBank(struct list_head *update_bank, const char *path)
 }
 
 /*
- *will return a string describing the returned opal return code 
+ *will return a string describing the returned opal return code
  *@rc, the return code
  *@return, a string describing the return error
  */

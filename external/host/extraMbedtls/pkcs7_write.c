@@ -16,8 +16,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-#include "external/extraMbedtls/include/pkcs7_write.h"
-#include "external/extraMbedtls/include/pkcs7.h"
+#include "pkcs7_write.h"
+#include "pkcs7.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

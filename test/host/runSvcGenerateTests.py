@@ -8,11 +8,15 @@ import sys
 import time
 import unittest
 import filecmp
+import argparse
 
 MEM_ERR = 101
-SECTOOLS="../secvarctl-cov"
-GEN = [SECTOOLS, "generate", "-v"]
+SECTOOLS="../../secvarctl-cov"
+GEN = [SECTOOLS, "-m", "host", "generate", "-v"]
 OUTDIR = "./generatedTestData/"
+MEMCHECK = False
+OPENSSL = True
+GNUTLS = False
 
 # fTOh = [#[generateCommand], resultofGenerateCommand, [validatation Command], result
 # [["-h", "SHA512", "-i", ]]
@@ -156,11 +160,11 @@ class Test(unittest.TestCase):
 			#first do it with file to has to ESL
 			self.assertEqual( getCmdResult(cmd + ["f:h", "-i", "./testdata/" + efiGen + ".crt", "-o" ,hashMade], out, self), True) #assert the hashfile can be made
 			self.assertEqual( getCmdResult(cmd + ["h:e", "-i", hashMade, "-o" , eslMade], out, self), True) #assert the ESL is valid
-			self.assertEqual( getCmdResult([SECTOOLS ,"validate", "-e", "-x", eslMade], out, self), True) #assert the ESL is correctly formated
+			self.assertEqual( getCmdResult([SECTOOLS , "-m", "host", "validate", "-e", "-x", eslMade], out, self), True) #assert the ESL is correctly formated
 			# self.assertEqual( compareFile(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 			#then do it with the file to ESL (hash generation done internally)
 			self.assertEqual( getCmdResult(cmd + ["f:e", "-i", "./testdata/" + efiGen + ".crt", "-o" ,eslMade], out, self), True) #assert the esl can be made from a file
-			self.assertEqual( getCmdResult([SECTOOLS ,"validate", "-e", "-x", eslMade], out, self), True) #assert the ESL is correctly formated
+			self.assertEqual( getCmdResult([SECTOOLS , "-m", "host", "validate", "-e", "-x", eslMade], out, self), True) #assert the ESL is correctly formated
 			# self.assertEqual( compareFile(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 	def test_genEsl(self):
 			out = "genEslLog.txt"
@@ -177,7 +181,7 @@ class Test(unittest.TestCase):
 				eslDesired =  "./testdata/" + efiGen + ".esl"
 				#first do it with file to has to ESL
 				self.assertEqual( getCmdResult(cmd + ["c:e", "-i", "./testdata/" + efiGen + ".crt", "-o" , eslMade], out, self), True) #assert the hashfile can be made
-				self.assertEqual( getCmdResult([SECTOOLS ,"validate", "-e", eslMade], out, self), True) #assert the ESL is correctly formated
+				self.assertEqual( getCmdResult([SECTOOLS , "-m", "host", "validate", "-e", eslMade], out, self), True) #assert the ESL is correctly formated
 				self.assertEqual( compareFiles(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 			for i in badESLcommands:
 				self.assertEqual( getCmdResult(cmd + i[0], out, self), i[1]) 
@@ -236,32 +240,32 @@ class Test(unittest.TestCase):
 
 			#all files should be valid format, check if dbx though
 			if i[1] =="dbx":
-				self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", genE2A], out, self), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", "-x", genE2A], out, self), True)
 				#validate pkcs7
-				self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", "-p", genE2P], out, self), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", "-x", "-p", genE2P], out, self), True)
 				#validate auth/pkcs7 from certs
 				if not i[0].startswith("empty"):
-					self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", genC2A], out, self), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", "-x", genC2A], out, self), True)
 					#validate pkcs7
-					self.assertEqual( getCmdResult([SECTOOLS, "validate", "-x", "-p", genC2P], out, self), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", "-x", "-p", genC2P], out, self), True)
 			else:
-				self.assertEqual( getCmdResult([SECTOOLS, "validate", genE2A], out, self), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", genE2A], out, self), True)
 				#validate pkcs7
-				self.assertEqual( getCmdResult([SECTOOLS, "validate", "-p", genE2P], out, self), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", "-p", genE2P], out, self), True)
 				#validate auth/pkcs7 from certs
 				if not i[0].startswith("empty"):
-					self.assertEqual( getCmdResult([SECTOOLS, "validate", genC2A], out, self), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", genC2A], out, self), True)
 					#validate pkcs7
-					self.assertEqual( getCmdResult([SECTOOLS, "validate", "-p", genC2P], out, self), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", "-p", genC2P], out, self), True)
 			#all files besides the one that start with bad should be verified, bad means signed incorrectly
 			if i[0].startswith("bad"):
-				self.assertEqual( getCmdResult([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genE2A], out, self), False)
+				self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genE2A], out, self), False)
 				if not i[0].startswith("empty"):
-					self.assertEqual( getCmdResult([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genC2A], out, self), False)
+					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genC2A], out, self), False)
 			else:
-				self.assertEqual( getCmdResult([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genE2A], out, self), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genE2A], out, self), True)
 				if not i[0].startswith("empty"):
-					self.assertEqual( getCmdResult([SECTOOLS, "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genC2A], out, self), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host",  "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genC2A], out, self), True)
  
 		#now test custom timestamp works
 		customTSAuth1 = OUTDIR+"db_by_PK_customTS1.auth"
@@ -269,8 +273,8 @@ class Test(unittest.TestCase):
 		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth1, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8" ], out, self), True) 
 		time.sleep(4)
 		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth2, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8" ], out, self), True) 
-		self.assertEqual( getCmdResult([SECTOOLS, "validate", customTSAuth1], out, self), True)
-		self.assertEqual( getCmdResult([SECTOOLS, "validate", customTSAuth2], out, self), True)
+		self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", customTSAuth1], out, self), True)
+		self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", customTSAuth2], out, self), True)
 		self.assertEqual( compareFiles(customTSAuth1, customTSAuth2), True)
 
 		#now test incorrect generate commands
@@ -300,7 +304,7 @@ class Test(unittest.TestCase):
 		]
 		emptyESLDesired = OUTDIR + "empty.esl"
 		emptyESLActual = OUTDIR + "resultEmpyESL.esl"
-		verifyCommand = [SECTOOLS, "verify", "-p", inpDir, "-u"]
+		verifyCommand = [SECTOOLS, "-m", "host", "verify", "-p", inpDir, "-u"]
 		command(["touch", emptyESLDesired])
 		toESLCommand = GEN + ["a:e", "-o", emptyESLActual, "-i"]
 		for i in goodResetKeys:
@@ -434,7 +438,7 @@ class Test(unittest.TestCase):
 			 		self.assertEqual( os.path.getsize(outFile), function[1])
 	def test_authtoesl(self):
 		out="authtoesllog.txt"
-		cmd=[SECTOOLS,"generate", "a:e"]
+		cmd=[SECTOOLS, "-m", "host", "generate", "a:e"]
 		inpDir = "./testdata/"
 		postUpdate="testGenerated.esl"
 		for file in os.listdir(inpDir):
@@ -466,21 +470,26 @@ class Test(unittest.TestCase):
 
 
 if __name__ == '__main__':
-	if "MEMCHECK" in sys.argv:
-	 	MEMCHECK = True
-	else: 
-	 	MEMCHECK = False
+        argParser = argparse.ArgumentParser()
+        argParser.add_argument("-m", "--memcheck", type=int, help="enable/disable memory leak check")
+        argParser.add_argument("-o", "--openssl", type=int, help="enable/disable OPENSSL")
+        argParser.add_argument("-g", "--gnutls", type=int, help="enable/disable GNUTLS")
+        argParser.add_argument("-s", "--secvarctl", help="set secvarctl tool")
+        args = argParser.parse_args()
 
-	OPENSSL = False
-	GNUTLS = False
-	if 'OPENSSL_TESTS_ONLY' in sys.argv:
-		OPENSSL = True
-	if 'GNUTLS_TESTS_ONLY' in sys.argv:
-		GNUTLS = True
-	del sys.argv[1:]
-	createEnvironment()
-	setupTestEnv()
-	unittest.main()
+        if args.memcheck != None:
+            MEMCHECK = args.memcheck
+        if args.openssl != None:
+            OPENSSL = args.openssl
+        if args.gnutls != None:
+            GNUTLS = args.gnutls
+        if args.secvarctl != None:
+            SECTOOLS = args.secvarctl
+
+        del sys.argv[1:]
+        createEnvironment()
+        setupTestEnv()
+        unittest.main()
 
 
 

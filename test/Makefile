@@ -4,41 +4,42 @@ py = python3
 #add location of efitools here. if in PATH, leave bleank
 # efitools = ../../efitools/
 efitools =../../efitools/
-data = testdata/PK_by_PK.auth
+host_data = host/testdata/PK_by_PK.auth
+SECVAR_TOOL = ../secvarctl-cov
 
-#use STATIC=1 for static build
+#By default host backend static library created
+DYNAMIC_LIB = 0
 MEMCHECK = 0
-ifeq ($(MEMCHECK),1)
-	MEMARGS = "MEMCHECK"
-else 
-	MEMARGS=
-endif
-
 #run tests against secvarctl compiled with openssl
-OPENSSL = 0
-ifeq ($(OPENSSL),1)
-	OPENSSL_TESTS = "OPENSSL_TESTS_ONLY"
-else 
-	OPENSSL_TESTS =
-endif
-
+OPENSSL = 1
 GNUTLS = 0
-ifeq ($(GNUTLS),1)
-        GNUTLS_TESTS = "GNUTLS_TESTS_ONLY"
+HOST_BACKEND = 1
+
+ifeq ($(SECVAR_TOOL), ../secvarctl-cov)
+   SECVAR_TOOLS = ../$(SECVAR_TOOL)
 else
-        GNUTLS_TESTS =
+   SECVAR_TOOLS = $(SECVAR_TOOL)
 endif
-all: $(data) ../secvarctl-cov
-	$(py) runTests.py $(MEMARGS)
-	$(py) runSvcGenerateTests.py $(MEMARGS) $(OPENSSL_TESTS) $(GNUTLS_TESTS)
 
-	
+all: coverage
+ifeq ($(strip $(HOST_BACKEND)), 1)
+	@cd host/ && \
+	$(py) runTests.py -m $(MEMCHECK) -s $(SECVAR_TOOLS) && \
+	$(py) runSvcGenerateTests.py -m $(MEMCHECK) -o $(OPENSSL) -g $(GNUTLS) -s $(SECVAR_TOOLS)
+endif
 
-generate: $(data)
+generate: $(host_data)
+ifeq ($(strip $(HOST_BACKEND)), 1)
+	@cd host/ && \
 	$(py) generateTestData.py $(efitools)
+endif
 
-../secvarctl-cov:
-	make -C ../ secvarctl-cov
+coverage:
+ifeq ("$(wildcard $(SECVAR_TOOL))","")
+	@make -C ../ coverage DYNAMIC_LIB=$(DYNAMIC_LIB)
+endif
 
 clean:
-	rm -f -r ./*.txt generatedTestData testenv/*
+	rm -rf host/*.txt host/generatedTestData host/testenv
+
+.PHONY: all coverage clean

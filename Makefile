@@ -1,103 +1,167 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright 2021 IBM Corp.
-#_*_MakeFile_*_
-CC = gcc 
-_CFLAGS = -MMD -O2 -std=gnu99 -I./ -Iinclude/ -Iexternal/skiboot/ \
-	  -Iexternal/skiboot/include -Wall -Werror
+# Copyright 2022-2023 IBM Corp.
+CC = gcc
+_CFLAGS = -MMD -O2 -std=gnu99 -Wall -Werror
+CFLAGS =
+LDFLAGS =
+
+SECVAR_TOOL = $(PWD)/secvarctl-cov
+MANDIR=usr/share/man
+LIB_DIR = ../../lib
+BIN_DIR = .
+HOST_BACKEND_DIR = ./backends/host
+
+INCLUDES = -I./include
+
+#By default host backend static library created
+DYNAMIC_LIB = 0
+
+#it is used to enable memory leak test in test sript
+MEMCHECK = 0
 
 DEBUG ?= 0
-ifeq ($(DEBUG),1)
-_CFLAGS += -g
+ifeq ($(strip $(DEBUG)), 1)
+  _CFLAGS += -g
 else
-_LDFLAGS += -s
-endif
-
-EDK2OBJDIR = backends/edk2-compat
-_EDK2_OBJ =  edk2-svc-read.o edk2-svc-write.o edk2-svc-validate.o edk2-svc-verify.o edk2-svc-generate.o
-EDK2_OBJ = $(patsubst %,$(EDK2OBJDIR)/%, $(_EDK2_OBJ))
-
-SKIBOOTOBJDIR = external/skiboot/libstb/secvar
-_SKIBOOT_OBJ = secvar_util.o backend/edk2-compat.o backend/edk2-compat-process.o
-SKIBOOT_OBJ = $(patsubst %,$(SKIBOOTOBJDIR)/%, $(_SKIBOOT_OBJ))
-
-OBJ =secvarctl.o  generic.o 
-OBJ +=$(SKIBOOT_OBJ) $(EDK2_OBJ) 
-
-OBJCOV = $(patsubst %.o, %.cov.o,$(OBJ))
-
-MANDIR=usr/share/man
-#use STATIC=1 for static build
-STATIC = 0
-ifeq ($(STATIC),1)
-	STATICFLAG=-static
-	_LDFLAGS +=-lpthread
-else 
-	STATICFLAG=
+  _LDFLAGS += -s
 endif
 
 #use CRYPTO_READ_ONLY for smaller executable but limited functionality
 #removes all write functions (secvarctl generate, pem_to_der etc.)
-CRYPTO_READ_ONLY = 0 
+CRYPTO_READ_ONLY = 0
 ifeq ($(strip $(CRYPTO_READ_ONLY)), 0)
-	_CFLAGS+=-DSECVAR_CRYPTO_WRITE_FUNC
+  _CFLAGS += -DSECVAR_CRYPTO_WRITE_FUNC
 endif
 
-#Build with crypto library = openssl rather than mbedtls
-OPENSSL = 0
+#By default, Build with crypto library openssl
+OPENSSL = 1
 GNUTLS = 0
-ifeq ($(OPENSSL),1)
-	_LDFLAGS += -lcrypto
-	_CFLAGS += -DSECVAR_CRYPTO_OPENSSL
-	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-openssl.o
-else 
-ifeq ($(GNUTLS),1)
-	_LDFLAGS += -lgnutls
-	_CFLAGS += "-DSECVAR_CRYPTO_GNUTLS"
-	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-gnutls.o
+MBEDTLS = 0
+CRYPTO_LIB = openssl
+
+ifeq ($(strip $(GNUTLS)), 1)
+  MBEDTLS = 0
+  OPENSSL = 0
+  CRYPTO_LIB = gnutls
+endif
+
+ifeq ($(strip $(MBEDTLS)), 1)
+  GNUTLS = 0
+  OPENSSL = 0
+  CRYPTO_LIB = mbedtls
+endif
+
+ifeq ($(strip $(OPENSSL)), 1)
+  _LDFLAGS += -lcrypto
+  _CFLAGS += -DSECVAR_CRYPTO_OPENSSL
+else ifeq ($(strip $(GNUTLS)), 1)
+  _LDFLAGS += -lgnutls
+  _CFLAGS += -DSECVAR_CRYPTO_GNUTLS
+else ifeq ($(strip $(MBEDTLS)), 1)
+  _LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
+  _CFLAGS += -DSECVAR_CRYPTO_MBEDTLS
+endif
+
+#use STATIC=1 for static build
+STATIC = 0
+ifeq ($(strip $(STATIC)), 1)
+  STATICFLAG= -static
+  _LDFLAGS += -lpthread
 else
-	_LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
-	_CFLAGS += -DSECVAR_CRYPTO_MBEDTLS
-
-	EXTRAMBEDTLSDIR = external/extraMbedtls
-	_EXTRAMBEDTLS = pkcs7_write.o pkcs7.o 
-	EXTRAMBEDTLS = $(patsubst %,$(EXTRAMBEDTLSDIR)/%, $(_EXTRAMBEDTLS))
-	OBJ += $(EXTRAMBEDTLS)
-
-	CRYPTO_OBJ = $(SKIBOOTOBJDIR)/crypto/crypto-mbedtls.o
-
-endif
+	STATICFLAG=
 endif
 
-OBJ += $(CRYPTO_OBJ)
+HOST_BACKEND = 1
 
-secvarctl: $(OBJ) 
-	$(CC) $(CFLAGS) $(_CFLAGS) $(STATICFLAG) $^  -o $@ $(LDFLAGS) $(_LDFLAGS)
+ifeq ($(strip $(HOST_BACKEND)), 1)
+  INCLUDES += -I./external/host/skiboot \
+              -I./external/host/skiboot/libstb \
+              -I./external/host/skiboot/include \
+              -I$(HOST_BACKEND_DIR)
+  _LDFLAGS += -lhost-backend-$(CRYPTO_LIB)
+  _CFLAGS += -DSECVAR_HOST_BACKEND
+endif
+
+_LDFLAGS += -L./lib
+
+SECVARCTL_SRCS = ./src/generic.c \
+                 ./src/secvarctl.c
+
+SECVARCTL_OBJS = $(SECVARCTL_SRCS:.c=.o)
+OBJCOV = $(patsubst %.o, %.cov.o,$(SECVARCTL_OBJS))
+
+_CFLAGS += $(CFLAGS) $(INCLUDES)
+_LDFLAGS += $(LDFLAGS)
+
+export CFLAGS
+export LDFLAGS
+
+all: secvarctl-backends secvarctl secvarctl-cov
+
+coverage: secvarctl-backends secvarctl-cov
+
+secvarctl: $(SECVARCTL_OBJS)
+	$(CC) $(_CFLAGS) $(STATICFLAG) $^ -o $(BIN_DIR)/$@ $(_LDFLAGS)
+	@echo "secvarctl Build successful!"
+
+secvarctl-cov: $(OBJCOV)
+	$(CC) $(_CFLAGS) $^ $(STATICFLAG) -fprofile-arcs -ftest-coverage -o $(BIN_DIR)/$@ $(_LDFLAGS)
+	@echo "secvarctl-cov Build successful!"
+
+secvarctl-backends:
+	@mkdir -p $(LIB_DIR)
+ifeq ($(strip $(HOST_BACKEND)), 1)
+	@$(MAKE) -C $(HOST_BACKEND_DIR) LIB_DIR=$(LIB_DIR) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
+	            MBEDTLS=$(MBEDTLS) CRYPTO_READ_ONLY=$(CRYPTO_READ_ONLY) DEBUG=$(DEBUG) \
+	            DYNAMIC_LIB=$(DYNAMIC_LIB)
+endif
 
 %.o: %.c
-	$(CC) $(CFLAGS) $(_CFLAGS) -c  $< -o $@
-
-clean:
-	find . -name "*.[od]" -delete
-	find . -name "*.cov.*" -delete
-	rm -f secvarctl secvarctl-cov ./html*
+	$(CC) $(_CFLAGS) $< -o $@ -c
 
 %.cov.o: %.c
-	$(CC) $(CFLAGS) $(_CFLAGS) -c  --coverage $< -o $@
+	$(CC) $(_CFLAGS) -c  --coverage $< -o $@
 
-secvarctl-cov: $(OBJCOV) 
-	$(CC) $(CFLAGS) $(_CFLAGS) $^  $(STATICFLAG) -fprofile-arcs -ftest-coverage -o $@ $(LDFLAGS) $(_LDFLAGS)
+check:
+	@$(MAKE) -C test MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
+	                 DYNAMIC_LIB=$(DYNAMIC_LIB) HOST_BACKEND=$(HOST_BACKEND) \
+	                 SECVAR_TOOL=$(SECVAR_TOOL)
+generate:
+	@$(MAKE) -C test generate MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
+	                 DYNAMIC_LIB=$(DYNAMIC_LIB) HOST_BACKEND=$(HOST_BACKEND) \
+	                 SECVAR_TOOL=$(SECVAR_TOOL)
 
-install: secvarctl
-	mkdir -p $(DESTDIR)/usr/bin
-	install -m 0755 secvarctl $(DESTDIR)/usr/bin/secvarctl
-	mkdir -p $(DESTDIR)/$(MANDIR)/man1
-	install -m 0644 secvarctl.1 $(DESTDIR)/$(MANDIR)/man1
+install: all
+	@mkdir -p $(DESTDIR)/usr/bin
+	@install -m 0755 secvarctl $(DESTDIR)/usr/bin/secvarctl
+	@mkdir -p $(DESTDIR)/$(MANDIR)/man1
+	@install -m 0644 secvarctl.1 $(DESTDIR)/$(MANDIR)/man1
+	@mkdir -p $(DESTDIR)/usr/lib/secvarctl
+	@install -m 0755 ./lib/* $(DESTDIR)/usr/lib/secvarctl
+ifeq ($(strip $(DYNAMIC_LIB)), 1)
+	@echo "$(DESTDIR)/usr/lib/secvarctl" > /etc/ld.so.conf.d/secvarctl.conf
+	@ldconfig
+endif
+	@echo "secvarctl installed successfully!"
 
-#dont add all c files, extra mbedtls and skiboot should retain its own format
-CLANG_FORMAT ?= clang-format
-format:
-	cp external/linux/.clang-format .
-	$(CLANG_FORMAT) --style=file -i *.c include/*.h backends/*/*.c backends/*/*/*.h
-	rm .clang-format
+uninstall:
+	@rm -rf $(DESTDIR)/usr/bin/secvarctl
+	@rm -rf $(DESTDIR)/$(MANDIR)/man1/secvarctl.1
+	@rm -rf $(DESTDIR)/usr/lib/secvarctl
+ifeq ($(strip $(DYNAMIC_LIB)), 1)
+	@rm -rf /etc/ld.so.conf.d/secvarctl.conf
+	@ldconfig
+endif
+	@echo "secvarctl uninstalled successfully!"
 
--include $(OBJ:.o=.d)
+clean:
+ifeq ($(strip $(HOST_BACKEND)), 1)
+	@$(MAKE) -C $(HOST_BACKEND_DIR) clean
+endif
+	@$(MAKE) -C test clean
+	find . -name "*.[od]" -delete
+	find . -name "*.cov.*" -delete
+	rm -rf ./lib
+	rm -f $(BIN_DIR)/secvarctl $(BIN_DIR)/secvarctl-cov
+
+.PHONY: all secvarctl-backends coverage clean

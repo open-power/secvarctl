@@ -7,6 +7,7 @@
 *.gcda
 *.gcno
 *.d
+lib
 build
 # final binaries
 secvarctl
