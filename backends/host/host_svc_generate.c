@@ -8,10 +8,10 @@
 #include <time.h> // for timestamp
 #include <ctype.h> // for isspace
 #include <argp.h>
-#include "libstb/secvar/crypto/crypto.h"
+#include "secvar/crypto/crypto.h"
 #include <ccan/endian/endian.h>
-#include "backends/edk2-compat/include/edk2-svc.h"
-#include "external/skiboot/libstb/secvar/backend/edk2-compat-process.h" // work on factoring this out
+#include "host_svc_backend.h"
+#include "secvar/backend/edk2-compat-process.h" // work on factoring this out
 
 enum pkcs7_generation_method {
 	// for -k <key> option
@@ -87,7 +87,7 @@ int performGenerateCommand(int argc, char *argv[])
 				  .time = NULL,
 				  .pkcs7_gen_meth = NO_PKCS7_GEN_METHOD };
 	// combine command and subcommand for usage/help messages
-	argv[0] = "secvarctl generate";
+	argv[0] = "secvarctl -m host generate";
 
 	struct argp_option options[] = {
 		{ "var", 'n', "VAR_NAME", 0,
@@ -193,7 +193,7 @@ int performGenerateCommand(int argc, char *argv[])
 		size = 0;
 	else {
 		// get data from input file
-		buff = (unsigned char *)getDataFromFile(args.inFile, SIZE_MAX, &size);
+		buff = (unsigned char *) get_data_from_file (args.inFile, SIZE_MAX, &size);
 		if (buff == NULL) {
 			prlog(PR_ERR, "ERROR: Could not find data in file %s\n", args.inFile);
 			rc = INVALID_FILE;
@@ -216,7 +216,7 @@ int performGenerateCommand(int argc, char *argv[])
 
 	prlog(PR_INFO, "Writing %zd bytes to %s\n", outBuffSize, args.outFile);
 	// write data to new file
-	rc = createFile(args.outFile, (char *)outBuff, outBuffSize);
+	rc = create_file (args.outFile, (char *)outBuff, outBuffSize);
 	if (rc) {
 		prlog(PR_ERR, "ERROR: Could not write new data to output file %s\n", args.outFile);
 	}
@@ -268,7 +268,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		}
 		args->pkcs7_gen_meth = W_PRIVATE_KEYS;
 		args->signKeyCount++;
-		rc = reallocArray((void **)&args->signKeys, args->signKeyCount,
+		rc = realloc_array ((void **)&args->signKeys, args->signKeyCount,
 				  sizeof(*args->signKeys));
 		if (rc) {
 			prlog(PR_ERR, "Failed to realloc private key (-k <>) array\n");
@@ -278,7 +278,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		break;
 	case 'c':
 		args->signCertCount++;
-		rc = reallocArray((void **)&args->signCerts, args->signCertCount,
+		rc = realloc_array ((void **)&args->signCerts, args->signCertCount,
 				  sizeof(*args->signCerts));
 		if (rc) {
 			prlog(PR_ERR, "Failed to realloc certificate (-c <>) array\n");
@@ -302,7 +302,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		}
 		args->pkcs7_gen_meth = W_EXTERNAL_GEN_SIG;
 		args->signKeyCount++;
-		rc = reallocArray((void **)&args->signKeys, args->signKeyCount,
+		rc = realloc_array ((void **)&args->signKeys, args->signKeyCount,
 				  sizeof(*args->signKeys));
 		if (rc) {
 			prlog(PR_ERR, "Failed to realloc signature (-s <>) array\n");
@@ -358,7 +358,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		else if (args->time && validateTime(args->time))
 			prlog(PR_ERR,
 			      "Invalid timestamp flag '-t YYYY-MM-DDThh:mm:ss' , see usage...\n");
-		else if (args->inForm[0] != 'r' && (args->inFile == NULL || isFile(args->inFile)))
+		else if (args->inForm[0] != 'r' && (args->inFile == NULL || is_file (args->inFile)))
 			prlog(PR_ERR, "ERROR: Input File is invalid, see usage below...\n");
 		else if (args->varName && isVariable(args->varName))
 			prlog(PR_ERR, "ERROR: %s is not a valid variable name\n", args->varName);
@@ -529,9 +529,9 @@ static int generateAuthOrPKCS7(const unsigned char *buff, size_t size, struct Ar
 
 	if (rc) {
 		prlog(PR_ERR, "Failed to generate %s file, use `--help` for more info\n",
-		      args->outForm[0] == 'a' ?
-			      "Auth" :
-			      args->outForm[0] == 'x' ? "pre-signed hash" : "PKCS7");
+		      args->outForm[0] == 'a' ? "Auth" :
+		      args->outForm[0] == 'x' ? "pre-signed hash" :
+						"PKCS7");
 		goto out;
 	}
 out:

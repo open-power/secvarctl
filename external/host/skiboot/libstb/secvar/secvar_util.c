@@ -11,7 +11,7 @@
 /*#include <opal.h>*/
 #include "secvar.h"
 //ADDED BY NICK
-#include "external/skiboot/include/opal-api.h"
+#include "opal-api.h"
 #define zalloc(...) calloc(1,__VA_ARGS__)
 
 void clear_bank_list(struct list_head *bank)

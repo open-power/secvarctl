@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdlib.h> // for exit
 #include "crypto.h"
-#include "include/prlog.h"
+#include "prlog.h"
 
 #include <gnutls/x509.h>
 #include <gnutls/pkcs7.h>

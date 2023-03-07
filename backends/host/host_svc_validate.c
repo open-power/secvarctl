@@ -4,8 +4,8 @@
 #include <string.h>
 #include <stdlib.h> // for exit
 #include <argp.h>
-#include "libstb/secvar/crypto/crypto.h"
-#include "include/edk2-svc.h"
+#include "secvar/crypto/crypto.h"
+#include "host_svc_backend.h"
 
 struct Arguments {
 	int helpFlag;
@@ -26,7 +26,7 @@ enum fileTypes { AUTH_FILE = 'a', PKCS7_FILE = 'p', ESL_FILE = 'e', CERT_FILE = 
  *handles argument parsing for validate command
  *@param argc, number of argument
  *@param arv, array of params
- *@return SUCCESS or err number 
+ *@return SUCCESS or err number
  */
 int performValidation(int argc, char *argv[])
 {
@@ -37,7 +37,7 @@ int performValidation(int argc, char *argv[])
 		.helpFlag = 0, .inFile = NULL, .inForm = AUTH_FILE, .varName = NULL
 	};
 	// combine command and subcommand for usage/help messages
-	argv[0] = "secvarctl validate";
+	argv[0] = "secvarctl -m host validate";
 
 	struct argp_option options[] = {
 		{ "verbose", 'v', 0, 0, "print more verbose process information" },
@@ -47,24 +47,27 @@ int performValidation(int argc, char *argv[])
 		{ "auth", 'a', 0, 0,
 		  "file is a properly generated authenticated variable, DEFAULT" },
 		{ "dbx", 'x', 0, 0,
-		  "file is for the dbx (allows for data to contain a hash not an x509), Note: user still should specify the file type" },
+		  "file is for the dbx (allows for data to contain a hash not an x509), "
+		  "Note: user still should specify the file type" },
 		{ "help", '?', 0, 0, "Give this help list", 1 },
 		{ "usage", ARGP_OPT_USAGE_KEY, 0, 0, "Give a short usage message", -1 },
 		{ 0 }
 	};
 
-	struct argp argp = {
-		options, parse_opt, "<FILE>",
-		"The purpose of this command is to help ensure that the format of the file is correct"
-		" and is able to be parsed for data. NOTE: This command mainly performs formatting checks, invalid content/signatures can still exist"
-		" use 'secvarctl verify' to see if content and file signature (if PKCS7/auth) are valid"
-	};
+	struct argp argp = { options, parse_opt, "<FILE>",
+			     "The purpose of this command is to help ensure that the "
+			     "format of the file is correct"
+			     " and is able to be parsed for data. NOTE: This command "
+			     "mainly performs formatting checks, invalid "
+			     "content/signatures can still exist"
+			     " use 'secvarctl verify' to see if content and file "
+			     "signature (if PKCS7/auth) are valid" };
 
 	rc = argp_parse(&argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
 	if (rc || args.helpFlag)
 		goto out;
 
-	buff = (unsigned char *)getDataFromFile(args.inFile, SIZE_MAX, &size);
+	buff = (unsigned char *) get_data_from_file (args.inFile, SIZE_MAX, &size);
 	if (!buff) {
 		prlog(PR_ERR, "ERROR: failed to get data from %s\n", args.inFile);
 		rc = INVALID_FILE;
@@ -98,7 +101,7 @@ out:
 /**
  *@param key , every option that is parsed has a value to identify it
  *@param arg, if key is an option than arg will hold its value ex: -<key> <arg>
- *@param state,  argp_state struct that contains useful information about the current parsing state 
+ *@param state,  argp_state struct that contains useful information about the current parsing state
  *@return success or errno
  */
 static int parse_opt(int key, char *arg, struct argp_state *state)
@@ -269,7 +272,7 @@ int validatePKCS7(const unsigned char *cert_data, size_t len)
 
 	do {
 		prlog(PR_INFO, "VALIDATING SIGNING CERTIFICATE:\n");
-		//ensure first cert is not null
+		// ensure first cert is not null
 		if (pkcs7_cert)
 			rc = validateCertStruct(pkcs7_cert, NULL);
 		else
@@ -366,8 +369,8 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 		    sigList->SignatureListSize <
 			    sigList->SignatureHeaderSize + sigList->SignatureSize) {
 			/*printf("Sig List : %d , sig Header: %d, sig Size: %d\n",list.SignatureListSize,list.SignatureHeaderSize,list.SignatureSize);*/
-			prlog(PR_ERR,
-			      "ERROR: Sig List is not structured correctly, defined size and actual sizes are mismatched\n");
+			prlog(PR_ERR, "ERROR: Sig List is not structured correctly, defined "
+				      "size and actual sizes are mismatched\n");
 			return ESL_FAIL;
 		}
 	}
@@ -427,7 +430,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 
 		if (verbose >= PR_INFO) {
 			prlog(PR_INFO, "\tHash: ");
-			printHex(cert, cert_size);
+			print_hex (cert, cert_size);
 		}
 	} else {
 		rc = validateCert(cert, cert_size, varName);
@@ -564,7 +567,7 @@ static int validateCertStruct(crypto_x509 *x509, const char *varName)
 		}
 	}
 
-	//if made it this far then return success
+	// if made it this far then return success
 	return SUCCESS;
 }
 
@@ -613,10 +616,10 @@ int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen)
 	if (*x509)
 		return SUCCESS;
 /*
-	 *if here, parsing cert in der failed
-	 *check if we have compiled with pkcs7_write functions
-	 *if so we can try to convert pem to der and try again
-	 */
+ *if here, parsing cert in der failed
+ *check if we have compiled with pkcs7_write functions
+ *if so we can try to convert pem to der and try again
+ */
 #ifdef SECVAR_CRYPTO_WRITE_FUNC
 	prlog(PR_INFO, "Failed to parse x509 as DER, trying PEM...\n");
 	// if failed, maybe input is PEM and so try converting PEM to DER, if conversion fails then we know it was DER and it failed

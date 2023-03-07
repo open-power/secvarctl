@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: Apache-2.0
 /*
+ * SPDX-License-Identifier: Apache-2.0
  * For CCAN, from skiboot's ffspart
  *
  * Copyright 2017 IBM Corp.

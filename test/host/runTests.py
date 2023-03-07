@@ -5,9 +5,13 @@ import subprocess
 import os
 import filecmp
 import sys
+import argparse
+
 MEM_ERR = 101
-SECTOOLS="../secvarctl-cov"
+SECTOOLS="../../secvarctl-cov"
 SECVARPATH="/sys/firmware/secvar/vars/"
+MEMCHECK = False
+
 goodAuths=[]
 badAuths=[]
 goodESLs=[]
@@ -104,18 +108,18 @@ validateCommands=[
 
 # these really arnt tests with bad envs, its more so tests that use two commands to run.
 badEnvCommands=[ #[arr command to skew env, output of first command, arr command for sectool, expected result]
-[["rm", "./testenv/KEK/size"],None,["read", "-p", "./testenv/", "KEK"], False], #remove size and it should fail
-[["rm", "./testenv/KEK/size"],None,["read", "-p", "./testenv/"], True], #remove size but as long as one is readable then it is ok
-[['echo', '"hey fail!"'],"./testenv/db/size",["read", "-p", "./testenv/", "db"], False], #read from ascii size file should fail
-[["dd" , "if=./testdata/goldenKeys/KEK/data", "of=./testenv/KEK/data", "count=100", "bs=1"],"log.txt",["verify", "-v","-p", "./testenv/", "-u","db", "./testdata/db_by_KEK.auth"], False], #verify against path with bad esl files should fail, modified THAT SHOULD NEVER HAPPEN!
-[["rm", "-r", "./testenv/db","./testenv/dbx","./testenv/KEK","./testenv/PK", "./testenv/TS" ],None,["verify","-v","-p", "./testenv/","-u","PK", "./testdata/PK_by_PK.auth"], True],# no data in path should enter setup mode
-[["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["verify","-v","-p", "./testenv/","-u","PK", "./testdata/PK_by_PK.auth"], True],# no data in pk ==setup mode
-[["rm","./testenv/db/update"],None,["verify","-v","-w","-p", "./testenv/","-u","db", "./testdata/db_by_PK.auth"], False],# no update file should exit
-[["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["read","-p", "./testenv/"], True],# Pk will be empty but other files will have things
-[["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["read","-p", "./testenv/", "PK"], False],# Pk will be empty, nothing else read so overall failure
-[["echo", "16"], "./testenv/TS/size", ["verify", "-v" , "-p", "./testenv/", "-u", "PK", "./testdata/PK_by_PK.auth"], False],
-[["dd", "if=/dev/zero", "of=./testenv/TS/data", "count=4", "bs=16"], None, ["verify", "-p", "./testenv/", "-u", "PK", "testdata/PK_by_PK.auth"], True], #If timestamp entry for a variable is empty than thats okay
-[["echo", "0"], "./testenv/KEK/size", ["verify", "-p", "./testenv/", "-u", "db", "./testdata/db_by_PK.auth"], True] #an empty KEK should not interupt db by PK verification
+[["rm", "./testenv/KEK/size"],None,["-m","host","read", "-p", "./testenv/", "KEK"], False], #remove size and it should fail
+[["rm", "./testenv/KEK/size"],None,["-m","host","read", "-p", "./testenv/"], True], #remove size but as long as one is readable then it is ok
+[['echo', '"hey fail!"'],"./testenv/db/size",["-m","host","read", "-p", "./testenv/", "db"], False], #read from ascii size file should fail
+[["dd" , "if=./testdata/goldenKeys/KEK/data", "of=./testenv/KEK/data", "count=100", "bs=1"],"log.txt",["-m","host","verify", "-v","-p", "./testenv/", "-u","db", "./testdata/db_by_KEK.auth"], False], #verify against path with bad esl files should fail, modified THAT SHOULD NEVER HAPPEN!
+[["rm", "-r", "./testenv/db","./testenv/dbx","./testenv/KEK","./testenv/PK", "./testenv/TS" ],None,["-m","host","verify","-v","-p", "./testenv/","-u","PK", "./testdata/PK_by_PK.auth"], True],# no data in path should enter setup mode
+[["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["-m","host","verify","-v","-p", "./testenv/","-u","PK", "./testdata/PK_by_PK.auth"], True],# no data in pk ==setup mode
+[["rm","./testenv/db/update"],None,["-m","host","verify","-v","-w","-p", "./testenv/","-u","db", "./testdata/db_by_PK.auth"], False],# no update file should exit
+[["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["-m","host","read","-p", "./testenv/"], True],# Pk will be empty but other files will have things
+[["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["-m","host","read","-p", "./testenv/", "PK"], False],# Pk will be empty, nothing else read so overall failure
+[["echo", "16"], "./testenv/TS/size", ["-m","host","verify", "-v" , "-p", "./testenv/", "-u", "PK", "./testdata/PK_by_PK.auth"], False],
+[["dd", "if=/dev/zero", "of=./testenv/TS/data", "count=4", "bs=16"], None, ["-m","host","verify", "-p", "./testenv/", "-u", "PK", "testdata/PK_by_PK.auth"], True], #If timestamp entry for a variable is empty than thats okay
+[["echo", "0"], "./testenv/KEK/size", ["-m","host","verify", "-p", "./testenv/", "-u", "db", "./testdata/db_by_PK.auth"], True] #an empty KEK should not interupt db by PK verification
 ]
 
 def command(args, out=None):#stores last log of function into log file
@@ -196,11 +200,13 @@ class Test(unittest.TestCase):
 	def test_secvarctl_basic(self):
 		out="secvarctlBasiclog.txt"
 		cmd=[SECTOOLS]
+		cmd+=["-m","host"]
 		for i in secvarctlCommands:
 			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 	def test_ppcSecVarsRead(self):
 		out="ppcSecVarsReadlog.txt"
 		cmd=[SECTOOLS]
+		cmd+=["-m","host"]
 		#if power sysfs exists read current keys
 		if os.path.isdir(SECVARPATH):
 			for i in ppcSecVarsRead:
@@ -212,19 +218,22 @@ class Test(unittest.TestCase):
 
 	def test_verify(self):
 		out="verifylog.txt"
-		cmd=[SECTOOLS, "verify"]
+		#out=None
+		cmd=[SECTOOLS]
+		#cmd+=["-m","host","verify"]
 		for fileInfo in goodAuths:
 			file="./testdata/"+fileInfo[0]
-			self.assertEqual( getCmdResult(cmd+[ "-w", "-p", "testenv/","-u",fileInfo[1],file],out, self), True)#verify all auths are signed by keys in testenv
+			self.assertEqual( getCmdResult(cmd+["-m","host","verify","-w", "-p", "testenv/","-u",fileInfo[1],file],out, self), True)#verify all auths are signed by keys in testenv
 			self.assertEqual(compareFiles("testenv/"+fileInfo[1]+"/update", file), True)#assert files wrote correctly
 		for fileInfo in badAuths:
 			file="./testdata/"+fileInfo[0]
-			self.assertEqual( getCmdResult(cmd+[ "-p", "testenv/","-u",fileInfo[1],file],out, self), False)#verify all bad auths are not signed correctly
+			self.assertEqual( getCmdResult(cmd+["-m","host","verify","-p", "testenv/","-u",fileInfo[1],file],out, self), False)#verify all bad auths are not signed correctly
 		for i in verifyCommands:
-			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
+			self.assertEqual( getCmdResult(cmd+["-m","host","verify"]+i[0],out, self),i[1])
 	def test_validate(self):
 		out="validatelog.txt"
-		cmd=[SECTOOLS, "validate"]
+		cmd=[SECTOOLS]
+		cmd+=["-m","host","validate"]
 		for i in validateCommands:
 			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 		for i in goodAuths:		#validate all auths
@@ -254,7 +263,8 @@ class Test(unittest.TestCase):
 			self.assertEqual( getCmdResult(cmd+["-v", "-p", i],out, self), False)
 	def test_read(self):
 		out="readlog.txt"
-		cmd=[SECTOOLS, "read"]
+		cmd=[SECTOOLS]
+		cmd+=["-m","host","read"]
 		#self.assertEqual(not not not command(cmd,out, self), True) #no args
 		for i in readCommands:
 			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
@@ -266,7 +276,8 @@ class Test(unittest.TestCase):
 				self.assertEqual( getCmdResult(cmd+["-f", i],out, self), False) #all truncated esls should fail to print human readable info
 	def test_write(self):
 		out="writelog.txt"
-		cmd=[SECTOOLS,"write"]
+		cmd=[SECTOOLS]
+		cmd+=["-m","host","write"]
 		path="./testenv/"
 		for i in writeCommands:
 			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
@@ -289,12 +300,21 @@ class Test(unittest.TestCase):
 			setupTestEnv()
 
 if __name__ == '__main__':
-	if "MEMCHECK" in sys.argv:
-	 	MEMCHECK = True
-	else: 
-	 	MEMCHECK = False
-	del sys.argv[1:]
-	setupArrays()
-	setupTestEnv()
-	unittest.main()
-    
+
+        argParser = argparse.ArgumentParser()
+        argParser.add_argument("-m", "--memcheck", type=int, help="enable/disable memory leak check")
+        argParser.add_argument("-s", "--secvarctl", help="set secvarctl tool")
+        argParser.add_argument("-p", "--secvarpath", help="set secvar path")
+        args = argParser.parse_args()
+
+        if args.memcheck != None:
+            MEMCHECK = args.memcheck
+        if args.secvarctl != None:
+            SECTOOLS = args.secvarctl
+        if args.secvarpath != None:
+            SECVARPATH = args.secvarpath
+
+        del sys.argv[1:]
+        setupArrays()
+        setupTestEnv()
+        unittest.main()

@@ -13,20 +13,21 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <ccan/endian/endian.h>
 /*#include <mbedtls/error.h>
 #include <device.h>
 #include "libstb/crypto/pkcs7/pkcs7.h"
 #include "external/skiboot/libstb/secvar/backend/edk2.h"
 #include "opal-api.h"*/
-#include "../secvar.h"
+#include "secvar/secvar.h"
 /*#include "../secvar_devtree.h"*/
 
 //added by nick child/dja
 #include <ccan/short_types/short_types.h>
-#include "external/skiboot/include/opal-api.h"
+#include "opal-api.h"
 //#include "external/extraMbedtls/include/pkcs7.h"
-#include "external/skiboot/libstb/secvar/backend/edk2.h"
+#include "secvar/backend/edk2.h"
 #include <compiler.h>
 
 //ADDED BY NICK CHILD

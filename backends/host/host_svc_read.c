@@ -9,9 +9,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <argp.h>
-#include "libstb/secvar/crypto/crypto.h"
-#include "external/skiboot/libstb/secvar/secvar.h" // for secvar struct
-#include "backends/edk2-compat/include/edk2-svc.h"
+#include "secvar/crypto/crypto.h"
+#include "secvar/secvar.h" // for secvar struct
+#include "host_svc_backend.h"
 
 static int readFiles(const char *var, const char *file, int hrFlag, const char *path);
 static int printReadable(const char *c, size_t size, const char *key);
@@ -31,7 +31,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state);
  *handles argument parsing for read command
  *@param argc, number of argument
  *@param arv, array of params
- *@return SUCCESS or err number 
+ *@return SUCCESS or err number
  */
 int performReadCommand(int argc, char *argv[])
 {
@@ -40,7 +40,7 @@ int performReadCommand(int argc, char *argv[])
 		.helpFlag = 0, .printRaw = 0, .pathToSecVars = NULL, .inFile = NULL, .varName = NULL
 	};
 	// combine command and subcommand for usage/help messages
-	argv[0] = "secvarctl read";
+	argv[0] = "secvarctl -m host read";
 
 	struct argp_option options[] = {
 		{ "raw", 'r', 0, 0, "prints raw data, default is human readable information" },
@@ -55,12 +55,17 @@ int performReadCommand(int argc, char *argv[])
 
 	struct argp argp = {
 		options, parse_opt, "[VARIABLE]",
-		"This program command is created to easily view secure variables. The current variables"
-		" that are able to be observed are the PK, KEK, db, dbx, TS. If no options are"
-		" given, then the information for the keys in the default path will be printed."
+		"This program command is created to easily view secure variables. The "
+		"current variables"
+		" that are able to be observed are the PK, KEK, db, dbx, TS. If no options "
+		"are"
+		" given, then the information for the keys in the default path will be "
+		"printed."
 		" If the user would like to print the information for another ESL file,"
 		" then the '-f' command would be appropriate."
-		"\vvalues for [VARIABLES] = {'PK','KEK','db','dbx', 'TS'} type one of the following to get info on that key, default is all. NOTE does not work when -f option is present"
+		"\vvalues for [VARIABLES] = {'PK','KEK','db','dbx', 'TS'} type one of the "
+		"following to get info on that key, default is all. NOTE does not work "
+		"when -f option is present"
 	};
 	rc = argp_parse(&argp, argc, argv, ARGP_NO_EXIT | ARGP_IN_ORDER | ARGP_NO_HELP, 0, &args);
 	if (rc || args.helpFlag)
@@ -75,7 +80,7 @@ out:
 /**
  *@param key , every option that is parsed has a value to identify it
  *@param arg, if key is an option than arg will hold its value ex: -<key> <arg>
- *@param state,  argp_state struct that contains useful information about the current parsing state 
+ *@param state,  argp_state struct that contains useful information about the current parsing state
  *@return success or errno
  */
 static int parse_opt(int key, char *arg, struct argp_state *state)
@@ -209,7 +214,7 @@ static int readFileFromSecVar(const char *path, const char *variable, int hrFlag
 		if (rc)
 			prlog(PR_WARNING, "ERROR: Could not parse file, continuing...\n");
 	} else {
-		printRaw(var->data, var->data_size);
+		print_raw(var->data, var->data_size);
 		rc = SUCCESS;
 	}
 
@@ -220,8 +225,8 @@ out:
 }
 
 /**
- *Does the appropriate read command depending on hrFlag on the file 
- *@param file , the path to the file 
+ *Does the appropriate read command depending on hrFlag on the file
+ *@param file , the path to the file
  *@param hrFlag, 1 for human readable 0 for raw data
  *@return SUCCESS or error number
  */
@@ -230,7 +235,7 @@ static int readFileFromPath(const char *file, int hrFlag)
 	int rc;
 	size_t size = 0;
 	char *c = NULL;
-	c = getDataFromFile(file, SIZE_MAX, &size);
+	c = get_data_from_file (file, SIZE_MAX, &size);
 	if (!c) {
 		return INVALID_FILE;
 	}
@@ -241,7 +246,7 @@ static int readFileFromPath(const char *file, int hrFlag)
 		else
 			rc = SUCCESS;
 	} else {
-		printRaw(c, size);
+		print_raw (c, size);
 		rc = SUCCESS;
 	}
 	free(c);
@@ -261,7 +266,7 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
 	int rc;
 	size_t size, out_size;
 	char *sizePath = NULL, *c = NULL;
-	rc = isFile(fullPath);
+	rc = is_file (fullPath);
 	if (rc) {
 		return rc;
 	}
@@ -295,7 +300,7 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
 			return ALLOC_FAIL;
 		}
 	} else {
-		c = getDataFromFile(fullPath, size, &out_size);
+		c = get_data_from_file (fullPath, size, &out_size);
 		if (!c)
 			return INVALID_FILE;
 	}
@@ -349,8 +354,8 @@ static int printReadable(const char *c, size_t size, const char *key)
 			    sigList->SignatureListSize <
 				    sigList->SignatureHeaderSize + sigList->SignatureSize) {
 				/*printf("Sig List : %d , sig Header: %d, sig Size: %d\n",list.SignatureListSize,list.SignatureHeaderSize,list.SignatureSize);*/
-				prlog(PR_ERR,
-				      "ERROR: Sig List is not structured correctly, defined size and actual sizes are mismatched\n");
+				prlog(PR_ERR, "ERROR: Sig List is not structured correctly, "
+					      "defined size and actual sizes are mismatched\n");
 				break;
 			}
 		}
@@ -373,7 +378,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 		}
 		if (key && !strcmp(key, "dbx")) {
 			printf("\tHash: ");
-			printHex(cert, cert_size);
+			print_hex (cert, cert_size);
 		} else {
 			rc = parseX509(&x509, cert, (size_t)cert_size);
 			if (rc)
