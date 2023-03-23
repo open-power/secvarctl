@@ -17,9 +17,9 @@ enum backends
 
 struct backend
 {
-	char name[32];
-	size_t countCmds;
-	struct command *commands;
+  char name[32];
+  size_t countCmds;
+  struct command *commands;
 };
 
 extern int verbose;

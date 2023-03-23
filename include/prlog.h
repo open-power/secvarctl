@@ -19,10 +19,12 @@ extern int verbose;
 #define PR_PRINTF PR_NOTICE
 #define PR_INFO 6
 #define PR_DEBUG 7
-#define prlog(l, ...)                                           \
-	do {                                                          \
-		if (l <= MAXLEVEL)                                          \
-			fprintf((l <= PR_ERR) ? stderr : stdout, ##__VA_ARGS__);  \
-	} while (0)
+#define prlog(l, ...)                                             \
+  do                                                              \
+    {                                                             \
+      if (l <= MAXLEVEL)                                          \
+        fprintf ((l <= PR_ERR) ? stderr : stdout, ##__VA_ARGS__); \
+    }                                                             \
+  while (0)
 
 #endif

@@ -110,7 +110,7 @@ get_data_from_file (const char *fullPath, size_t max_bytes, size_t *size)
     }
 
   read_size = read (fptr, buffer, max_bytes);
-  if (read_size != max_bytes)
+  if (read_size > max_bytes)
     {
       prlog (PR_ERR, "ERROR: failed to read whole contents of %s in one go\n", fullPath);
       free (buffer);
@@ -118,7 +118,7 @@ get_data_from_file (const char *fullPath, size_t max_bytes, size_t *size)
       goto out;
     }
   else
-    *size = max_bytes;
+    *size = read_size;
 
 out:
   close (fptr);
