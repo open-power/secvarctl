@@ -10,12 +10,12 @@ MANDIR=usr/share/man
 LIB_DIR = ../../lib
 BIN_DIR = .
 HOST_BACKEND_DIR = ./backends/host
+GUEST_BACKEND_DIR = ./backends/guest
 
 INCLUDES = -I./include
 
 #By default host backend static library created
 DYNAMIC_LIB = 0
-
 #it is used to enable memory leak test in test sript
 MEMCHECK = 0
 
@@ -72,6 +72,7 @@ else
 endif
 
 HOST_BACKEND = 1
+GUEST_BACKEND = 1
 
 ifeq ($(strip $(HOST_BACKEND)), 1)
   INCLUDES += -I./external/host/skiboot \
@@ -80,6 +81,12 @@ ifeq ($(strip $(HOST_BACKEND)), 1)
               -I$(HOST_BACKEND_DIR)
   _LDFLAGS += -lhost-backend-$(CRYPTO_LIB)
   _CFLAGS += -DSECVAR_HOST_BACKEND
+endif
+
+ifeq ($(strip $(GUEST_BACKEND)), 1)
+  INCLUDES += -I$(GUEST_BACKEND_DIR)/include
+  LDFLAGS += -lguest-backend-openssl -lstb-secvar-openssl
+  CFLAGS += -DSECVAR_GUEST_BACKEND
 endif
 
 _LDFLAGS += -L./lib
@@ -114,6 +121,10 @@ ifeq ($(strip $(HOST_BACKEND)), 1)
 	@$(MAKE) -C $(HOST_BACKEND_DIR) LIB_DIR=$(LIB_DIR) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
 	            MBEDTLS=$(MBEDTLS) CRYPTO_READ_ONLY=$(CRYPTO_READ_ONLY) DEBUG=$(DEBUG) \
 	            DYNAMIC_LIB=$(DYNAMIC_LIB)
+endif
+ifeq ($(strip $(GUEST_BACKEND)), 1)
+	@$(MAKE) -C $(GUEST_BACKEND_DIR) DEBUG=$(DEBUG) LIB_DIR=$(LIB_DIR) \
+	            CRYPTO_READ_ONLY=$(CRYPTO_READ_ONLY) DYNAMIC_LIB=$(DYNAMIC_LIB)
 endif
 
 %.o: %.c
@@ -157,6 +168,9 @@ endif
 clean:
 ifeq ($(strip $(HOST_BACKEND)), 1)
 	@$(MAKE) -C $(HOST_BACKEND_DIR) clean
+endif
+ifeq ($(strip $(GUEST_BACKEND)), 1)
+	@$(MAKE) -C $(GUEST_BACKEND_DIR) clean
 endif
 	@$(MAKE) -C test clean
 	find . -name "*.[od]" -delete

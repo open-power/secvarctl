@@ -7,17 +7,29 @@
 #include <stdlib.h>
 #include "prlog.h"
 #include "secvarctl.h"
+#ifdef SECVAR_HOST_BACKEND
 #include "host_svc_backend.h"
+#endif
+#ifdef SECVAR_GUEST_BACKEND
+#include "guest_svc_backend.h"
+#endif
 
 #define HOST_BACKEND ((char *) "ibm,edk2-compat-v1")
-#define GUEST_BACKEND ((char *) "ibm,libstb-secvar-v1")
+#define GUEST_BACKEND ((char *) "ibm,plpks-sb-v1")
 
 int verbose = PR_WARNING;
 
 static struct backend backends[] = {
+#ifdef SECVAR_HOST_BACKEND
   { .name = "ibm,edk2-compat-v1",
     .countCmds = sizeof (edk2_compat_command_table) / sizeof (struct command),
-    .commands = edk2_compat_command_table }
+    .commands = edk2_compat_command_table },
+#endif
+#ifdef SECVAR_GUEST_BACKEND
+  { .name = "ibm,plpks-sb-v1",
+    .countCmds = sizeof (guest_command_table) / sizeof (struct command),
+    .commands = guest_command_table },
+#endif
 };
 
 void
@@ -155,39 +167,50 @@ main (int argc, char *argv[])
 
   for (; argc > 0 && *argv[0] == '-'; argc--, argv++)
     {
-      if (!strcmp (*argv, "--usage"))
+      if (!strcmp ("--usage", *argv))
         {
           usage ();
           return SUCCESS;
         }
-      else if (!strcmp (*argv, "--help") || !strcmp (*argv, "-h"))
+      else if (!strcmp ("--help", *argv) || !strcmp ("-h", *argv))
         {
           help ();
           return SUCCESS;
         }
-      else if (!strcmp (*argv, "-m") || !strcmp (*argv, "--mode"))
+      else if (!strcmp ("-m", *argv) || !strcmp ("--mode", *argv))
         {
           argv++;
           argc--;
-          if (*argv != NULL && !strncmp (*argv, "guest", 5))
+          if (*argv != NULL && !strcmp ("guest", *argv))
             {
               secvarctl_mode = 1;
               backend_name = GUEST_BACKEND;
             }
-          else if (*argv != NULL && !strncmp (*argv, "host", 4))
+          else if (*argv != NULL && !strcmp ("host", *argv))
             {
               secvarctl_mode = 0;
               backend_name = HOST_BACKEND;
             }
-          else
+          else if (*argv != NULL)
             {
               prlog (PR_WARNING, "\nERROR: %s is unkonwn mode\n", *argv);
               usage ();
               return SUCCESS;
             }
+          else
+            {
+              prlog (PR_WARNING, "\nERROR: mode name is needed\n");
+              usage ();
+              return SUCCESS;
+            }
         }
-      else if (!strcmp (*argv, "-v") || !strcmp (*argv, "--verbose"))
+      else if (!strcmp ("-v", *argv) || !strcmp ("--verbose", *argv))
         verbose = PR_DEBUG;
+      else
+        {
+          usage ();
+          return SUCCESS;
+        }
     }
 
   if (argc <= 0)
