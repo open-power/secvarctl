@@ -2,3 +2,4 @@
 *.txt
 testenv
 generatedTestData
+generated-data
