@@ -14,6 +14,7 @@ MEMCHECK = 0
 OPENSSL = 1
 GNUTLS = 0
 HOST_BACKEND = 1
+GUEST_BACKEND = 1
 
 ifeq ($(SECVAR_TOOL), ../secvarctl-cov)
    SECVAR_TOOLS = ../$(SECVAR_TOOL)
@@ -27,11 +28,19 @@ ifeq ($(strip $(HOST_BACKEND)), 1)
 	$(py) runTests.py -m $(MEMCHECK) -s $(SECVAR_TOOLS) && \
 	$(py) runSvcGenerateTests.py -m $(MEMCHECK) -o $(OPENSSL) -g $(GNUTLS) -s $(SECVAR_TOOLS)
 endif
+ifeq ($(strip $(GUEST_BACKEND)), 1)
+	@cd guest/ && \
+	$(py) guest_tests.py -m $(MEMCHECK) -s $(SECVAR_TOOLS)
+endif
 
 generate: $(host_data)
 ifeq ($(strip $(HOST_BACKEND)), 1)
 	@cd host/ && \
 	$(py) generateTestData.py $(efitools)
+endif
+ifeq ($(strip $(GUEST_BACKEND)), 1)
+	@cd guest/ && \
+	$(py) guest_generate_testdata.py $(SECVAR_TOOLS)
 endif
 
 coverage:
@@ -40,6 +49,7 @@ ifeq ("$(wildcard $(SECVAR_TOOL))","")
 endif
 
 clean:
+	rm -rf guest/*.txt guest/generated-data guest/testenv guest/log
 	rm -rf host/*.txt host/generatedTestData host/testenv
 
 .PHONY: all coverage clean
