@@ -9,7 +9,6 @@
 *.d
 lib
 build
-libstb-secvar
 # final binaries
 secvarctl
 secvarctl-cov
