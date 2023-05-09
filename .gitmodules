@@ -1,0 +1,3 @@
+[submodule "external/guest/libstb-secvar"]
+	path = external/guest/libstb-secvar
+	url = https://github.com/ibm/libstb-secvar
