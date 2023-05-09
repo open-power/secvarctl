@@ -15,7 +15,7 @@ set( GUEST_EXTERNAL_BACKEND_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../external/guest
 set( GUEST_EXTERNAL_BACKEND ${CMAKE_CURRENT_SOURCE_DIR}/../../external/guest)
 add_definitions(-DSECVAR_CRYPTO_OPENSSL)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include/ ${GUEST_EXTERNAL_BACKEND_DIR}/include ${GUEST_EXTERNAL_BACKEND_DIR}/include/secvar ${CMAKE_CURRENT_SOURCE_DIR}/include )
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include/ ${GUEST_EXTERNAL_BACKEND_DIR}/include ${GUEST_EXTERNAL_BACKEND_DIR}/include/secvar ${CMAKE_CURRENT_SOURCE_DIR}/include ${GUEST_EXTERNAL_BACKEND_DIR} )
 option (DYNAMIC_LIB "Dynamic library " OFF)
 option (STATIC_LIB "Static library " ON)
 if( ${DYNAMIC_LIB} )
