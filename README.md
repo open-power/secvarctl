@@ -58,21 +58,22 @@ Being that the key management process is rather lengthy and difficult, `secvarct
   - C compiler
 
 ## BUILDING:
- |               | Make      |
- ---             | ----------- |
- | Default Build (openssl is cryptolib) | `make [build options]`      |
- | Build W Mbedtls as cryptolib | `MBEDTLS=1` |
- | Build W OpenSSL as cryptolib | `OPENSSL=1` |
- | Build W GnuTLS as cryptolib | `GNUTLS=1` |
- | Static Build | `STATIC=1` |
- | Reduced Size Build | default |
- | Build Without Crypto Write Functions | `CRYPTO_READ_ONLY=1` |
- | Build W Specific Mbedtls Library | `CFLAGS="-I<path>/include" LDFLAGS="-L<path>/library"` |
- | Build for Coverage Tests | `make [options] coverage` |
- | Build W Debug Symbols | `make DEBUG=1` |
+ |               | Make      | CMake |
+ ---             | ----------- | ----------- |
+ | Default Build (openssl is cryptolib) | `make [build options]`      | `mkdir build && cd build && cmake [build options] ../ . && cmake --build .`      |
+ | Build W Mbedtls as cryptolib | `MBEDTLS=1` | `-DMBEDTLS=1` |
+ | Build W OpenSSL as cryptolib | `OPENSSL=1` | `mkdir build && cd build && cmake -DOPENSSL=1 [build options] ../ . && cmake --build .` |
+ | Build W GnuTLS as cryptolib | `GNUTLS=1` | `-DGNUTLS=1` |
+ | Static Build | `By Default Static build` |	`By Default Static build` |
+ | Dynamic Build | `DYNAMIC_LIB=1` |	`-DDYNAMIC_LIB=1` |
+ | Reduced Size Build | `default` | `-DSTRIP=1` |
+ | Build Without Crypto Write Functions | `CRYPTO_READ_ONLY=1` | `-CRYPTO_READ_ONLY=1` |
+ | Build W Specific Mbedtls Library | `CFLAGS="-I<path>/include" LDFLAGS="-L<path>/library"` | `-DCUSTOM_MBEDTLS=<path>` |
+ | Build for Coverage Tests | `make [options] coverage` | `-DCoverage=1` |
+ | Build W Debug Symbols | `make DEBUG=1` | `default` |
  | Run unit test | `make check`        |
- | Install    | `make install`        |
- | Uninstall    | `make uninstall`        |
+ | Install    | `make install`        | `make install_lib` |
+ | Uninstall    | `make uninstall`        | `make uninstall` | 
 
 ## USAGE:
 
