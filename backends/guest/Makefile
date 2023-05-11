@@ -11,6 +11,8 @@ GUEST_EXTERNAL_BACKEND = ../../external/guest
 INCLUDES = -I../../include \
            -I$(GUEST_EXTERNAL_BACKEND_DIR)/include \
            -I$(GUEST_EXTERNAL_BACKEND_DIR)/include/secvar \
+	   -I$(GUEST_EXTERNAL_BACKEND_DIR) \
+	   -I$(GUEST_EXTERNAL_BACKEND_DIR)/external/endian \
 					 -I./include
 
 DEBUG ?= 0
