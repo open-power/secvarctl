@@ -15,7 +15,7 @@ set( GUEST_EXTERNAL_BACKEND_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../external/guest
 set( GUEST_EXTERNAL_BACKEND ${CMAKE_CURRENT_SOURCE_DIR}/../../external/guest)
 add_definitions(-DSECVAR_CRYPTO_OPENSSL)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include/ ${GUEST_EXTERNAL_BACKEND_DIR}/include ${GUEST_EXTERNAL_BACKEND_DIR}/include/secvar ${CMAKE_CURRENT_SOURCE_DIR}/include ${GUEST_EXTERNAL_BACKEND_DIR} )
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include/ ${GUEST_EXTERNAL_BACKEND_DIR}/include ${GUEST_EXTERNAL_BACKEND_DIR}/include/secvar ${CMAKE_CURRENT_SOURCE_DIR}/include ${GUEST_EXTERNAL_BACKEND_DIR} ${GUEST_EXTERNAL_BACKEND_DIR}/external/endian )
 option (DYNAMIC_LIB "Dynamic library " OFF)
 option (STATIC_LIB "Static library " ON)
 if( ${DYNAMIC_LIB} )
@@ -60,7 +60,9 @@ else ( )
 	set ( LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/lib )
 	set (COPY_FROM ${LIB_DIR}/../libguest* )
 endif ( )
-add_custom_target (generate ALL make -C ${GUEST_EXTERNAL_BACKEND_DIR} -f Makefile LIB_DIR=${LIB_DIR} STATIC_LIB=${STATIC_LIB} CRYPTO_READ_ONLY=${CRYPTO_READ_ONLY})
+add_custom_target (generate ALL
+	COMMAND git submodule update --recursive --init --remote
+	COMMAND make -C ${GUEST_EXTERNAL_BACKEND_DIR} -f Makefile LIB_DIR=${LIB_DIR} STATIC_LIB=${STATIC_LIB} CRYPTO_READ_ONLY=${CRYPTO_READ_ONLY})
 
 message("GUEST BACKEND ${BUILD_T} LIBRARY")
 add_library( guest-backend-openssl ${BUILD_T} ${SRCS})
