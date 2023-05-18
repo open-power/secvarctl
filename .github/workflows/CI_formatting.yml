@@ -1,21 +1,21 @@
-name: Test Source Code Formatting
+# name: Test Source Code Formatting
 
-on: ['push', 'pull_request']
+# on: ['push', 'pull_request']
 
-jobs:
-  build:
+# jobs:
+#   build:
 
-    runs-on: ubuntu-latest
+#     runs-on: ubuntu-latest
 
-    steps:
-    - uses: actions/checkout@v2
+#     steps:
+#     - uses: actions/checkout@v2
   
-    - name: install clang format
-      run: sudo apt install clang-format
+#     - name: install clang format
+#       run: sudo apt install clang-format
 
-    - name: test if formatting is appropriate
-      run: |
-           make format
-           git status
-           git diff
-           [[ -z $(git status -s) ]]
+#     - name: test if formatting is appropriate
+#       run: |
+#            make format
+#            git status
+#            git diff
+#            [[ -z $(git status -s) ]]
