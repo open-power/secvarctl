@@ -998,7 +998,8 @@ static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const u
 	ptr += sizeof(attr);
 	memcpy(ptr, args->time, sizeof(struct efi_time));
 	ptr += sizeof(*args->time);
-	memcpy(ptr, ESL, ESL_size);
+	if (ESL_size != 0 && ESL != NULL)
+		memcpy(ptr, ESL, ESL_size);
 
 out:
 	if (wkey)
