@@ -328,6 +328,7 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 		// unlikely fail, if alloc fails
 		if (getCurrentVars(currentVars, &currCount, path)) {
 			prlog(PR_ERR, "Could not get current variables from path %s\n", path);
+			free(currentVars);
 			return INVALID_FILE;
 		}
 	}
