@@ -3,9 +3,9 @@
 CC = gcc
 _CFLAGS = -MMD -O2 -std=gnu99 -Wall # -Werror
 CFLAGS =
-LDFLAGS =
-
-SECVAR_TOOL = $(PWD)/secvarctl-cov
+# TODO: just put all the linker flags for now, rework the LDFLAGS settings later
+LDFLAGS = -lcrypto -lmbedtls -lmbedx509 -lmbedcrypto
+SECVAR_TOOL = $(PWD)/bin/secvarctl-cov
 MANDIR=usr/share/man
 BIN_DIR = bin
 OBJ_DIR = obj
@@ -134,7 +134,7 @@ $(OBJ_DIR)/%.cov.o: %.c
 
 $(BIN_DIR)/secvarctl: $(OBJS) $(LIBSTB_SECVAR)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(_CFLAGS) $(STATICFLAG) $^ -o $@ $(_LDFLAGS) -lcrypto -lmbedtls -lmbedx509 -lmbedcrypto
+	$(CC) $(_CFLAGS) $(STATICFLAG) $^ -o $@ $(_LDFLAGS)
 
 $(BIN_DIR)/secvarctl-cov: $(OBJCOV) $(LIBSTB_SECVAR)
 	@mkdir -p $(BIN_DIR)
@@ -148,10 +148,18 @@ secvarctl: $(BIN_DIR)/secvarctl
 secvarctl-cov: $(BIN_DIR)/secvarctl-cov
 .PHONY: secvarctl secvarctl-cov
 
-check:
+check: secvarctl-cov
 	@$(MAKE) -C test MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
 	                 HOST_BACKEND=$(HOST_BACKEND) \
-	                 SECVAR_TOOL=$(SECVAR_TOOL)
+	                 SECVAR_TOOL=$(SECVAR_TOOL) \
+	                 check
+
+memcheck: secvarctl-cov
+	@$(MAKE) -C test MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
+	                 HOST_BACKEND=$(HOST_BACKEND) \
+	                 SECVAR_TOOL=$(SECVAR_TOOL) \
+	                 memcheck
+
 generate:
 	@$(MAKE) -C test generate MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
 	                 HOST_BACKEND=$(HOST_BACKEND) \

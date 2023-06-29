@@ -11,7 +11,7 @@ import filecmp
 import argparse
 
 MEM_ERR = 101
-SECTOOLS="../../secvarctl-cov"
+SECTOOLS="../../bin/secvarctl-cov"
 GEN = [SECTOOLS, "-m", "host", "generate", "-v"]
 OUTDIR = "./generatedTestData/"
 MEMCHECK = False
