@@ -172,7 +172,7 @@ get_current_esl (const struct verify_args *args, const uint8_t *update_variable,
   char *esl_data = "/data";
   char *esl_data_path = NULL;
   uint8_t *current_esl = *current_esl_data;
-  size_t current_esl_size;
+  size_t current_esl_size = 0;
 
   if (args->variable_path != NULL)
     {
