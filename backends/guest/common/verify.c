@@ -70,7 +70,7 @@ update_variable (const uint8_t *variable_name, const uint8_t *auth_data,
              (allow_unauthenticated_pk_update ? "True" : "False"));
       prlog (PR_INFO, "\tappend update: %s\n\n", (append_update ? "True" : "False"));
 
-      if (*new_esl_data != NULL && (*new_esl_data + TIMESTAMP_LEN) != NULL)
+      if (*new_esl_data != NULL)
         {
           rc = print_variables ((*new_esl_data + TIMESTAMP_LEN),
                                 (*new_esl_data_size - TIMESTAMP_LEN), variable_name);
