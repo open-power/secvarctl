@@ -22,16 +22,27 @@ else
    SECVAR_TOOLS = $(SECVAR_TOOL)
 endif
 
-all: coverage
-ifeq ($(strip $(HOST_BACKEND)), 1)
+define test_host
 	@cd host/ && \
-	$(py) runTests.py -m $(MEMCHECK) -s $(SECVAR_TOOLS) && \
-	$(py) runSvcGenerateTests.py -m $(MEMCHECK) -o $(OPENSSL) -g $(GNUTLS) -s $(SECVAR_TOOLS)
-endif
-ifeq ($(strip $(GUEST_BACKEND)), 1)
+	$(py) runTests.py -m $(1) -s $(SECVAR_TOOLS) && \
+	$(py) runSvcGenerateTests.py -m $(1) -o $(OPENSSL) -g $(GNUTLS) -s $(SECVAR_TOOLS)
+endef
+
+define test_guest
 	@cd guest/ && \
-	$(py) guest_tests.py -m $(MEMCHECK) -s $(SECVAR_TOOLS)
-endif
+	$(py) guest_tests.py -m $(1) -s $(SECVAR_TOOLS)
+endef
+
+# TODO: skip tests if a backend isn't enabled
+all: check
+check: check-host check-guest
+memcheck: memcheck-host memcheck-guest
+
+check-%:
+	$(call $(patsubst check-%,test_%,$@),0)
+
+memcheck-%:
+	$(call $(patsubst check-%,test_%,$@),1)
 
 generate: $(host_data)
 ifeq ($(strip $(HOST_BACKEND)), 1)
@@ -52,4 +63,4 @@ clean:
 	rm -rf guest/*.txt guest/generated-data guest/testenv guest/log
 	rm -rf host/*.txt host/generatedTestData host/testenv
 
-.PHONY: all coverage clean
+.PHONY: all coverage clean check memcheck check-% memcheck-%
