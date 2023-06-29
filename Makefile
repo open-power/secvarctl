@@ -1,23 +1,20 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2022-2023 IBM Corp.
 CC = gcc
-_CFLAGS = -MMD -O2 -std=gnu99 -Wall -Werror
+_CFLAGS = -MMD -O2 -std=gnu99 -Wall # -Werror
 CFLAGS =
 LDFLAGS =
 
 SECVAR_TOOL = $(PWD)/secvarctl-cov
 MANDIR=usr/share/man
-LIB_DIR = ../../lib
-BIN_DIR = .
-HOST_BACKEND_DIR = ./backends/host
-GUEST_BACKEND_DIR = ./backends/guest
+BIN_DIR = bin
+OBJ_DIR = obj
 
-INCLUDES = -I./include
-
-#By default host backend static library created
-DYNAMIC_LIB = 0
-#it is used to enable memory leak test in test sript
-MEMCHECK = 0
+# TODO: seriously trim down the number of -I includes. use more relative pathing.
+INCLUDES = -I./include                               \
+           -I./external/libstb-secvar/               \
+           -I./external/libstb-secvar/include        \
+           -I./external/libstb-secvar/include/secvar
 
 DEBUG ?= 0
 ifeq ($(strip $(DEBUG)), 1)
@@ -38,6 +35,9 @@ OPENSSL = 1
 GNUTLS = 0
 MBEDTLS = 0
 CRYPTO_LIB = openssl
+
+# TODO: Split libstb-secvar Makefile into includeable and runnable probably
+LIBSTB_SECVAR = external/libstb-secvar/lib/libstb-secvar-openssl.a
 
 ifeq ($(strip $(GNUTLS)), 1)
   MBEDTLS = 0
@@ -75,27 +75,44 @@ HOST_BACKEND = 1
 GUEST_BACKEND = 1
 
 ifeq ($(strip $(HOST_BACKEND)), 1)
-  INCLUDES += -I./external/host/skiboot \
-              -I./external/host/skiboot/libstb \
-              -I./external/host/skiboot/include \
-              -I$(HOST_BACKEND_DIR)
-  _LDFLAGS += -lhost-backend-$(CRYPTO_LIB)
+  INCLUDES += -I./external/skiboot               \
+              -I./external/skiboot/libstb        \
+              -I./external/skiboot/include       \
+              -I./external/extraMbedtls/include/ \
+              -I./backends/host
   _CFLAGS += -DSECVAR_HOST_BACKEND
 endif
 
 ifeq ($(strip $(GUEST_BACKEND)), 1)
-  INCLUDES += -I$(GUEST_BACKEND_DIR)/include
-  LDFLAGS += -lguest-backend-openssl -lstb-secvar-openssl
+  INCLUDES += -I./backends/guest/include
   CFLAGS += -DSECVAR_GUEST_BACKEND
 endif
 
 _LDFLAGS += -L./lib
 
-SECVARCTL_SRCS = ./src/generic.c \
-                 ./src/secvarctl.c
+SRCS = generic.c \
+       secvarctl.c
 
-SECVARCTL_OBJS = $(SECVARCTL_SRCS:.c=.o)
-OBJCOV = $(patsubst %.o, %.cov.o,$(SECVARCTL_OBJS))
+# TODO: Consider splitting this also into its own Makefile.inc?
+EXTERNAL_SRCS = external/extraMbedtls/pkcs7.c                                \
+                external/extraMbedtls/pkcs7_write.c                          \
+                external/skiboot/libstb/secvar/secvar_util.c                 \
+                external/skiboot/libstb/secvar/crypto/crypto-mbedtls.c       \
+                external/skiboot/libstb/secvar/crypto/crypto-openssl.c       \
+                external/skiboot/libstb/secvar/crypto/crypto-gnutls.c        \
+                external/skiboot/libstb/secvar/backend/edk2-compat.c         \
+                external/skiboot/libstb/secvar/backend/edk2-compat-process.c
+
+include backends/host/Makefile.inc
+include backends/guest/Makefile.inc
+
+SRCS += $(EXTERNAL_SRCS)
+
+SRCS += $(addprefix backends/host/,$(HOST_SRCS))
+SRCS += $(addprefix backends/guest/,$(GUEST_SRCS))
+
+OBJS = $(addprefix $(OBJ_DIR)/,$(SRCS:.c=.o))
+OBJCOV = $(patsubst %.o, %.cov.o,$(OBJS))
 
 _CFLAGS += $(CFLAGS) $(INCLUDES)
 _LDFLAGS += $(LDFLAGS)
@@ -103,43 +120,41 @@ _LDFLAGS += $(LDFLAGS)
 export CFLAGS
 export LDFLAGS
 
-all: secvarctl-backends secvarctl secvarctl-cov
+all: secvarctl
 
-coverage: secvarctl-backends secvarctl-cov
+coverage: secvarctl-cov
 
-secvarctl: $(SECVARCTL_OBJS)
-	$(CC) $(_CFLAGS) $(STATICFLAG) $^ -o $(BIN_DIR)/$@ $(_LDFLAGS)
-	@echo "secvarctl Build successful!"
-
-secvarctl-cov: $(OBJCOV)
-	$(CC) $(_CFLAGS) $^ $(STATICFLAG) -fprofile-arcs -ftest-coverage -o $(BIN_DIR)/$@ $(_LDFLAGS)
-	@echo "secvarctl-cov Build successful!"
-
-secvarctl-backends:
-	@mkdir -p $(LIB_DIR)
-ifeq ($(strip $(HOST_BACKEND)), 1)
-	@$(MAKE) -C $(HOST_BACKEND_DIR) LIB_DIR=$(LIB_DIR) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
-	            MBEDTLS=$(MBEDTLS) CRYPTO_READ_ONLY=$(CRYPTO_READ_ONLY) DEBUG=$(DEBUG) \
-	            DYNAMIC_LIB=$(DYNAMIC_LIB)
-endif
-ifeq ($(strip $(GUEST_BACKEND)), 1)
-	@$(MAKE) -C $(GUEST_BACKEND_DIR) DEBUG=$(DEBUG) LIB_DIR=$(LIB_DIR) \
-	            CRYPTO_READ_ONLY=$(CRYPTO_READ_ONLY) DYNAMIC_LIB=$(DYNAMIC_LIB)
-endif
-
-%.o: %.c
+$(OBJ_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
 	$(CC) $(_CFLAGS) $< -o $@ -c
 
-%.cov.o: %.c
-	$(CC) $(_CFLAGS) -c  --coverage $< -o $@
+$(OBJ_DIR)/%.cov.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(_CFLAGS) -c --coverage $< -o $@
+
+$(BIN_DIR)/secvarctl: $(OBJS) $(LIBSTB_SECVAR)
+	@mkdir -p $(BIN_DIR)
+	$(CC) $(_CFLAGS) $(STATICFLAG) $^ -o $@ $(_LDFLAGS) -lcrypto -lmbedtls -lmbedx509 -lmbedcrypto
+
+$(BIN_DIR)/secvarctl-cov: $(OBJCOV) $(LIBSTB_SECVAR)
+	@mkdir -p $(BIN_DIR)
+	$(CC) $(_CFLAGS) $^ $(STATICFLAG) -fprofile-arcs -ftest-coverage -o $@ $(_LDFLAGS)
+
+$(LIBSTB_SECVAR):
+	$(MAKE) CFLAGS=-DSECVAR_CRYPTO_WRITE_FUNC -C external/libstb-secvar lib/libstb-secvar-openssl.a
+
+
+secvarctl: $(BIN_DIR)/secvarctl
+secvarctl-cov: $(BIN_DIR)/secvarctl-cov
+.PHONY: secvarctl secvarctl-cov
 
 check:
 	@$(MAKE) -C test MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
-	                 DYNAMIC_LIB=$(DYNAMIC_LIB) HOST_BACKEND=$(HOST_BACKEND) \
+	                 HOST_BACKEND=$(HOST_BACKEND) \
 	                 SECVAR_TOOL=$(SECVAR_TOOL)
 generate:
 	@$(MAKE) -C test generate MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
-	                 DYNAMIC_LIB=$(DYNAMIC_LIB) HOST_BACKEND=$(HOST_BACKEND) \
+	                 HOST_BACKEND=$(HOST_BACKEND) \
 	                 SECVAR_TOOL=$(SECVAR_TOOL)
 
 install: all
@@ -149,33 +164,18 @@ install: all
 	@install -m 0644 secvarctl.1 $(DESTDIR)/$(MANDIR)/man1
 	@mkdir -p $(DESTDIR)/usr/lib/secvarctl
 	@install -m 0755 ./lib/* $(DESTDIR)/usr/lib/secvarctl
-ifeq ($(strip $(DYNAMIC_LIB)), 1)
-	@echo "$(DESTDIR)/usr/lib/secvarctl" > /etc/ld.so.conf.d/secvarctl.conf
-	@ldconfig
-endif
 	@echo "secvarctl installed successfully!"
 
 uninstall:
 	@rm -rf $(DESTDIR)/usr/bin/secvarctl
 	@rm -rf $(DESTDIR)/$(MANDIR)/man1/secvarctl.1
 	@rm -rf $(DESTDIR)/usr/lib/secvarctl
-ifeq ($(strip $(DYNAMIC_LIB)), 1)
-	@rm -rf /etc/ld.so.conf.d/secvarctl.conf
-	@ldconfig
-endif
 	@echo "secvarctl uninstalled successfully!"
 
 clean:
-ifeq ($(strip $(HOST_BACKEND)), 1)
-	@$(MAKE) -C $(HOST_BACKEND_DIR) clean
-endif
-ifeq ($(strip $(GUEST_BACKEND)), 1)
-	@$(MAKE) -C $(GUEST_BACKEND_DIR) clean
-endif
 	@$(MAKE) -C test clean
-	find . -name "*.[od]" -delete
-	find . -name "*.cov.*" -delete
-	rm -rf ./lib
-	rm -f $(BIN_DIR)/secvarctl $(BIN_DIR)/secvarctl-cov
+	$(MAKE) -C external/libstb-secvar/ clean
+	rm -rf $(BIN_DIR)
+	rm -rf $(OBJ_DIR)
 
-.PHONY: all secvarctl-backends coverage clean
+.PHONY: all coverage clean

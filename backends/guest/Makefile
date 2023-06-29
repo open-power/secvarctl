@@ -11,7 +11,8 @@ GUEST_EXTERNAL_BACKEND = ../../external/guest
 INCLUDES = -I../../include \
            -I$(GUEST_EXTERNAL_BACKEND_DIR)/include \
            -I$(GUEST_EXTERNAL_BACKEND_DIR)/include/secvar \
-					 -I./include
+           -I$(GUEST_EXTERNAL_BACKEND_DIR) \
+           -I./include
 
 DEBUG ?= 0
 ifeq ($(strip $(DEBUG)), 1)
