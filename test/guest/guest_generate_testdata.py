@@ -51,7 +51,7 @@ log_dir = "./log"
 if len(sys.argv)>1:
 	secvarctl = [sys.argv[1]]
 else:
-	secvarctl = ["../../secvarctl-cov"]
+	secvarctl = ["../../bin/secvarctl-cov"]
 
 secvarctl = secvarctl + ["-m", "guest", "generate"]
 
