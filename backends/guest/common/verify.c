@@ -174,45 +174,59 @@ get_current_esl (const struct verify_args *args, const uint8_t *update_variable,
   uint8_t *current_esl = *current_esl_data;
   size_t current_esl_size = 0;
 
-  if (args->variable_path != NULL)
+  // Handle current variables
+  for (i = 0; i < args->current_variable_size; i += 2)
     {
-      len = strlen (args->variable_path) + strlen ((char *) update_variable) +
-            strlen (esl_data);
-      esl_data_path = malloc (len + 1);
-      if (esl_data_path == NULL)
-        return ALLOC_FAIL;
-
-      memset (esl_data_path, 0x00, len + 1);
-      len = 0;
-      memcpy (esl_data_path + len, args->variable_path, strlen (args->variable_path));
-      len += strlen (args->variable_path);
-      memcpy (esl_data_path + len, update_variable, strlen ((char *) update_variable));
-      len += strlen ((char *) update_variable);
-      memcpy (esl_data_path + len, esl_data, strlen (esl_data));
-
-      if (is_file (esl_data_path) == SUCCESS)
-        rc = get_current_esl_data ((uint8_t *) esl_data_path, &current_esl,
-                                   &current_esl_size);
-      free (esl_data_path);
-    }
-  else
-    {
-      for (i = 0; i < args->current_variable_size; i += 2)
+      if (memcmp (args->current_variable[i], update_variable,
+                  strlen ((char *) update_variable)) == 0)
         {
-          if (memcmp (args->current_variable[i], update_variable,
-                      strlen ((char *) update_variable)) == 0)
-            {
-              rc = get_current_esl_data ((uint8_t *) args->current_variable[i + 1],
-                                         &current_esl, &current_esl_size);
-              if (rc != SUCCESS)
-                return rc;
-              break;
-            }
+          // Target variable found in current variable arg list
+          rc = get_current_esl_data ((uint8_t *) args->current_variable[i + 1],
+                                     &current_esl, &current_esl_size);
+          if (rc != SUCCESS)
+            goto fail;
+          goto out;
         }
     }
 
+  // Target variable NOT found in current variable arg list, trying variable path
+
+  if (args->variable_path == NULL)
+    goto fail;
+  len = strlen (args->variable_path) + strlen ((char *) update_variable) +
+        strlen (esl_data);
+  esl_data_path = malloc (len + 1);
+  if (esl_data_path == NULL)
+    {
+      rc = ALLOC_FAIL;
+      goto fail;
+    }
+
+  memset (esl_data_path, 0x00, len + 1);
+  len = 0;
+  memcpy (esl_data_path + len, args->variable_path, strlen (args->variable_path));
+  len += strlen (args->variable_path);
+  memcpy (esl_data_path + len, update_variable, strlen ((char *) update_variable));
+  len += strlen ((char *) update_variable);
+  memcpy (esl_data_path + len, esl_data, strlen (esl_data));
+
+  if (is_file (esl_data_path) == SUCCESS)
+    rc = get_current_esl_data ((uint8_t *) esl_data_path, &current_esl,
+                               &current_esl_size);
+  free (esl_data_path);
+
+  if (rc != SUCCESS)
+      goto fail;
+
+out:
   *current_esl_data = current_esl;
   *current_esl_data_size = current_esl_size;
+
+  return rc;
+
+fail:
+  *current_esl_data = NULL;
+  *current_esl_data_size = 0;
 
   return rc;
 }
