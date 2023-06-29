@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2022-2023 IBM Corp.
 CC = gcc
-_CFLAGS = -MMD -O2 -std=gnu99 -Wall # -Werror
+_CFLAGS = -MMD -O2 -std=gnu99 -Wall -Werror
 CFLAGS =
 # TODO: just put all the linker flags for now, rework the LDFLAGS settings later
 LDFLAGS = -lcrypto -lmbedtls -lmbedx509 -lmbedcrypto
