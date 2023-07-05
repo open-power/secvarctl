@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 IBM Corp.
 py = python3
-#add location of efitools here. if in PATH, leave bleank
-# efitools = ../../efitools/
-efitools =../../efitools/
+#add location of efitools here. if in PATH, leave blank
+efitools = ../../efitools/
 host_data = host/testdata/PK_by_PK.auth
-SECVAR_TOOL = ../secvarctl-cov
+SECVAR_TOOL ?= $(PWD)/../bin/secvarctl-cov
 
 #By default host backend static library created
 DYNAMIC_LIB = 0
@@ -16,21 +15,15 @@ GNUTLS = 0
 HOST_BACKEND = 1
 GUEST_BACKEND = 1
 
-ifeq ($(SECVAR_TOOL), ../secvarctl-cov)
-   SECVAR_TOOLS = ../$(SECVAR_TOOL)
-else
-   SECVAR_TOOLS = $(SECVAR_TOOL)
-endif
-
 define test_host
 	@cd host/ && \
-	$(py) runTests.py -m $(1) -s $(SECVAR_TOOLS) && \
-	$(py) runSvcGenerateTests.py -m $(1) -o $(OPENSSL) -g $(GNUTLS) -s $(SECVAR_TOOLS)
+	$(py) runTests.py -m $(1) -s $(SECVAR_TOOL) && \
+	$(py) runSvcGenerateTests.py -m $(1) -o $(OPENSSL) -g $(GNUTLS) -s $(SECVAR_TOOL)
 endef
 
 define test_guest
 	@cd guest/ && \
-	$(py) guest_tests.py -m $(1) -s $(SECVAR_TOOLS)
+	$(py) guest_tests.py -m $(1) -s $(SECVAR_TOOL)
 endef
 
 # TODO: skip tests if a backend isn't enabled
@@ -51,7 +44,7 @@ ifeq ($(strip $(HOST_BACKEND)), 1)
 endif
 ifeq ($(strip $(GUEST_BACKEND)), 1)
 	@cd guest/ && \
-	$(py) guest_generate_testdata.py $(SECVAR_TOOLS)
+	$(py) guest_generate_testdata.py $(SECVAR_TOOL)
 endif
 
 coverage:
