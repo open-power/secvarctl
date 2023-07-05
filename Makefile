@@ -113,6 +113,7 @@ SRCS += $(addprefix backends/guest/,$(GUEST_SRCS))
 
 OBJS = $(addprefix $(OBJ_DIR)/,$(SRCS:.c=.o))
 OBJCOV = $(patsubst %.o, %.cov.o,$(OBJS))
+DEPS = $(OBJS:.o=.d)
 
 _CFLAGS += $(CFLAGS) $(INCLUDES)
 _LDFLAGS += $(LDFLAGS)
@@ -122,7 +123,7 @@ export LDFLAGS
 
 all: secvarctl
 
-coverage: secvarctl-cov
+-include $(DEPS)
 
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
