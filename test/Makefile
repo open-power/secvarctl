@@ -42,7 +42,7 @@ check-%:
 	$(call $(patsubst check-%,test_%,$@),0)
 
 memcheck-%:
-	$(call $(patsubst check-%,test_%,$@),1)
+	$(call $(patsubst memcheck-%,test_%,$@),1)
 
 generate: $(host_data)
 ifeq ($(strip $(HOST_BACKEND)), 1)
