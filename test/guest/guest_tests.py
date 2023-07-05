@@ -193,7 +193,6 @@ def generate_auth (variable_name, signer_key_file, signer_cert_file, cert_file, 
 class Test (unittest.TestCase):
 	def test_ppcsecvar_path_read (self):
 		out = log_dir + "ppcsecvarspathreadlog.txt"
-		print ("running secvar path check test")
 		#if power sysfs exists read current keys
 		if os.path.isdir (SECVARPATH):
 			cmd = get_read_command ("", "")
@@ -205,7 +204,6 @@ class Test (unittest.TestCase):
 
 	def test_generate_esl_files (self):
 		out = log_dir + "generatelog.txt"
-		print ("running esl file generation test")
 		for var_name in variables:
 		        esl_file = gen_dir + var_name + ".esl"
 
@@ -222,7 +220,6 @@ class Test (unittest.TestCase):
 
 	def test_generate_auth_files (self):
 		out = log_dir + "generatelog.txt"
-		print ("running auth file generation test")
 		for var_by_PK in variable_by_PK:
 		        auth_file = gen_dir + var_by_PK[0] + ".auth"
 		        PK_key_file = test_dir[3] + var_by_PK[2] + "/" + var_by_PK[2] + ".key"
@@ -257,7 +254,6 @@ class Test (unittest.TestCase):
 		out = log_dir + "generatelog.txt"
 		format_type = auth_reset
 		cert_file = "empty"
-		print ("running reset auth file generation test")
 		for var_by_PK in variable_by_PK:
 		        auth_file = gen_dir + auth_reset + "_" + var_by_PK[0] + ".auth"
 		        PK_key_file = test_dir[3] + var_by_PK[2] + "/" + var_by_PK[2] + ".key"
@@ -274,7 +270,6 @@ class Test (unittest.TestCase):
 
 	def test_read (self):
 		out = log_dir + "readlog.txt"
-		print ("running auth/cert/pkcs7/esl file read test")
 		for cert_file in cert_files:
 			cmd = get_read_command (cert_type, cert_file)
 			self.assertEqual (get_cmd_result (cmd, out, self), True)
@@ -290,7 +285,6 @@ class Test (unittest.TestCase):
 
 	def test_validate (self):
 		out = log_dir + "validatelog.txt"
-		print ("running auth/cert/pkcs7/esl file validation test")
 		for cert_file in cert_files:
 			cmd = get_validate_command (cert_type, cert_file)
 			self.assertEqual (get_cmd_result (cmd, out, self), True)
@@ -306,7 +300,6 @@ class Test (unittest.TestCase):
 
 	def test_write (self):
 		out = log_dir + "writelog.txt"
-		print ("running auth file write test")
 		for var_by_PK in variable_by_PK:
 			auth_file = test_dir[1] + var_by_PK[0] + ".auth"
 			cmd = get_write_command (var_by_PK[1], auth_file, test_env_path, non_force)
@@ -318,7 +311,6 @@ class Test (unittest.TestCase):
 
 	def test_write_with_force (self):
 		out = log_dir + "writelog.txt"
-		print ("running auth file write with force test")
 		for var_by_PK in variable_by_PK:
 			auth_file = test_dir[1] + var_by_PK[0] + ".auth"
 			cmd = get_write_command (var_by_PK[1], auth_file, test_env_path, force)
@@ -333,7 +325,6 @@ class Test (unittest.TestCase):
 		update_variables = []
 		current_variables = []
 		current_variables_empty = []
-		print ("running auth file verification test")
 		for var_by_PK in variable_by_PK:
 			auth_file = test_dir[1] + var_by_PK[0] + ".auth"
 			current_var = test_dir[3] + var_by_PK[2] + "/" + "data"
@@ -429,7 +420,6 @@ class Test (unittest.TestCase):
 
 	def test_verify_reset_auth (self):
 		out = log_dir + "verifylog.txt"
-		print ("running reset auth file verification")
 		update_variables = []
 		current_variables = []
 		for var_by_PK in reset_variable_by_PK:
