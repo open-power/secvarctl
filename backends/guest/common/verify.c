@@ -195,14 +195,13 @@ get_current_esl (const struct verify_args *args, const uint8_t *update_variable,
     goto fail;
   len = strlen (args->variable_path) + strlen ((char *) update_variable) +
         strlen (esl_data);
-  esl_data_path = malloc (len + 1);
+  esl_data_path = calloc (1, len + 1);
   if (esl_data_path == NULL)
     {
       rc = ALLOC_FAIL;
       goto fail;
     }
 
-  memset (esl_data_path, 0x00, len + 1);
   len = 0;
   memcpy (esl_data_path + len, args->variable_path, strlen (args->variable_path));
   len += strlen (args->variable_path);
