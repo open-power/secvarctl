@@ -181,7 +181,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		if (args->helpFlag)
 			break;
 		if (!args->updateVarCount || args->updateVarCount <= 1)
-		argp_usage(state);
+			argp_usage(state);
 		//	prlog(PR_ERR, "ERROR: No update variables/files given, use -u "
 		//		      "<varName_1> <authFileForVar_1>...\n\t\t"
 		//		      "Where <varName> is one of {'PK','KEK','db','dbx'} "
@@ -335,7 +335,7 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 	// once here, strings should be ready, it is time to fill banks
 	// fill update bank with all updates
 	for (int i = 0; i < updateCount; i += 2) {
-		c = get_data_from_file ((char *)updateVars[i + 1], SIZE_MAX, &len);
+		c = get_data_from_file((char *)updateVars[i + 1], SIZE_MAX, &len);
 		if (c) {
 			list_add_tail(update_bank, &new_secvar(updateVars[i],
 							       strlen(updateVars[i]) + 1, c, len, 0)
@@ -357,7 +357,7 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 					dealloc_secvar(tmp);
 			}
 		} else {
-			c = get_data_from_file ((char *)currentVars[i + 1], SIZE_MAX, &len);
+			c = get_data_from_file((char *)currentVars[i + 1], SIZE_MAX, &len);
 			if (c) {
 				list_add_tail(variable_bank,
 					      &new_secvar(currentVars[i],
@@ -508,7 +508,7 @@ static int getCurrentVars(char *newCurr[], int *size, const char *path)
 		offset += strlen(variables[i]);
 		strncpy(fullPath + offset, ext, strlen(ext) + 1);
 		// if it is a file then add variable name and data file to newCurr
-		if (!is_file (fullPath)) {
+		if (!is_file(fullPath)) {
 			newCurr[lenCtr] = malloc(strlen(variables[i]) + 1);
 			if (!newCurr[lenCtr]) {
 				prlog(PR_ERR, "ERROR: failed to allocate memory\n");

@@ -164,7 +164,7 @@ static int updateSecVar(const char *varName, const char *authFile, const char *p
 	}
 
 	// get data to write, if force flag then validate the data is an auth file
-	buff = (unsigned char *) get_data_from_file (authFile, SIZE_MAX, &size);
+	buff = (unsigned char *)get_data_from_file(authFile, SIZE_MAX, &size);
 	// if we are validating and validating fails, quit
 	if (!force) {
 		rc = validateAuth(buff, size, varName);
@@ -208,7 +208,7 @@ int updateVar(const char *path, const char *var, const unsigned char *buff, size
 	strcat(fullPathWithCommand, var);
 	strcat(fullPathWithCommand, "/update");
 
-	rc = write_data_to_file (fullPathWithCommand, (const char *)buff, size);
+	rc = write_data_to_file(fullPathWithCommand, (const char *)buff, size);
 	free(fullPathWithCommand);
 
 	return rc;

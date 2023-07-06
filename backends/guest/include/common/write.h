@@ -8,13 +8,12 @@
 #include <stdint.h>
 #include "common/read.h"
 
-struct write_args
-{
-  int help_flag;
-  int input_valid;
-  const char *path;
-  const char *variable_name;
-  const char *input_file;
+struct write_args {
+	int help_flag;
+	int input_valid;
+	const char *path;
+	const char *variable_name;
+	const char *input_file;
 };
 
 /*
@@ -27,9 +26,8 @@ struct write_args
  * @param force, 1 for no validation of auth, 0 for validate
  * @return error if variable given is unknown, or issue validating or writing
  */
-int
-write_variable (const uint8_t *variable_name, const uint8_t *auth_file, const uint8_t *path,
-                int force);
+int write_variable(const uint8_t *variable_name, const uint8_t *auth_file, const uint8_t *path,
+		   int force);
 
 /*
  * updates a secure variable by writing data in buffer to the
@@ -41,8 +39,7 @@ write_variable (const uint8_t *variable_name, const uint8_t *auth_file, const ui
  * @param buffer_size , size of auth data
  * @return whatever returned by writeData, SUCCESS or errno
  */
-int
-write_to_variable (const char *path, const char *variable_name, const uint8_t *buffer,
-                   const size_t buffer_size);
+int write_to_variable(const char *path, const char *variable_name, const uint8_t *buffer,
+		      const size_t buffer_size);
 
 #endif
