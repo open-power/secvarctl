@@ -235,7 +235,7 @@ static int readFileFromPath(const char *file, int hrFlag)
 	int rc;
 	size_t size = 0;
 	char *c = NULL;
-	c = get_data_from_file (file, SIZE_MAX, &size);
+	c = get_data_from_file(file, SIZE_MAX, &size);
 	if (!c) {
 		return INVALID_FILE;
 	}
@@ -246,7 +246,7 @@ static int readFileFromPath(const char *file, int hrFlag)
 		else
 			rc = SUCCESS;
 	} else {
-		print_raw (c, size);
+		print_raw(c, size);
 		rc = SUCCESS;
 	}
 	free(c);
@@ -266,7 +266,7 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
 	int rc;
 	size_t size, out_size;
 	char *sizePath = NULL, *c = NULL;
-	rc = is_file (fullPath);
+	rc = is_file(fullPath);
 	if (rc) {
 		return rc;
 	}
@@ -300,7 +300,7 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
 			return ALLOC_FAIL;
 		}
 	} else {
-		c = get_data_from_file (fullPath, size, &out_size);
+		c = get_data_from_file(fullPath, size, &out_size);
 		if (!c)
 			return INVALID_FILE;
 	}
@@ -378,7 +378,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 		}
 		if (key && !strcmp(key, "dbx")) {
 			printf("\tHash: ");
-			print_hex (cert, cert_size);
+			print_hex(cert, cert_size);
 		} else {
 			rc = parseX509(&x509, cert, (size_t)cert_size);
 			if (rc)

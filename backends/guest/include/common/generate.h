@@ -10,32 +10,30 @@
 #include "pseries.h"
 #include "common/read.h"
 
-enum pkcs7_gen_methods
-{
-  W_PRIVATE_KEYS = 0, /* for -k <key> option */
-  W_EXTERNAL_GEN_SIG, /* for -s <sig> option */
-  NO_PKCS7_GEN_METHOD /* default, when not generating a pkcs7/auth */
+enum pkcs7_gen_methods {
+	W_PRIVATE_KEYS = 0, /* for -k <key> option */
+	W_EXTERNAL_GEN_SIG, /* for -s <sig> option */
+	NO_PKCS7_GEN_METHOD /* default, when not generating a pkcs7/auth */
 };
 
 typedef enum pkcs7_gen_methods pkcs7_method_t;
 
-struct generate_args
-{
-  int append_flag;
-  int help_flag;
-  int input_valid;
-  int sign_key_count;
-  int sign_cert_count;
-  const char *input_file;
-  const char *output_file;
-  const char **sign_certs;
-  const char **sign_keys;
-  const char *input_form;
-  const char *output_form;
-  const char *variable_name;
-  const char *hash_alg;
-  timestamp_t *time;
-  pkcs7_method_t pkcs7_gen_method;
+struct generate_args {
+	int append_flag;
+	int help_flag;
+	int input_valid;
+	int sign_key_count;
+	int sign_cert_count;
+	const char *input_file;
+	const char *output_file;
+	const char **sign_certs;
+	const char **sign_keys;
+	const char *input_form;
+	const char *output_form;
+	const char *variable_name;
+	const char *hash_alg;
+	timestamp_t *time;
+	pkcs7_method_t pkcs7_gen_method;
 };
 
 /*
@@ -45,8 +43,7 @@ struct generate_args
  * @param time_str,  the given timestamp string
  * @return SUCCESS or errno if failed to extract data
  */
-int
-parse_custom_timestamp (timestamp_t *timestamp, const char *time_str);
+int parse_custom_timestamp(timestamp_t *timestamp, const char *time_str);
 
 /*
  * gets current time and puts into an timestamp_t
@@ -54,8 +51,7 @@ parse_custom_timestamp (timestamp_t *timestamp, const char *time_str);
  * @param timstamp, the outputted current time
  * @return success or errno if generated timestamp is incorrect
  */
-int
-get_timestamp (timestamp_t *timestamp);
+int get_timestamp(timestamp_t *timestamp);
 
 /*
  * generates esl from input data, esl will have guid specified by guid
@@ -67,9 +63,8 @@ get_timestamp (timestamp_t *timestamp);
  * @param out_esl_size, the length of outbuff
  * @return success or err number
  */
-int
-create_esl (const uint8_t *data, const size_t data_size, const uuid_t guid,
-            uint8_t **out_esl, size_t *out_esl_size);
+int create_esl(const uint8_t *data, const size_t data_size, const uuid_t guid, uint8_t **out_esl,
+	       size_t *out_esl_size);
 
 /*
  * actually performs the extraction of the esl from the authfile
@@ -81,8 +76,7 @@ create_esl (const uint8_t *data, const size_t data_size, const uuid_t guid,
  * note: this allocates memory for output buffer, free later
  * @return success or error number
  */
-int
-extract_esl_from_auth (const uint8_t *in, const size_t insize, uint8_t **out, size_t *out_size);
+int extract_esl_from_auth(const uint8_t *in, const size_t insize, uint8_t **out, size_t *out_size);
 
 /*
  * generates presigned hashed data, this accepts an esl and all metadata, it performs a sha hash
@@ -94,10 +88,9 @@ extract_esl_from_auth (const uint8_t *in, const size_t insize, uint8_t **out, si
  * @param out_buffer_size, the length of hashed data (should be 32 bytes)
  * @return success or err number
  */
-int
-create_presigned_hash (const uint8_t *esl, const size_t esl_size,
-                       const struct generate_args *args, const uuid_t guid,
-                       uint8_t **out_buffer, size_t *out_buffer_size);
+int create_presigned_hash(const uint8_t *esl, const size_t esl_size,
+			  const struct generate_args *args, const uuid_t guid, uint8_t **out_buffer,
+			  size_t *out_buffer_size);
 /*
  * generates a pkcs7 that is compatable with secure variables aka the data to be hashed will be
  * varname + timestamp +attr etc. etc ... + newdata
@@ -109,10 +102,9 @@ create_presigned_hash (const uint8_t *esl, const size_t esl_size,
  * @param out_buffer_size, the length of outbuff
  * @return success or err number
  */
-int
-create_pkcs7 (const uint8_t *new_data, const size_t new_data_size,
-              const struct generate_args *args, const uuid_t guid,
-              uint8_t **out_buffer, size_t *out_buffer_size);
+int create_pkcs7(const uint8_t *new_data, const size_t new_data_size,
+		 const struct generate_args *args, const uuid_t guid, uint8_t **out_buffer,
+		 size_t *out_buffer_size);
 
 /*
  * create an auth message and its size and return a success or negative number (error)
@@ -124,10 +116,9 @@ create_pkcs7 (const uint8_t *new_data, const size_t new_data_size,
  * @param out_buffer_size, the length of outbuff
  * @return success or err number
  */
-int
-create_auth_msg (const uint8_t *new_esl, const size_t new_esl_size,
-                 const struct generate_args *args, const uuid_t guid,
-                 uint8_t **out_buffer, size_t *out_buffer_size);
+int create_auth_msg(const uint8_t *new_esl, const size_t new_esl_size,
+		    const struct generate_args *args, const uuid_t guid, uint8_t **out_buffer,
+		    size_t *out_buffer_size);
 
 /*
  * convert x509 from PEM to DER and validate the certificate
@@ -138,9 +129,8 @@ create_auth_msg (const uint8_t *new_esl, const size_t new_esl_size,
  * @param cert_data_size, the length of certificate data
  * @return SUCCESS or err number
  */
-int
-is_x509certificate (const uint8_t *buffer, const size_t buffer_size,
-                    uint8_t **cert_data, size_t *cert_data_size);
+int is_x509certificate(const uint8_t *buffer, const size_t buffer_size, uint8_t **cert_data,
+		       size_t *cert_data_size);
 
 /*
  * generate the hash data using input data
@@ -154,8 +144,7 @@ is_x509certificate (const uint8_t *buffer, const size_t buffer_size,
  * @param esl_guid, signature type of ESL
  * @return SUCCESS or err number
  */
-int
-get_hash_data (const uint8_t *buffer, const size_t buffer_size,
-               hash_func_t **hash_funct, uint8_t *hash_data, size_t *hash_data_size);
+int get_hash_data(const uint8_t *buffer, const size_t buffer_size, hash_func_t **hash_funct,
+		  uint8_t *hash_data, size_t *hash_data_size);
 
 #endif
