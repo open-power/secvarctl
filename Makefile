@@ -187,4 +187,4 @@ clean:
 	rm -rf $(BIN_DIR)
 	rm -rf $(OBJ_DIR)
 
-.PHONY: all coverage clean
+.PHONY: all generate install uninstall clean
