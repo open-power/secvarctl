@@ -193,7 +193,7 @@ int performGenerateCommand(int argc, char *argv[])
 		size = 0;
 	else {
 		// get data from input file
-		buff = (unsigned char *) get_data_from_file (args.inFile, SIZE_MAX, &size);
+		buff = (unsigned char *)get_data_from_file(args.inFile, SIZE_MAX, &size);
 		if (buff == NULL) {
 			prlog(PR_ERR, "ERROR: Could not find data in file %s\n", args.inFile);
 			rc = INVALID_FILE;
@@ -216,7 +216,7 @@ int performGenerateCommand(int argc, char *argv[])
 
 	prlog(PR_INFO, "Writing %zd bytes to %s\n", outBuffSize, args.outFile);
 	// write data to new file
-	rc = create_file (args.outFile, (char *)outBuff, outBuffSize);
+	rc = create_file(args.outFile, (char *)outBuff, outBuffSize);
 	if (rc) {
 		prlog(PR_ERR, "ERROR: Could not write new data to output file %s\n", args.outFile);
 	}
@@ -268,8 +268,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		}
 		args->pkcs7_gen_meth = W_PRIVATE_KEYS;
 		args->signKeyCount++;
-		rc = realloc_array ((void **)&args->signKeys, args->signKeyCount,
-				  sizeof(*args->signKeys));
+		rc = realloc_array((void **)&args->signKeys, args->signKeyCount,
+				   sizeof(*args->signKeys));
 		if (rc) {
 			prlog(PR_ERR, "Failed to realloc private key (-k <>) array\n");
 			break;
@@ -278,8 +278,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		break;
 	case 'c':
 		args->signCertCount++;
-		rc = realloc_array ((void **)&args->signCerts, args->signCertCount,
-				  sizeof(*args->signCerts));
+		rc = realloc_array((void **)&args->signCerts, args->signCertCount,
+				   sizeof(*args->signCerts));
 		if (rc) {
 			prlog(PR_ERR, "Failed to realloc certificate (-c <>) array\n");
 			break;
@@ -302,8 +302,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		}
 		args->pkcs7_gen_meth = W_EXTERNAL_GEN_SIG;
 		args->signKeyCount++;
-		rc = realloc_array ((void **)&args->signKeys, args->signKeyCount,
-				  sizeof(*args->signKeys));
+		rc = realloc_array((void **)&args->signKeys, args->signKeyCount,
+				   sizeof(*args->signKeys));
 		if (rc) {
 			prlog(PR_ERR, "Failed to realloc signature (-s <>) array\n");
 			break;
@@ -358,7 +358,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		else if (args->time && validateTime(args->time))
 			prlog(PR_ERR,
 			      "Invalid timestamp flag '-t YYYY-MM-DDThh:mm:ss' , see usage...\n");
-		else if (args->inForm[0] != 'r' && (args->inFile == NULL || is_file (args->inFile)))
+		else if (args->inForm[0] != 'r' && (args->inFile == NULL || is_file(args->inFile)))
 			prlog(PR_ERR, "ERROR: Input File is invalid, see usage below...\n");
 		else if (args->varName && isVariable(args->varName))
 			prlog(PR_ERR, "ERROR: %s is not a valid variable name\n", args->varName);

@@ -67,7 +67,7 @@ int performValidation(int argc, char *argv[])
 	if (rc || args.helpFlag)
 		goto out;
 
-	buff = (unsigned char *) get_data_from_file (args.inFile, SIZE_MAX, &size);
+	buff = (unsigned char *)get_data_from_file(args.inFile, SIZE_MAX, &size);
 	if (!buff) {
 		prlog(PR_ERR, "ERROR: failed to get data from %s\n", args.inFile);
 		rc = INVALID_FILE;
@@ -430,7 +430,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 
 		if (verbose >= PR_INFO) {
 			prlog(PR_INFO, "\tHash: ");
-			print_hex (cert, cert_size);
+			print_hex(cert, cert_size);
 		}
 	} else {
 		rc = validateCert(cert, cert_size, varName);
