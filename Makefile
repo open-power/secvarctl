@@ -90,8 +90,8 @@ endif
 
 _LDFLAGS += -L./lib
 
-SRCS = generic.c \
-       secvarctl.c
+SVC_SRCS = generic.c \
+           secvarctl.c
 
 # TODO: Consider splitting this also into its own Makefile.inc?
 EXTERNAL_SRCS = external/extraMbedtls/pkcs7.c                                \
@@ -106,10 +106,14 @@ EXTERNAL_SRCS = external/extraMbedtls/pkcs7.c                                \
 include backends/host/Makefile.inc
 include backends/guest/Makefile.inc
 
-SRCS += $(EXTERNAL_SRCS)
-
+SRCS  = $(SVC_SRCS)
 SRCS += $(addprefix backends/host/,$(HOST_SRCS))
 SRCS += $(addprefix backends/guest/,$(GUEST_SRCS))
+
+# Copy for format-related targets, so they ignore the external files
+MAIN_SRCS := $(SRCS)
+
+SRCS += $(EXTERNAL_SRCS)
 
 OBJS = $(addprefix $(OBJ_DIR)/,$(SRCS:.c=.o))
 OBJCOV = $(patsubst %.o, %.cov.o,$(OBJS))
@@ -181,10 +185,15 @@ uninstall:
 	@rm -rf $(DESTDIR)/usr/lib/secvarctl
 	@echo "secvarctl uninstalled successfully!"
 
+CLANG_FORMAT ?= clang-format
+HEADERS = $(shell find . ! \( -path ./external -prune \) -name "*.h" -type f)
+format:
+	@$(CLANG_FORMAT) --style=file:external/linux/.clang-format -i $(MAIN_SRCS) $(HEADERS)
+
 clean:
 	@$(MAKE) -C test clean
 	$(MAKE) -C external/libstb-secvar/ clean
 	rm -rf $(BIN_DIR)
 	rm -rf $(OBJ_DIR)
 
-.PHONY: all generate install uninstall clean
+.PHONY: all generate install uninstall format clean
