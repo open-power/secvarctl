@@ -383,7 +383,7 @@ static int get_pk_and_kek_from_update_var(const struct verify_args *args, uint8_
  */
 int verify_variables(struct verify_args *args)
 {
-	int rc = SUCCESS, i = 0;
+	int rc = SUCCESS;
 	uint8_t *pk_esl_data = NULL, *kek_esl_data = NULL;
 	size_t pk_esl_data_size = 0, kek_esl_data_size = 0;
 	bool flag = false;
@@ -392,7 +392,7 @@ int verify_variables(struct verify_args *args)
 		rc = get_pk_and_kek_from_path_var(args, &pk_esl_data, &pk_esl_data_size,
 						  &kek_esl_data, &kek_esl_data_size);
 	else if (args->current_variable_size > 0) {
-		for (i = 0; i < args->current_variable_size; i += 2) {
+		for (int i = 0; i < args->current_variable_size; i += 2) {
 			if (memcmp(args->current_variable[i], PK_VARIABLE,
 				   strlen(args->current_variable[i])) == 0)
 				rc = get_current_esl_data((uint8_t *)args->current_variable[i + 1],
