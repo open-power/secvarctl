@@ -251,7 +251,7 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 		if (rc == SUCCESS) {
 			if (is_print_raw || esl_data_size == DEFAULT_PK_LEN)
 				print_raw((char *)esl_data, esl_data_size);
-			else if (esl_data_size != -1 && (esl_data_size - TIMESTAMP_LEN) != 0)
+			else if (esl_data_size >= TIMESTAMP_LEN)
 				rc = print_variables(esl_data + TIMESTAMP_LEN,
 						     esl_data_size - TIMESTAMP_LEN,
 						     (uint8_t *)variable_name);
@@ -280,8 +280,7 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 				    (esl_data_size == DEFAULT_PK_LEN &&
 				     memcmp(defined_sb_variables[i], PK_VARIABLE, PK_LEN) == 0))
 					print_raw((char *)esl_data, esl_data_size);
-				else if (esl_data_size != -1 &&
-					 (esl_data_size - TIMESTAMP_LEN) != 0)
+				else if (esl_data_size >= TIMESTAMP_LEN)
 					rc = print_variables(esl_data + TIMESTAMP_LEN,
 							     esl_data_size - TIMESTAMP_LEN,
 							     (uint8_t *)defined_sb_variables[i]);
