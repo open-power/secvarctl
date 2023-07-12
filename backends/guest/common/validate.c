@@ -379,7 +379,7 @@ int validate_auth(const uint8_t *auth_data, size_t auth_data_len)
 
 	if (verbose >= PR_INFO) {
 		prlog(PR_INFO, "\tAPPEND HEADER :\n");
-		printf("\t   Append Flag : %ld\n", append_flag);
+		printf("\t   Append Flag : %zu\n", append_flag);
 	}
 
 	auth_data_len -= APPEND_HEADER_LEN;
