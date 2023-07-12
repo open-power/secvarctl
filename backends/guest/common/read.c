@@ -124,14 +124,17 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *va
 {
 	int rc;
 	ssize_t esl_data_size = buffer_size, cert_size;
-	size_t esl_size = 0, next_esl_size = 0, data_size = 0;
-	size_t sig_offset = 0, signature_size = 0, count = 0, offset = 0;
+	size_t count = 0, offset = 0;
 	uint8_t *cert = NULL, *signature_type = NULL, *esl_data = (uint8_t *)buffer;
 	sv_esl_t *sig_list;
 	sv_esd_t *esd = NULL;
 	crypto_x509_t *x509 = NULL;
 
 	while (esl_data_size > 0) {
+		// TODO: consider breaking this down into functions, to avoid these scope reductions
+		size_t esl_size, next_esl_size, sig_offset;
+		size_t signature_size;
+
 		if (esl_data_size < sizeof(sv_esl_t)) {
 			prlog(PR_ERR,
 			      "ERROR: ESL has %zd bytes and is smaller than an ESL (%zd bytes),"
@@ -159,6 +162,8 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *va
 
 		/* reads the esd from esl */
 		while (esl_size > 0) {
+			size_t data_size;
+
 			esd = (sv_esd_t *)(esl_data + (offset + sig_offset));
 			data_size = signature_size - sizeof(sv_esd_t);
 			cert = esd->signature_data;
