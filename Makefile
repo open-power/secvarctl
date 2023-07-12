@@ -165,6 +165,10 @@ memcheck: secvarctl-cov
 	                 SECVAR_TOOL=$(SECVAR_TOOL) \
 	                 memcheck
 
+cppcheck:
+	cppcheck --enable=all --suppress=missingIncludeSystem --force -q \
+	         $(MAIN_SRCS) $(INCLUDE)
+
 generate:
 	@$(MAKE) -C test generate MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
 	                 HOST_BACKEND=$(HOST_BACKEND) \
