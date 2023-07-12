@@ -318,8 +318,10 @@ int validate_cert(const uint8_t *cert_data, size_t cert_data_len)
 {
 	int rc;
 	crypto_x509_t *x509;
+#ifdef SECVAR_CRYPTO_WRITE_FUNC
 	uint8_t *cert = NULL;
 	size_t cert_size = 0;
+#endif
 
 	rc = crypto.get_x509_certificate(cert_data, cert_data_len, &x509);
 	if (rc) {
