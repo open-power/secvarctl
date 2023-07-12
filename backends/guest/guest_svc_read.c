@@ -85,8 +85,6 @@ static int read_cert(const uint8_t *cert_data, const size_t cert_data_len, const
 {
 	int rc = SUCCESS;
 	crypto_x509_t *x509;
-	uint8_t *cert = NULL;
-	size_t cert_size = 0;
 
 	if (is_print_raw) {
 		print_raw((char *)cert_data, cert_data_len);
@@ -101,6 +99,8 @@ static int read_cert(const uint8_t *cert_data, const size_t cert_data_len, const
        * if so we can try to convert pem to der and try again
        */
 #ifdef SECVAR_CRYPTO_WRITE_FUNC
+		uint8_t *cert;
+		size_t cert_size;
 		prlog(PR_INFO, "failed to parse x509 as DER, trying PEM...\n");
 		rc = crypto.get_der_from_pem(cert_data, cert_data_len, &cert, &cert_size);
 		if (rc) {
