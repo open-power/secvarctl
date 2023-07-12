@@ -234,7 +234,7 @@ int validate_esl(const uint8_t *esl_data, size_t esl_data_len)
 {
 	ssize_t esl_data_size = esl_data_len;
 	size_t esl_size = 0;
-	int count = 0, offset = 0, rc;
+	int count = 0, offset = 0, rc = SUCCESS;
 
 	prlog(PR_INFO, "VALIDATING ESL:\n");
 
@@ -260,7 +260,7 @@ int validate_esl(const uint8_t *esl_data, size_t esl_data_len)
 	if (!count)
 		return ESL_FAIL;
 
-	return SUCCESS;
+	return rc;
 }
 
 /*
