@@ -277,44 +277,46 @@ static int get_pk_and_kek_from_path_var(const struct verify_args *args, uint8_t 
 	char *esl_data = "/data";
 	char *esl_data_path = NULL;
 
-	if (args->variable_path != NULL) {
-		len = strlen(args->variable_path) + PK_LEN + strlen(esl_data);
-		esl_data_path = malloc(len + 1);
-		if (esl_data_path == NULL)
-			return ALLOC_FAIL;
-
-		memset(esl_data_path, 0x00, len + 1);
-		len = 0;
-		memcpy(esl_data_path + len, args->variable_path, strlen(args->variable_path));
-		len += strlen(args->variable_path);
-		memcpy(esl_data_path + len, PK_VARIABLE, PK_LEN);
-		len += PK_LEN;
-		memcpy(esl_data_path + len, esl_data, strlen(esl_data));
-
-		if (is_file(esl_data_path) == SUCCESS)
-			rc = get_current_esl_data((uint8_t *)esl_data_path, pk_esl_data,
-						  pk_esl_data_size);
-
-		free(esl_data_path);
-		len = strlen(args->variable_path) + KEK_LEN + strlen(esl_data);
-		esl_data_path = malloc(len + 1);
-		if (esl_data_path == NULL)
-			return ALLOC_FAIL;
-
-		memset(esl_data_path, 0x00, len + 1);
-		len = 0;
-		memcpy(esl_data_path + len, args->variable_path, strlen(args->variable_path));
-		len += strlen(args->variable_path);
-		memcpy(esl_data_path + len, KEK_VARIABLE, KEK_LEN);
-		len += KEK_LEN;
-		memcpy(esl_data_path + len, esl_data, strlen(esl_data));
-
-		if (is_file(esl_data_path) == SUCCESS)
-			rc = get_current_esl_data((uint8_t *)esl_data_path, kek_esl_data,
-						  kek_esl_data_size);
-
-		free(esl_data_path);
+	if (args->variable_path == NULL) {
+		prlog(PR_ERR, "Path is not set, possibly a bug?");
+		return -1; // Throwaway error, this function likely needs a rewrite
 	}
+
+	len = strlen(args->variable_path) + PK_LEN + strlen(esl_data);
+	esl_data_path = malloc(len + 1);
+	if (esl_data_path == NULL)
+		return ALLOC_FAIL;
+
+	memset(esl_data_path, 0x00, len + 1);
+	len = 0;
+	memcpy(esl_data_path + len, args->variable_path, strlen(args->variable_path));
+	len += strlen(args->variable_path);
+	memcpy(esl_data_path + len, PK_VARIABLE, PK_LEN);
+	len += PK_LEN;
+	memcpy(esl_data_path + len, esl_data, strlen(esl_data));
+
+	if (is_file(esl_data_path) == SUCCESS)
+		rc = get_current_esl_data((uint8_t *)esl_data_path, pk_esl_data, pk_esl_data_size);
+
+	free(esl_data_path);
+	len = strlen(args->variable_path) + KEK_LEN + strlen(esl_data);
+	esl_data_path = malloc(len + 1);
+	if (esl_data_path == NULL)
+		return ALLOC_FAIL;
+
+	memset(esl_data_path, 0x00, len + 1);
+	len = 0;
+	memcpy(esl_data_path + len, args->variable_path, strlen(args->variable_path));
+	len += strlen(args->variable_path);
+	memcpy(esl_data_path + len, KEK_VARIABLE, KEK_LEN);
+	len += KEK_LEN;
+	memcpy(esl_data_path + len, esl_data, strlen(esl_data));
+
+	if (is_file(esl_data_path) == SUCCESS)
+		rc = get_current_esl_data((uint8_t *)esl_data_path, kek_esl_data,
+					  kek_esl_data_size);
+
+	free(esl_data_path);
 
 	return rc;
 }
