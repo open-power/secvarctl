@@ -31,16 +31,6 @@ int is_file(const char *path)
 	return SUCCESS;
 }
 
-size_t get_leading_whitespace(unsigned char *data, size_t dataSize)
-{
-	size_t whiteSpaceSize = 0;
-
-	while ((whiteSpaceSize < dataSize) && data[whiteSpaceSize] == 0x00)
-		whiteSpaceSize++;
-
-	return whiteSpaceSize;
-}
-
 void print_hex(unsigned char *data, size_t length)
 {
 	int i;
