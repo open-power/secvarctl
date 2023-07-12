@@ -1088,7 +1088,7 @@ static int toAuth(const unsigned char *newESL, size_t eslSize, struct Arguments 
 	// now build auth file, = auth header + pkcs7 + new ESL
 	*outBuffSize = pkcs7Size + sizeof(authHeader) + eslSize;
 	*outBuff = malloc(*outBuffSize);
-	if (!outBuff) {
+	if (!*outBuff) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 		rc = ALLOC_FAIL;
 		goto out;
