@@ -147,13 +147,13 @@ int extract_esl_from_auth(const uint8_t *data, const size_t data_size, uint8_t *
 
 	auth = (auth_info_t *)data;
 	length = auth->auth_cert.hdr.da_length;
-	if (length <= 0 || length > data_size) { /* if total size of header and pkcs7 */
+	if (length == 0 || length > data_size) { /* if total size of header and pkcs7 */
 		prlog(PR_ERR, "error: invalid auth size %zd\n", length);
 		return AUTH_FAIL;
 	}
 
 	pkcs7_size = extract_pkcs7_len(auth);
-	if (pkcs7_size <= 0 || pkcs7_size > length) {
+	if (pkcs7_size == 0 || pkcs7_size > length) {
 		prlog(PR_ERR, "error: invalid pkcs7 size %zd\n", pkcs7_size);
 		return PKCS7_FAIL;
 	}
