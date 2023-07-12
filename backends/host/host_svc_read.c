@@ -332,14 +332,15 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
  */
 static int printReadable(const char *c, size_t size, const char *key)
 {
-	ssize_t eslvarsize = size, cert_size;
-	size_t eslsize = 0;
+	ssize_t eslvarsize = size;
 	int count = 0, offset = 0, rc;
 	unsigned char *cert = NULL;
 	EFI_SIGNATURE_LIST *sigList;
 	crypto_x509 *x509 = NULL;
 
 	while (eslvarsize > 0) {
+		ssize_t cert_size;
+		size_t eslsize;
 		if (eslvarsize < sizeof(EFI_SIGNATURE_LIST)) {
 			prlog(PR_ERR,
 			      "ERROR: ESL has %zd bytes and is smaller than an ESL (%zd bytes), remaining data not parsed\n",
