@@ -184,12 +184,12 @@ static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int i
 	pkcs7_size = extract_pkcs7_len(auth);
 
 	printf("APPEND HEADER :\n");
-	printf("\tAppend Flag : %ld\n", append_flag);
+	printf("\tAppend Flag : %zu\n", append_flag);
 	printf("AUTH INFO:\n");
 	printf("\tGuid code is : ");
 	print_signature_type(&auth->auth_cert.cert_type);
 	printf("\tType: PKCS7\n");
-	printf("\tAuth File Size = %zd\n\t  -Auth/PKCS7 Data Size = %zd\n\t  -ESL Size = %zd\n",
+	printf("\tAuth File Size = %zu\n\t  -Auth/PKCS7 Data Size = %zu\n\t  -ESL Size = %zu\n",
 	       auth_data_len, auth_size, auth_data_len - auth_size);
 	printf("\tTimestamp: ");
 	print_timestamp(auth->timestamp);
