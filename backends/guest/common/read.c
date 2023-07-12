@@ -165,13 +165,13 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *va
 			cert_size = data_size;
 
 			if (is_hash(signature_type)) {
-				printf("\tData-%ld: ", count);
+				printf("\tData-%zu: ", count);
 				print_hex(cert, cert_size);
 			} else if (is_cert(signature_type)) {
 				rc = crypto.get_x509_certificate(cert, cert_size, &x509);
 				if (rc)
 					break;
-				printf("\tCertificate-%ld: ", count);
+				printf("\tCertificate-%zu: ", count);
 				rc = print_cert_info(x509);
 				if (rc)
 					break;
@@ -199,7 +199,7 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *va
 		esl_data_size -= next_esl_size;
 	}
 
-	printf("\tFound %ld ESL's\n\n", count);
+	printf("\tFound %zu ESL's\n\n", count);
 
 	if (x509)
 		crypto.release_x509_certificate(x509);
