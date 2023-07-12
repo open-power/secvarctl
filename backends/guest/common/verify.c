@@ -332,46 +332,41 @@ static int get_pk_and_kek_from_update_var(const struct verify_args *args, uint8_
 	bool append_update;
 
 	for (i = 0; i < args->update_variable_size; i += 2) {
-		auth_data = NULL;
+		uint8_t **target_data;
+		size_t *target_size;
+
 		if (memcmp(args->update_variable[i], PK_VARIABLE,
-			   strlen(args->update_variable[i])) == 0 &&
-		    (*pk_esl_data == NULL && *pk_esl_data_size == 0)) {
-			rc = get_auth_data((uint8_t *)args->update_variable[i + 1], &auth_data,
-					   &auth_data_size, &append_update);
-			if (rc == SUCCESS) {
-				rc = update_variable((uint8_t *)args->update_variable[i],
-						     auth_data + APPEND_HEADER_LEN,
-						     auth_data_size - APPEND_HEADER_LEN,
-						     current_esl_data, current_esl_data_size,
-						     *pk_esl_data, *pk_esl_data_size, *kek_esl_data,
-						     *kek_esl_data_size, append_update, pk_esl_data,
-						     pk_esl_data_size);
-				if (auth_data != NULL)
-					free(auth_data);
-
-				if (rc != SUCCESS)
-					return rc;
-			}
+			   strlen(args->update_variable[i])) == 0) {
+			target_data = pk_esl_data;
+			target_size = pk_esl_data_size;
 		} else if (memcmp(args->update_variable[i], KEK_VARIABLE,
-				  strlen(args->update_variable[i])) == 0 &&
-			   (*kek_esl_data == NULL && *kek_esl_data_size == 0)) {
-			rc = get_auth_data((uint8_t *)args->update_variable[i + 1], &auth_data,
-					   &auth_data_size, &append_update);
-			if (rc == SUCCESS) {
-				rc = update_variable((uint8_t *)args->update_variable[i],
-						     auth_data + APPEND_HEADER_LEN,
-						     auth_data_size - APPEND_HEADER_LEN,
-						     current_esl_data, current_esl_data_size,
-						     *pk_esl_data, *pk_esl_data_size, *kek_esl_data,
-						     *kek_esl_data_size, append_update,
-						     kek_esl_data, kek_esl_data_size);
-				if (auth_data != NULL)
-					free(auth_data);
-
-				if (rc != SUCCESS)
-					return rc;
-			}
+				  strlen(args->update_variable[i])) == 0) {
+			target_data = kek_esl_data;
+			target_size = kek_esl_data_size;
+		} else {
+			// Only operate on PK or KEK, ignore everything else
+			continue;
 		}
+
+		rc = get_auth_data((uint8_t *)args->update_variable[i + 1], &auth_data,
+				   &auth_data_size, &append_update);
+		if (rc != SUCCESS) {
+			if (auth_data)
+				free(auth_data);
+			continue;
+		}
+
+		rc = update_variable((uint8_t *)args->update_variable[i],
+				     auth_data + APPEND_HEADER_LEN,
+				     auth_data_size - APPEND_HEADER_LEN, current_esl_data,
+				     current_esl_data_size, *pk_esl_data, *pk_esl_data_size,
+				     *kek_esl_data, *kek_esl_data_size, append_update, target_data,
+				     target_size);
+
+		free(auth_data);
+
+		if (rc != SUCCESS)
+			return rc;
 
 		if (*pk_esl_data != NULL && *kek_esl_data != NULL)
 			break;
