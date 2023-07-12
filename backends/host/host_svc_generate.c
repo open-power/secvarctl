@@ -780,14 +780,14 @@ static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out
 
 	auth = (struct efi_variable_authentication_2 *)in;
 	length = auth->auth_info.hdr.dw_length;
-	if (length <= 0 || length > inSize) { // if total size of header and pkcs7
+	if (length == 0 || length > inSize) { // if total size of header and pkcs7
 		prlog(PR_ERR, "ERROR: Invalid auth size %zd\n", length);
 		return AUTH_FAIL;
 	}
 	pkcs7_size = get_pkcs7_len(auth);
 	/*pkcs7_size=length-(sizeof(auth->auth_info.hdr)+sizeof(auth->auth_info.cert_type));*/ // =sizeof cert_data[] AKA pkcs7 data
 	// if total size of header and pkcs7
-	if (pkcs7_size <= 0 || pkcs7_size > length) {
+	if (pkcs7_size == 0 || pkcs7_size > length) {
 		prlog(PR_ERR, "ERROR: Invalid pkcs7 size %zd\n", pkcs7_size);
 		return PKCS7_FAIL;
 	}
