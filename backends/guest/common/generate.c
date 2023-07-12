@@ -360,6 +360,11 @@ int create_auth_msg(const uint8_t *new_esl, const size_t new_esl_size,
 	uint8_t *pkcs7 = NULL, *append_header = NULL;
 	auth_info_t auth_header;
 
+	if (out_buffer == NULL) {
+		prlog(PR_ERR, "out_buffer was NULL, this is likely a bug");
+		return ALLOC_FAIL; // Not entirely true, but there's not a better error for this yet
+	}
+
 	rc = create_pkcs7(new_esl, new_esl_size, args, guid, &pkcs7, &pkcs7_size);
 	if (rc != SUCCESS) {
 		prlog(PR_ERR, "ERROR: cannot generate auth file, failed to generate pkcs7\n");
@@ -379,7 +384,7 @@ int create_auth_msg(const uint8_t *new_esl, const size_t new_esl_size,
 	/* now build auth msg = append header + auth header + pkcs7 + new esl */
 	*out_buffer_size = APPEND_HEADER_LEN + sizeof(auth_header) + pkcs7_size + new_esl_size;
 	*out_buffer = malloc(*out_buffer_size);
-	if (out_buffer == NULL) {
+	if (*out_buffer == NULL) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 		free(pkcs7);
 		return ALLOC_FAIL;
