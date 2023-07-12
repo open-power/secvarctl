@@ -463,8 +463,7 @@ static int readTS(const char *data, size_t size)
 	}
 
 	for (tmpStamp = (struct efi_time *)data; size > 0;
-	     tmpStamp = (void *)tmpStamp + sizeof(struct efi_time),
-	    size -= sizeof(struct efi_time)) {
+	     tmpStamp = tmpStamp + 1, size -= sizeof(struct efi_time)) {
 		// print variable name
 		printf("\t%s:\t",
 		       variables[(ARRAY_SIZE(variables) - 1) - (size / sizeof(struct efi_time))]);
