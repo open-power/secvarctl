@@ -4,7 +4,7 @@
  */
 #include <stdlib.h>
 #include <string.h>
-#include "endian.h"
+#include <endian.h>
 #include "err.h"
 #include "prlog.h"
 #include "util.h"
