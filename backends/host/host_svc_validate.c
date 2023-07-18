@@ -610,6 +610,11 @@ int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen)
 		      buflen);
 		return CERT_FAIL;
 	}
+	if (x509 == NULL) {
+		prlog(PR_ERR, "x509 is NULL, this is probably a bug");
+		return CERT_FAIL;
+	}
+
 	// returns x509 struct on success or NULL on fail
 	*x509 = crypto_x509_parse_der(certBuf, buflen);
 	if (*x509)
