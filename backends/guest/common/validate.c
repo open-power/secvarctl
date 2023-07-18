@@ -26,7 +26,7 @@ int validate_hash_alg(size_t size, const hash_func_t *alg)
 	if (size != alg->size) {
 		prlog(PR_ERR,
 		      "ERROR: length of hash data does not equal expected size of hash "
-		      "%s, expected %zd found %zd bytes\n",
+		      "%s, expected %zu found %zu bytes\n",
 		      alg->name, alg->size, size);
 		return HASH_FAIL;
 	}
@@ -120,7 +120,7 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 	/* verify struct to ensure it is a valid sig_list, if 1 is returned break */
 	if (esl_data_size < sizeof(sv_esl_t)) {
 		prlog(PR_ERR,
-		      "ERROR: ESL has %zd bytes and is smaller than an ESL (%zd bytes),"
+		      "ERROR: ESL has %zu bytes and is smaller than an ESL (%zu bytes),"
 		      "remaining data not parsed\n",
 		      esl_data_size, sizeof(sv_esl_t));
 		return ESL_FAIL;
@@ -145,13 +145,13 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 	    sig_list->signature_header_size > esl_data_size ||
 	    sig_list->signature_size > esl_data_size) {
 		prlog(PR_ERR,
-		      "ERROR: expected signature list size %d + header size %d + "
-		      "signature size is %d larger than actual size %zd\n",
+		      "ERROR: expected signature list size %u + header size %u + "
+		      "signature size is %u larger than actual size %zu\n",
 		      sig_list->signature_list_size, sig_list->signature_header_size,
 		      sig_list->signature_size, esl_data_size);
 		return ESL_FAIL;
 	} else if ((int)sig_list->signature_list_size <= 0) {
-		prlog(PR_ERR, "ERROR: signature list has incorrect size %d \n",
+		prlog(PR_ERR, "ERROR: signature list has incorrect size %u \n",
 		      sig_list->signature_list_size);
 		return ESL_FAIL;
 	}
@@ -391,7 +391,7 @@ int validate_auth(const uint8_t *auth_data, size_t auth_data_len)
 	auth_size = auth->auth_cert.hdr.da_length + sizeof(auth->timestamp);
 	/* if expected length is greater than the actual length or not a valid size, return fail */
 	if ((ssize_t)auth_size <= 0 || auth_size > auth_data_len) {
-		prlog(PR_ERR, "ERROR: invalid auth size, expected %zd found %zd\n", auth_size,
+		prlog(PR_ERR, "ERROR: invalid auth size, expected %zu found %zu\n", auth_size,
 		      auth_data_len);
 		return AUTH_FAIL;
 	}
@@ -413,12 +413,12 @@ int validate_auth(const uint8_t *auth_data, size_t auth_data_len)
 	pkcs7_size = extract_pkcs7_len(auth);
 	/* ensure pkcs7 size is valid length */
 	if ((ssize_t)pkcs7_size <= 0 || pkcs7_size > auth_size) {
-		prlog(PR_ERR, "ERROR: Invalid pkcs7 size %zd\n", pkcs7_size);
+		prlog(PR_ERR, "ERROR: Invalid pkcs7 size %zu\n", pkcs7_size);
 		return AUTH_FAIL;
 	}
 
 	prlog(PR_INFO,
-	      "\tAuth File Size = %zd\n\t  -Auth/PKCS7 Data Size = %zd\n\t  -ESL Size = %zd\n",
+	      "\tAuth File Size = %zu\n\t  -Auth/PKCS7 Data Size = %zu\n\t  -ESL Size = %zu\n",
 	      auth_data_len, auth_size, auth_data_len - auth_size);
 
 	if (verbose >= PR_INFO) {
