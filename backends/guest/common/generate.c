@@ -100,10 +100,10 @@ int create_esl(const uint8_t *data, const size_t data_size, const uuid_t guid, u
 
 	esl.signature_type = guid;
 	esl.signature_list_size = sizeof(esl) + sizeof(uuid_t) + data_size;
-	prlog(PR_INFO, "\tsig list size - %d\n", esl.signature_list_size);
+	prlog(PR_INFO, "\tsig list size - %u\n", esl.signature_list_size);
 	esl.signature_header_size = 0;
 	esl.signature_size = data_size + sizeof(uuid_t);
-	prlog(PR_INFO, "\tsignature data size - %d\n", esl.signature_size);
+	prlog(PR_INFO, "\tsignature data size - %u\n", esl.signature_size);
 
 	/*esl structure:
       -esl header - 28 bytes
@@ -148,13 +148,13 @@ int extract_esl_from_auth(const uint8_t *data, const size_t data_size, uint8_t *
 	auth = (auth_info_t *)data;
 	length = auth->auth_cert.hdr.da_length;
 	if (length == 0 || length > data_size) { /* if total size of header and pkcs7 */
-		prlog(PR_ERR, "error: invalid auth size %zd\n", length);
+		prlog(PR_ERR, "error: invalid auth size %zu\n", length);
 		return AUTH_FAIL;
 	}
 
 	pkcs7_size = extract_pkcs7_len(auth);
 	if (pkcs7_size == 0 || pkcs7_size > length) {
-		prlog(PR_ERR, "error: invalid pkcs7 size %zd\n", pkcs7_size);
+		prlog(PR_ERR, "error: invalid pkcs7 size %zu\n", pkcs7_size);
 		return PKCS7_FAIL;
 	}
 
@@ -170,8 +170,8 @@ int extract_esl_from_auth(const uint8_t *data, const size_t data_size, uint8_t *
 	}
 
 	prlog(PR_NOTICE,
-	      "\tauth file size = %zd\n\t  -auth/pkcs7 data size = %zd\n\t"
-	      "  -esl size = %zd\n",
+	      "\tauth file size = %zu\n\t  -auth/pkcs7 data size = %zu\n\t"
+	      "  -esl size = %zu\n",
 	      data_size, auth_buffer_size, data_size - auth_buffer_size);
 
 	/* skips over entire pkcs7 in cert_datas */
@@ -278,7 +278,7 @@ int create_presigned_hash(const uint8_t *esl, const size_t esl_size,
 	if (rc)
 		prlog(PR_ERR, "failed to generate hash\n");
 	else if (*out_buffer_size != 32) {
-		prlog(PR_ERR, "error: size of sha256 is not 32 bytes, found %zd bytes\n",
+		prlog(PR_ERR, "error: size of sha256 is not 32 bytes, found %zu bytes\n",
 		      *out_buffer_size);
 		rc = HASH_FAIL;
 	}
@@ -396,13 +396,13 @@ int create_auth_msg(const uint8_t *new_esl, const size_t new_esl_size,
 	prlog(PR_INFO, "\t+ append header %d bytes\n", APPEND_HEADER_LEN);
 	memcpy(*out_buffer + offset, &auth_header, sizeof(auth_header));
 	offset += sizeof(auth_header);
-	prlog(PR_INFO, "\t+ auth header %ld bytes\n", sizeof(auth_header));
+	prlog(PR_INFO, "\t+ auth header %zu bytes\n", sizeof(auth_header));
 	memcpy(*out_buffer + offset, pkcs7, pkcs7_size);
 	offset += pkcs7_size;
-	prlog(PR_INFO, "\t+ pkcs7 %zd bytes\n", pkcs7_size);
+	prlog(PR_INFO, "\t+ pkcs7 %zu bytes\n", pkcs7_size);
 	memcpy(*out_buffer + offset, new_esl, new_esl_size);
 	offset += new_esl_size;
-	prlog(PR_INFO, "\t+ new esl %zd bytes\n\t= %zd total bytes\n", new_esl_size, offset);
+	prlog(PR_INFO, "\t+ new esl %zu bytes\n\t= %zu total bytes\n", new_esl_size, offset);
 
 	free(pkcs7);
 
