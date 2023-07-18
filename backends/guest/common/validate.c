@@ -57,17 +57,17 @@ int validate_time(timestamp_t *time)
 		return INVALID_TIMESTAMP;
 	}
 
-	if (time->hour < 0 || time->hour > 23) {
+	if (time->hour > 23) {
 		prlog(PR_ERR, "ERROR: Invalid Timestamp value for hour: %d\n", time->hour);
 		return INVALID_TIMESTAMP;
 	}
 
-	if (time->minute < 0 || time->minute > 59) {
+	if (time->minute > 59) {
 		prlog(PR_ERR, "ERROR: Invalid Timestamp value for minute: %d\n", time->minute);
 		return INVALID_TIMESTAMP;
 	}
 
-	if (time->second < 0 || time->second > 60) {
+	if (time->second > 60) {
 		prlog(PR_ERR, "ERROR: Invalid Timestamp value for second: %d\n", time->second);
 		return INVALID_TIMESTAMP;
 	}
@@ -129,7 +129,7 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 	/* Get sig list */
 	sig_list = extract_esl_signature_list(esl_data, esl_data_size);
 	if (sig_list->signature_list_size > 0) {
-		if ((sig_list->signature_size <= 0 && sig_list->signature_header_size <= 0) ||
+		if ((sig_list->signature_size == 0 && sig_list->signature_header_size == 0) ||
 		    sig_list->signature_list_size <
 			    (sig_list->signature_header_size + sig_list->signature_size)) {
 			prlog(PR_ERR, "ERROR: signature list is not structured correctly, defined "
