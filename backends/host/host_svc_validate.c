@@ -640,7 +640,7 @@ int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen)
 	return SUCCESS;
 }
 
-static bool timestamp_is_empty(char *ts_ptr)
+static bool timestamp_is_empty(const char *ts_ptr)
 {
 	for (size_t i = 0; i < sizeof(struct efi_time); i++) {
 		if (ts_ptr[i] != 0x00)
