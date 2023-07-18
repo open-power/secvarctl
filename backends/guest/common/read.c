@@ -80,7 +80,7 @@ void print_signature_type(const void *sig)
 /* prints info on ESL, nothing on ESL data */
 void print_esl_info(sv_esl_t *sig_list)
 {
-	printf("\tESL SIG LIST SIZE: %d\n", sig_list->signature_list_size);
+	printf("\tESL SIG LIST SIZE: %u\n", sig_list->signature_list_size);
 	printf("\tGUID is : ");
 	print_signature_type(&sig_list->signature_type);
 	printf("\tSignature type is: %s\n", get_signature_type(sig_list->signature_type));
@@ -137,7 +137,7 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *va
 
 		if (esl_data_size < sizeof(sv_esl_t)) {
 			prlog(PR_ERR,
-			      "ERROR: ESL has %zd bytes and is smaller than an ESL (%zd bytes),"
+			      "ERROR: ESL has %zd bytes and is smaller than an ESL (%zu bytes),"
 			      " remaining data not parsed\n",
 			      esl_data_size, sizeof(sv_esl_t));
 			break;
@@ -150,7 +150,7 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *va
 		signature_type = get_signature_type(sig_list->signature_type);
 
 		if (esl_size < sizeof(sv_esl_t) || esl_size > esl_data_size) {
-			prlog(PR_ERR, "ERROR: invalid ESL size (%lu)\n", esl_size);
+			prlog(PR_ERR, "ERROR: invalid ESL size (%zu)\n", esl_size);
 			break;
 		}
 
