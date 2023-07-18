@@ -10,7 +10,7 @@
 #include "err.h"
 #include "prlog.h"
 #include "crypto.h"
-#include "endian.h"
+#include <endian.h>
 #include "common/util.h"
 #include "common/generate.h"
 #include "common/validate.h"
