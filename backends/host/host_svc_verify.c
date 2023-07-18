@@ -374,7 +374,6 @@ static int setupBanks(struct list_head *variable_bank, struct list_head *update_
 		for (int i = 0; i < currCount; i++)
 			free(currentVars[i]);
 		free(currentVars);
-		currentVars = NULL;
 	}
 
 	return SUCCESS;
