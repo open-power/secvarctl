@@ -308,10 +308,10 @@ int validateESL(const unsigned char *eslBuf, size_t buflen, const char *key)
 {
 	ssize_t eslvarsize = buflen;
 	size_t eslsize = 0;
-	int count = 0, offset = 0, rc;
+	int count = 0, offset = 0;
 	prlog(PR_INFO, "VALIDATING ESL:\n");
 	while (eslvarsize > 0) {
-		rc = validateSingularESL(&eslsize, eslBuf + offset, eslvarsize, key);
+		int rc = validateSingularESL(&eslsize, eslBuf + offset, eslvarsize, key);
 		// verify current esl to ensure it is a valid sigList, if 1 is returned break or error
 		if (rc) {
 			prlog(PR_ERR, "ERROR: Sig List #%d is not structured correctly\n", count);
@@ -494,7 +494,6 @@ out:
 static int validateCertStruct(crypto_x509 *x509, const char *varName)
 {
 	int rc, len, version;
-	char *x509_info;
 	// check raw cert data has data
 	len = crypto_x509_get_der_len(x509);
 	if (len < 0) {
@@ -544,7 +543,7 @@ static int validateCertStruct(crypto_x509 *x509, const char *varName)
 		if (crypto_x509_md_is_sha256(x509) || crypto_x509_oid_is_pkcs1_sha256(x509) ||
 		    crypto_x509_get_pk_bit_len(x509) != 2048) {
 			// calloc to ensure null terminator
-			x509_info = calloc(CERT_BUFFER_SIZE, 1);
+			char *x509_info = calloc(CERT_BUFFER_SIZE, 1);
 			if (!x509_info) {
 				prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 				return CERT_FAIL;
