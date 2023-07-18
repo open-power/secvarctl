@@ -180,7 +180,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		// check that all essential args are given and valid
 		if (args->helpFlag)
 			break;
-		if (!args->updateVarCount || args->updateVarCount <= 1)
+		if (args->updateVarCount <= 1)
 			argp_usage(state);
 		//	prlog(PR_ERR, "ERROR: No update variables/files given, use -u "
 		//		      "<varName_1> <authFileForVar_1>...\n\t\t"
