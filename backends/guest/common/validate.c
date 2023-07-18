@@ -112,7 +112,6 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 {
 	ssize_t cert_size;
 	int rc;
-	size_t esl_size;
 	uint8_t *cert = NULL, *signature_type = NULL;
 	sv_esl_t *sig_list;
 
@@ -154,14 +153,6 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 	} else if ((int)sig_list->signature_list_size <= 0) {
 		prlog(PR_ERR, "ERROR: signature list has incorrect size %d \n",
 		      sig_list->signature_list_size);
-		return ESL_FAIL;
-	}
-
-	esl_size = sig_list->signature_list_size;
-	if (esl_size > esl_data_size) {
-		prlog(PR_ERR,
-		      "ERROR: signature list size is greater than remaining data size: %zd > %zd\n",
-		      esl_size, esl_data_size);
 		return ESL_FAIL;
 	}
 
@@ -215,7 +206,7 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 	}
 
 	free(cert);
-	*next_esl = esl_size;
+	*next_esl = sig_list->signature_list_size;
 
 	return rc;
 }
