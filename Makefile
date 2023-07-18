@@ -11,7 +11,8 @@ BIN_DIR = bin
 OBJ_DIR = obj
 
 # TODO: seriously trim down the number of -I includes. use more relative pathing.
-INCLUDES = -I./include                               \
+INCLUDES = -I.                                       \
+           -I./include                               \
            -I./external/libstb-secvar/               \
            -I./external/libstb-secvar/include        \
            -I./external/libstb-secvar/include/secvar
@@ -167,7 +168,7 @@ memcheck: secvarctl-cov
 
 cppcheck:
 	cppcheck --enable=all --suppress=missingIncludeSystem --force -q \
-	         $(MAIN_SRCS) $(INCLUDE)
+	         $(INCLUDES) $(MAIN_SRCS)
 
 generate:
 	@$(MAKE) -C test generate MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
