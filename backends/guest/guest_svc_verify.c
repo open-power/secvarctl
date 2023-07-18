@@ -71,9 +71,6 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 		else if ((rc = validate_variables_arguments(args)) != SUCCESS)
 			return rc;
 		break;
-		argp_usage(state);
-		rc = ARG_PARSE_FAIL;
-		break;
 	}
 
 	if (rc)
