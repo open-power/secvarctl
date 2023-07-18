@@ -455,7 +455,7 @@ int validate_variables_arguments(struct verify_args *args)
 {
 	int i = 0;
 
-	if (args->update_variable_size == 0 || args->update_variable_size <= 1) {
+	if (args->update_variable_size <= 1) {
 		prlog(PR_ERR, "ERROR: needs the update variable and respective auth files\n"
 			      " Example: -u <var_name 1> <var_auth_file 1>...<var_name N> "
 			      "<var_auth_file N>\n");
