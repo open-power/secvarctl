@@ -306,7 +306,7 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
 	}
 	if (size != out_size) {
 		prlog(PR_ERR,
-		      "ERROR: expected size of secvar (%zd) is not equal to actual size (%zd)\n",
+		      "ERROR: expected size of secvar (%zu) is not equal to actual size (%zu)\n",
 		      size, out_size);
 		free(c);
 		return INVALID_FILE;
@@ -343,7 +343,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 		size_t eslsize;
 		if (eslvarsize < sizeof(EFI_SIGNATURE_LIST)) {
 			prlog(PR_ERR,
-			      "ERROR: ESL has %zd bytes and is smaller than an ESL (%zd bytes), remaining data not parsed\n",
+			      "ERROR: ESL has %zd bytes and is smaller than an ESL (%zu bytes), remaining data not parsed\n",
 			      eslvarsize, sizeof(EFI_SIGNATURE_LIST));
 			break;
 		}
@@ -364,7 +364,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 		    sigList->SignatureHeaderSize > eslvarsize ||
 		    sigList->SignatureSize > eslvarsize) {
 			prlog(PR_ERR,
-			      "ERROR: Expected Sig List Size %d + Header size %d + Signature Size is %d larger than actual size %zd\n",
+			      "ERROR: Expected Sig List Size %u + Header size %u + Signature Size is %u larger than actual size %zd\n",
 			      sigList->SignatureListSize, sigList->SignatureHeaderSize,
 			      sigList->SignatureSize, eslvarsize);
 			break;
@@ -414,7 +414,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 // prints info on ESL, nothing on ESL data
 void printESLInfo(EFI_SIGNATURE_LIST *sigList)
 {
-	printf("\tESL SIG LIST SIZE: %d\n", sigList->SignatureListSize);
+	printf("\tESL SIG LIST SIZE: %u\n", sigList->SignatureListSize);
 	printf("\tGUID is : ");
 	printGuidSig(&sigList->SignatureType);
 	printf("\tSignature type is: %s\n", getSigType(sigList->SignatureType));
@@ -457,7 +457,7 @@ static int readTS(const char *data, size_t size)
 	// data length must have a timestamp for every variable besides the TS variable
 	if (size != sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1)) {
 		prlog(PR_ERR,
-		      "ERROR: TS variable does not contain data on all the variables, expected %ld bytes of data, found %zd\n",
+		      "ERROR: TS variable does not contain data on all the variables, expected %zu bytes of data, found %zu\n",
 		      sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1), size);
 		return INVALID_TIMESTAMP;
 	}

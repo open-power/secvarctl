@@ -714,7 +714,7 @@ int guest_generate_command(int argc, char *argv[])
 		goto out;
 	}
 
-	prlog(PR_INFO, "writing %zd bytes to %s\n", out_buffer_size, args.output_file);
+	prlog(PR_INFO, "writing %zu bytes to %s\n", out_buffer_size, args.output_file);
 	/* write data to new file */
 	rc = create_file(args.output_file, (char *)out_buffer, out_buffer_size);
 	if (rc) {
