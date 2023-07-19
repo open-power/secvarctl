@@ -349,7 +349,6 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 {
 	ssize_t cert_size;
 	int rc;
-	size_t eslsize;
 	unsigned char *cert = NULL;
 	EFI_SIGNATURE_LIST *sigList;
 
@@ -386,14 +385,6 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 	} else if ((int)sigList->SignatureListSize <= 0) {
 		prlog(PR_ERR, "ERROR: Sig List has incorrect size %u \n",
 		      sigList->SignatureListSize);
-		return ESL_FAIL;
-	}
-	eslsize = sigList->SignatureListSize;
-	// if eslsize is greater than remaining buffer size, error
-	if (eslsize > eslvarsize) {
-		prlog(PR_ERR,
-		      "ERROR: Sig list size is greater than remaining data size: %zu > %zu\n",
-		      eslsize, eslvarsize);
 		return ESL_FAIL;
 	}
 
@@ -436,7 +427,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 		rc = validateCert(cert, cert_size, varName);
 	}
 	free(cert);
-	*bytesRead = eslsize;
+	*bytesRead = sigList->SignatureListSize;
 
 	return rc;
 }
