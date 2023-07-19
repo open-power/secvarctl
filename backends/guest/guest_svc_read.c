@@ -208,8 +208,7 @@ static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int i
 	       crypto.get_signing_cert_from_pkcs7(pkcs7, cert_num, &x509) == SUCCESS) {
 		printf("SIGNING CERTIFICATE:\n");
 
-		if (rc == SUCCESS)
-			rc = print_cert_info(x509);
+		rc = print_cert_info(x509);
 
 		cert_num++;
 	}
