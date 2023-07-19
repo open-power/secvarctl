@@ -364,7 +364,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 	sigList = get_esl_signature_list((const char *)esl, eslvarsize);
 	// check size info is logical
 	if (sigList->SignatureListSize > 0) {
-		if ((sigList->SignatureSize <= 0 && sigList->SignatureHeaderSize <= 0) ||
+		if ((sigList->SignatureSize == 0 && sigList->SignatureHeaderSize == 0) ||
 		    sigList->SignatureListSize <
 			    sigList->SignatureHeaderSize + sigList->SignatureSize) {
 			/*printf("Sig List : %d , sig Header: %d, sig Size: %d\n",list.SignatureListSize,list.SignatureHeaderSize,list.SignatureSize);*/
@@ -707,17 +707,17 @@ int validateTime(struct efi_time *time)
 		return INVALID_TIMESTAMP;
 	}
 
-	if (time->hour < 0 || time->hour > 23) {
+	if (time->hour > 23) {
 		prlog(PR_ERR, "ERROR: Invalid Timestamp value for hour: %d\n", time->hour);
 		return INVALID_TIMESTAMP;
 	}
 
-	if (time->minute < 0 || time->minute > 59) {
+	if (time->minute > 59) {
 		prlog(PR_ERR, "ERROR: Invalid Timestamp value for minute: %d\n", time->minute);
 		return INVALID_TIMESTAMP;
 	}
 
-	if (time->second < 0 || time->second > 60) {
+	if (time->second > 60) {
 		prlog(PR_ERR, "ERROR: Invalid Timestamp value for second: %d\n", time->second);
 		return INVALID_TIMESTAMP;
 	}
