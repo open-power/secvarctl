@@ -84,7 +84,7 @@ char *get_data_from_file(const char *fullPath, size_t max_bytes, size_t *size)
 	if (max_bytes > fileInfo.st_size)
 		max_bytes = fileInfo.st_size;
 
-	prlog(PR_NOTICE, "----opening %s is success: reading %ld bytes----\n", fullPath, max_bytes);
+	prlog(PR_NOTICE, "----opening %s is success: reading %zu bytes----\n", fullPath, max_bytes);
 
 	buffer = malloc(max_bytes);
 	if (!buffer) {
@@ -132,7 +132,7 @@ int write_data_to_file(const char *file, const char *buff, size_t size)
 	} else if (rc == 0)
 		prlog(PR_WARNING, "End of file reached, not all of file was written to %s\n", file);
 	else
-		prlog(PR_NOTICE, "%d/%zd bytes successfully written from file to %s\n", rc, size,
+		prlog(PR_NOTICE, "%d/%zu bytes successfully written from file to %s\n", rc, size,
 		      file);
 
 	close(fptr);
@@ -166,7 +166,7 @@ int create_file(const char *file, const char *buff, size_t size)
 	} else if (rc == 0)
 		prlog(PR_WARNING, "End of file reached, not all of file was written to %s\n", file);
 	else
-		prlog(PR_NOTICE, "%d/%zd bytes successfully written from file to %s\n", rc, size,
+		prlog(PR_NOTICE, "%d/%zu bytes successfully written from file to %s\n", rc, size,
 		      file);
 
 	close(fptr);
@@ -191,7 +191,7 @@ int realloc_array(void **arr, size_t new_length, size_t size_each)
 	old_arr = *arr;
 	/* check if requested size is too big */
 	if (__builtin_mul_overflow(new_length, size_each, &new_size)) {
-		prlog(PR_ERR, "ERROR: Invalid size to alloc %zd * %zd\n", new_length, size_each);
+		prlog(PR_ERR, "ERROR: Invalid size to alloc %zu * %zu\n", new_length, size_each);
 		goto out;
 	}
 
