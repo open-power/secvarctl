@@ -190,7 +190,7 @@ int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key)
 	authSize = auth->auth_info.hdr.dw_length + sizeof(auth->timestamp);
 	// if expected length is greater than the actual length or not a valid size, return fail
 	if ((ssize_t)authSize <= 0 || authSize > buflen) {
-		prlog(PR_ERR, "ERROR: Invalid auth size, expected %zd found %zd\n", authSize,
+		prlog(PR_ERR, "ERROR: Invalid auth size, expected %zu found %zu\n", authSize,
 		      buflen);
 		return AUTH_FAIL;
 	}
@@ -209,12 +209,12 @@ int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key)
 	pkcs7_size = get_pkcs7_len(auth);
 	// ensure pkcs7 size is valid length
 	if ((ssize_t)pkcs7_size <= 0 || pkcs7_size > authSize) {
-		prlog(PR_ERR, "ERROR: Invalid pkcs7 size %zd\n", pkcs7_size);
+		prlog(PR_ERR, "ERROR: Invalid pkcs7 size %zu\n", pkcs7_size);
 		return AUTH_FAIL;
 	}
 
 	prlog(PR_INFO,
-	      "\tAuth File Size = %zd\n\t  -Auth/PKCS7 Data Size = %zd\n\t  -ESL Size = %zd\n",
+	      "\tAuth File Size = %zu\n\t  -Auth/PKCS7 Data Size = %zu\n\t  -ESL Size = %zu\n",
 	      buflen, authSize, buflen - authSize);
 
 	if (verbose >= PR_INFO) {
@@ -357,7 +357,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 	// verify struct to ensure it is a valid sigList, if 1 is returned break
 	if (eslvarsize < sizeof(EFI_SIGNATURE_LIST)) {
 		prlog(PR_ERR,
-		      "ERROR: ESL has %zd bytes and is smaller than an ESL (%zd bytes), remaining data not parsed\n",
+		      "ERROR: ESL has %zu bytes and is smaller than an ESL (%zu bytes), remaining data not parsed\n",
 		      eslvarsize, sizeof(EFI_SIGNATURE_LIST));
 		return ESL_FAIL;
 	}
@@ -379,12 +379,12 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 	if (sigList->SignatureListSize > eslvarsize || sigList->SignatureHeaderSize > eslvarsize ||
 	    sigList->SignatureSize > eslvarsize) {
 		prlog(PR_ERR,
-		      "ERROR: Expected Sig List Size %d + Header size %d + Signature Size is %d larger than actual size %zd\n",
+		      "ERROR: Expected Sig List Size %u + Header size %u + Signature Size is %u larger than actual size %zu\n",
 		      sigList->SignatureListSize, sigList->SignatureHeaderSize,
 		      sigList->SignatureSize, eslvarsize);
 		return ESL_FAIL;
 	} else if ((int)sigList->SignatureListSize <= 0) {
-		prlog(PR_ERR, "ERROR: Sig List has incorrect size %d \n",
+		prlog(PR_ERR, "ERROR: Sig List has incorrect size %u \n",
 		      sigList->SignatureListSize);
 		return ESL_FAIL;
 	}
@@ -392,7 +392,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 	// if eslsize is greater than remaining buffer size, error
 	if (eslsize > eslvarsize) {
 		prlog(PR_ERR,
-		      "ERROR: Sig list size is greater than remaining data size: %zd > %zd\n",
+		      "ERROR: Sig list size is greater than remaining data size: %zu > %zu\n",
 		      eslsize, eslvarsize);
 		return ESL_FAIL;
 	}
@@ -467,7 +467,7 @@ int validateCert(const unsigned char *certBuf, size_t buflen, const char *varNam
 	crypto_x509 *x509 = NULL;
 
 	if (buflen == 0) {
-		prlog(PR_ERR, "ERROR: Length %zd is invalid\n", buflen);
+		prlog(PR_ERR, "ERROR: Length %zu is invalid\n", buflen);
 		return CERT_FAIL;
 	}
 	rc = parseX509(&x509, certBuf, buflen);
@@ -606,7 +606,7 @@ static crypto_x509 *parseX509_PEM(const unsigned char *data_pem, size_t data_len
 int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen)
 {
 	if ((ssize_t)buflen <= 0) {
-		prlog(PR_ERR, "ERROR: Certificate has invalid length %zd, cannot validate\n",
+		prlog(PR_ERR, "ERROR: Certificate has invalid length %zu, cannot validate\n",
 		      buflen);
 		return CERT_FAIL;
 	}
@@ -664,7 +664,7 @@ int validateTS(const unsigned char *data, size_t size)
 	// data length must have a timestamp for every variable besides the TS variable
 	if (size != sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1)) {
 		prlog(PR_ERR,
-		      "ERROR: TS variable does not contain data on all the variables, expected %ld bytes of data, found %zd\n",
+		      "ERROR: TS variable does not contain data on all the variables, expected %zu bytes of data, found %zu\n",
 		      sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1), size);
 		return INVALID_TIMESTAMP;
 	}
