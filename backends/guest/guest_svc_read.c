@@ -172,6 +172,11 @@ static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int i
 	crypto_pkcs7_t *pkcs7 = NULL;
 	auth_info_t *auth = NULL;
 
+	if (auth_data == NULL) {
+		prlog(PR_ERR, "%s: auth_data is NULL, this is probably a bug", __func__);
+		return ALLOC_FAIL;
+	}
+
 	if (is_print_raw) {
 		print_raw((char *)auth_data, auth_data_len);
 		return rc;
