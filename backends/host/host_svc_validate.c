@@ -543,8 +543,7 @@ static int validateCertStruct(crypto_x509 *x509, const char *varName)
 			prlog(PR_ERR,
 			      "ERROR: Wanted x509 with RSA 2048 and SHA-256. Discovered %s with signature length %d bits\n",
 			      x509_info, crypto_x509_get_pk_bit_len(x509));
-			if (x509_info)
-				free(x509_info);
+			free(x509_info);
 			return CERT_FAIL;
 		}
 	}
