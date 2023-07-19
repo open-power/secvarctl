@@ -353,8 +353,6 @@ static int get_pk_and_kek_from_update_var(const struct verify_args *args, uint8_
 		rc = get_auth_data((uint8_t *)args->update_variable[i + 1], &auth_data,
 				   &auth_data_size, &append_update);
 		if (rc != SUCCESS) {
-			if (auth_data)
-				free(auth_data);
 			continue;
 		}
 
