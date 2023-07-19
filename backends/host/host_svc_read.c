@@ -351,7 +351,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 		sigList = get_esl_signature_list(c + offset, eslvarsize);
 		// check size info is logical
 		if (sigList->SignatureListSize > 0) {
-			if ((sigList->SignatureSize <= 0 && sigList->SignatureHeaderSize <= 0) ||
+			if ((sigList->SignatureSize == 0 && sigList->SignatureHeaderSize == 0) ||
 			    sigList->SignatureListSize <
 				    sigList->SignatureHeaderSize + sigList->SignatureSize) {
 				/*printf("Sig List : %d , sig Header: %d, sig Size: %d\n",list.SignatureListSize,list.SignatureHeaderSize,list.SignatureSize);*/
