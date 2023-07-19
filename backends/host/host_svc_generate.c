@@ -962,6 +962,12 @@ static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const u
 		goto out;
 	}
 
+	if (!ESL && ESL_size != 0) {
+		prlog(PR_ERR, "%s: ESL is NULL, but ESL_size is not zero this is probably a bug\n",
+		      __func__);
+		return ARG_PARSE_FAIL;
+	}
+
 	if (verbose >= PR_INFO) {
 		prlog(PR_INFO, "Timestamp is : ");
 		printTimestamp(*args->time);
@@ -998,7 +1004,9 @@ static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const u
 	ptr += sizeof(attr);
 	memcpy(ptr, args->time, sizeof(struct efi_time));
 	ptr += sizeof(*args->time);
-	memcpy(ptr, ESL, ESL_size);
+	// Skip zero-sized memcpy if generating a reset to make static analysis happy
+	if (ESL)
+		memcpy(ptr, ESL, ESL_size);
 
 out:
 	if (wkey)
