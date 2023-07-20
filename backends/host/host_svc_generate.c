@@ -214,7 +214,7 @@ int performGenerateCommand(int argc, char *argv[])
 		goto out;
 	}
 
-	prlog(PR_INFO, "Writing %zd bytes to %s\n", outBuffSize, args.outFile);
+	prlog(PR_INFO, "Writing %zu bytes to %s\n", outBuffSize, args.outFile);
 	// write data to new file
 	rc = create_file(args.outFile, (char *)outBuff, outBuffSize);
 	if (rc) {
@@ -704,7 +704,7 @@ static int validateHashAndAlg(size_t size, const struct hash_funct *alg)
 {
 	if (size != alg->size) {
 		prlog(PR_ERR,
-		      "ERROR: length of hash data does not equal expected size of hash %s, expected %zd found %zd bytes\n",
+		      "ERROR: length of hash data does not equal expected size of hash %s, expected %zu found %zu bytes\n",
 		      alg->name, alg->size, size);
 		return HASH_FAIL;
 	}
@@ -734,11 +734,11 @@ static int toESL(const unsigned char *data, size_t size, const uuid_t guid, unsi
 	}
 
 	esl.SignatureListSize = sizeof(esl) + sizeof(uuid_t) + size;
-	prlog(PR_INFO, "\tSig List Size - %d\n", esl.SignatureListSize);
+	prlog(PR_INFO, "\tSig List Size - %u\n", esl.SignatureListSize);
 	// for some reason we are using header size is zero in all our files
 	esl.SignatureHeaderSize = 0;
 	esl.SignatureSize = size + sizeof(uuid_t);
-	prlog(PR_INFO, "\tSignature Data Size - %d\n", esl.SignatureSize);
+	prlog(PR_INFO, "\tSignature Data Size - %u\n", esl.SignatureSize);
 
 	/*ESL Structure:
 		-ESL header - 28 bytes
@@ -781,14 +781,14 @@ static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out
 	auth = (struct efi_variable_authentication_2 *)in;
 	length = auth->auth_info.hdr.dw_length;
 	if (length == 0 || length > inSize) { // if total size of header and pkcs7
-		prlog(PR_ERR, "ERROR: Invalid auth size %zd\n", length);
+		prlog(PR_ERR, "ERROR: Invalid auth size %zu\n", length);
 		return AUTH_FAIL;
 	}
 	pkcs7_size = get_pkcs7_len(auth);
 	/*pkcs7_size=length-(sizeof(auth->auth_info.hdr)+sizeof(auth->auth_info.cert_type));*/ // =sizeof cert_data[] AKA pkcs7 data
 	// if total size of header and pkcs7
 	if (pkcs7_size == 0 || pkcs7_size > length) {
-		prlog(PR_ERR, "ERROR: Invalid pkcs7 size %zd\n", pkcs7_size);
+		prlog(PR_ERR, "ERROR: Invalid pkcs7 size %zu\n", pkcs7_size);
 		return PKCS7_FAIL;
 	}
 	/*
@@ -802,7 +802,7 @@ static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out
 		return ESL_FAIL;
 	}
 	prlog(PR_NOTICE,
-	      "\tAuth File Size = %zd\n\t  -Auth/PKCS7 Data Size = %zd\n\t  -ESL Size = %zd\n",
+	      "\tAuth File Size = %zu\n\t  -Auth/PKCS7 Data Size = %zu\n\t  -ESL Size = %zu\n",
 	      inSize, auth_buffer_size, inSize - auth_buffer_size);
 
 	// skips over entire pkcs7 in cert_datas
@@ -902,7 +902,7 @@ static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size, str
 		goto out;
 	}
 	if (*outBuffSize != 32) {
-		prlog(PR_ERR, "ERROR: size of SHA256 is not 32 bytes, found %zd bytes\n",
+		prlog(PR_ERR, "ERROR: size of SHA256 is not 32 bytes, found %zu bytes\n",
 		      *outBuffSize);
 		rc = HASH_FAIL;
 	}
@@ -1104,13 +1104,13 @@ static int toAuth(const unsigned char *newESL, size_t eslSize, struct Arguments 
 	prlog(PR_INFO, "Combining Auth header, PKCS7 and new ESL:\n");
 	memcpy(*outBuff + offset, &authHeader, sizeof(authHeader));
 	offset += sizeof(authHeader);
-	prlog(PR_INFO, "\t+ Auth Header %ld bytes\n", sizeof(authHeader));
+	prlog(PR_INFO, "\t+ Auth Header %zu bytes\n", sizeof(authHeader));
 	memcpy(*outBuff + offset, pkcs7, pkcs7Size);
 	offset += pkcs7Size;
-	prlog(PR_INFO, "\t+ PKCS7 %zd bytes\n", pkcs7Size);
+	prlog(PR_INFO, "\t+ PKCS7 %zu bytes\n", pkcs7Size);
 	memcpy(*outBuff + offset, newESL, eslSize);
 	offset += eslSize;
-	prlog(PR_INFO, "\t+ new ESL %zd bytes\n\t= %zd total bytes\n", eslSize, offset);
+	prlog(PR_INFO, "\t+ new ESL %zu bytes\n\t= %zu total bytes\n", eslSize, offset);
 
 out:
 	if (pkcs7)
