@@ -166,9 +166,13 @@ memcheck: secvarctl-cov
 	                 SECVAR_TOOL=$(SECVAR_TOOL) \
 	                 memcheck
 
+
+CPPCHECK_FLAGS =  --enable=all --force -q
+CPPCHECK_FLAGS += --suppress=missingIncludeSystem
+CPPCHECK_FLAGS += --suppress=unusedFunction       # false positive on validateTS
+CPPCHECK_FLAGS += --suppress=internalAstError     # false positive on ccan/list_for_each
 cppcheck:
-	cppcheck --enable=all --suppress=missingIncludeSystem --force -q \
-	         $(INCLUDES) $(MAIN_SRCS)
+	cppcheck $(CPPCHECK_FLAGS) $(INCLUDES) $(MAIN_SRCS)
 
 generate:
 	@$(MAKE) -C test generate MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
