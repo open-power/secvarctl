@@ -9,7 +9,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: install openssl nad valgrind for running test script
+    - name: install openssl and valgrind for running test script
       run:  sudo apt install openssl valgrind
     - name: install mbedtls
       run:  sudo apt install libmbedtls-dev
@@ -34,26 +34,27 @@ jobs:
         make clean
         cd ..
         make clean
-    
-    - name: run and test cmake builds
-      run: |
-        sudo apt install cmake
-        mkdir build
-        cd build
-        cmake ../ .
-        cmake --build .
-        mv  secvarctl ../secvarctl-cov
-        cd ../test
-        make
-        make clean 
-        cd ../build
-        rm -r *
-        cmake ../ -DOPENSSL=1 .
-        cmake --build .
-        mv  secvarctl ../secvarctl-cov
-        cd ../test
-        make OPENSSL=1
-        make clean
-        cd ..
+
+    # TODO: Disabled until cmake build returns
+    # - name: run and test cmake builds
+    #   run: |
+    #     sudo apt install cmake
+    #     mkdir build
+    #     cd build
+    #     cmake ../ .
+    #     cmake --build .
+    #     mv  secvarctl ../secvarctl-cov
+    #     cd ../test
+    #     make
+    #     make clean 
+    #     cd ../build
+    #     rm -r *
+    #     cmake ../ -DOPENSSL=1 .
+    #     cmake --build .
+    #     mv  secvarctl ../secvarctl-cov
+    #     cd ../test
+    #     make OPENSSL=1
+    #     make clean
+    #     cd ..
         
   
