@@ -8,7 +8,7 @@ import sys
 import argparse
 
 MEM_ERR = 101
-SECTOOLS="../../bin/secvarctl-cov"
+SECTOOLS="../../bin/secvarctl-dbg"
 SECVARPATH="/sys/firmware/secvar/vars/"
 MEMCHECK = False
 
