@@ -5,10 +5,9 @@ _CFLAGS = -MMD -O2 -std=gnu99 -Wall -Werror
 CFLAGS =
 # TODO: just put all the linker flags for now, rework the LDFLAGS settings later
 LDFLAGS = -lcrypto -lmbedtls -lmbedx509 -lmbedcrypto
-SECVAR_TOOL = $(PWD)/bin/secvarctl-cov
 MANDIR=usr/share/man
-BIN_DIR = bin
-OBJ_DIR = obj
+BIN_DIR = $(PWD)/bin
+OBJ_DIR = $(PWD)/obj
 
 # TODO: seriously trim down the number of -I includes. use more relative pathing.
 INCLUDES = -I.                                       \
@@ -117,11 +116,19 @@ MAIN_SRCS := $(SRCS)
 SRCS += $(EXTERNAL_SRCS)
 
 OBJS = $(addprefix $(OBJ_DIR)/,$(SRCS:.c=.o))
-OBJCOV = $(patsubst %.o, %.cov.o,$(OBJS))
+OBJDBG = $(patsubst %.o, %.dbg.o,$(OBJS))
 DEPS = $(OBJS:.o=.d)
 
 _CFLAGS += $(CFLAGS) $(INCLUDES)
 _LDFLAGS += $(LDFLAGS)
+
+SANITIZE_FLAGS = -fsanitize=address              \
+                 -fsanitize=undefined            \
+                 -fno-sanitize-recover=all       \
+                 -fsanitize=float-divide-by-zero \
+                 -fsanitize=float-cast-overflow  \
+                 -fno-sanitize=null              \
+                 -fno-sanitize=alignment
 
 export CFLAGS
 export LDFLAGS
@@ -134,38 +141,32 @@ $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(_CFLAGS) $< -o $@ -c
 
-$(OBJ_DIR)/%.cov.o: %.c
+$(OBJ_DIR)/%.dbg.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(_CFLAGS) -c --coverage $< -o $@
+	$(CC) $(_CFLAGS) -c --coverage -g $(SANITIZE_FLAGS) $< -o $@
 
 $(BIN_DIR)/secvarctl: $(OBJS) $(LIBSTB_SECVAR)
 	@mkdir -p $(BIN_DIR)
 	$(CC) $(_CFLAGS) $(STATICFLAG) $^ -o $@ $(_LDFLAGS)
 
-$(BIN_DIR)/secvarctl-cov: $(OBJCOV) $(LIBSTB_SECVAR)
+$(BIN_DIR)/secvarctl-dbg: $(OBJDBG) $(LIBSTB_SECVAR)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(_CFLAGS) $^ $(STATICFLAG) -fprofile-arcs -ftest-coverage -o $@ $(_LDFLAGS)
+	$(CC) $(_CFLAGS) $^ $(STATICFLAG) -g $(SANITIZE_FLAGS) -fprofile-arcs -ftest-coverage -o $@ $(_LDFLAGS)
 
 $(LIBSTB_SECVAR):
 	$(MAKE) CFLAGS=-DSECVAR_CRYPTO_WRITE_FUNC -C external/libstb-secvar lib/libstb-secvar-openssl.a
 
 
 secvarctl: $(BIN_DIR)/secvarctl
-secvarctl-cov: $(BIN_DIR)/secvarctl-cov
-.PHONY: secvarctl secvarctl-cov
+secvarctl-dbg: $(BIN_DIR)/secvarctl-dbg
+debug: $(BIN_DIR)/secvarctl-dbg
+.PHONY: secvarctl secvarctl-dbg debug
 
-check: secvarctl-cov
+check: secvarctl-dbg
 	@$(MAKE) -C test MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
 	                 HOST_BACKEND=$(HOST_BACKEND) \
-	                 SECVAR_TOOL=$(SECVAR_TOOL) \
+	                 SECVAR_TOOL=$(addprefix $(BIN_DIR)/,$<) \
 	                 check
-
-memcheck: secvarctl-cov
-	@$(MAKE) -C test MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
-	                 HOST_BACKEND=$(HOST_BACKEND) \
-	                 SECVAR_TOOL=$(SECVAR_TOOL) \
-	                 memcheck
-
 
 CPPCHECK_FLAGS =  --enable=all --force -q
 CPPCHECK_FLAGS += --suppress=missingIncludeSystem
