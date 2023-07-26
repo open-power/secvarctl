@@ -2,10 +2,11 @@
 # - backups and editor gunk
 *.swp
 *~
+compile_commands.json
+.cache
 # build products and coverage data
 obj
-lib
-build
+bin
 # final binaries
 secvarctl
-secvarctl-cov
+secvarctl-dbg
