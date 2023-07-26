@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2022-2023 IBM Corp.
-CC = gcc
-_CFLAGS = -MMD -O2 -std=gnu99 -Wall -Werror
-CFLAGS =
+CC ?= gcc
+_CFLAGS = -MMD -std=gnu99 -Wall -Werror
 # TODO: just put all the linker flags for now, rework the LDFLAGS settings later
 LDFLAGS = -lcrypto -lmbedtls -lmbedx509 -lmbedcrypto
 MANDIR=usr/share/man
@@ -15,13 +14,6 @@ INCLUDES = -I.                                       \
            -I./external/libstb-secvar/               \
            -I./external/libstb-secvar/include        \
            -I./external/libstb-secvar/include/secvar
-
-DEBUG ?= 0
-ifeq ($(strip $(DEBUG)), 1)
-  _CFLAGS += -g
-else
-  _LDFLAGS += -s
-endif
 
 #use CRYPTO_READ_ONLY for smaller executable but limited functionality
 #removes all write functions (secvarctl generate, pem_to_der etc.)
@@ -130,6 +122,9 @@ SANITIZE_FLAGS = -fsanitize=address              \
                  -fno-sanitize=null              \
                  -fno-sanitize=alignment
 
+DEBUG_CFLAGS = -g -O0 --coverage
+RELEASE_CFLAGS = -s -O2
+
 export CFLAGS
 export LDFLAGS
 
@@ -139,11 +134,11 @@ all: secvarctl
 
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(_CFLAGS) $< -o $@ -c
+	$(CC) $(RELEASE_CFLAGS) $(_CFLAGS) $(INCLUDES) $< -o $@ -c
 
 $(OBJ_DIR)/%.dbg.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(_CFLAGS) -c --coverage -g $(SANITIZE_FLAGS) $< -o $@
+	$(CC) $(DEBUG_CFLAGS) $(_CFLAGS) $(SANITIZE_FLAGS) -c  $< -o $@
 
 $(BIN_DIR)/secvarctl: $(OBJS) $(LIBSTB_SECVAR)
 	@mkdir -p $(BIN_DIR)
@@ -151,7 +146,7 @@ $(BIN_DIR)/secvarctl: $(OBJS) $(LIBSTB_SECVAR)
 
 $(BIN_DIR)/secvarctl-dbg: $(OBJDBG) $(LIBSTB_SECVAR)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(_CFLAGS) $^ $(STATICFLAG) -g $(SANITIZE_FLAGS) -fprofile-arcs -ftest-coverage -o $@ $(_LDFLAGS)
+	$(CC) $(_CFLAGS) -g $^ $(STATICFLAG) $(SANITIZE_FLAGS) -fprofile-arcs -ftest-coverage -o $@ $(_LDFLAGS)
 
 $(LIBSTB_SECVAR):
 	$(MAKE) CFLAGS=-DSECVAR_CRYPTO_WRITE_FUNC -C external/libstb-secvar lib/libstb-secvar-openssl.a
