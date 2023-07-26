@@ -165,7 +165,7 @@ check: secvarctl-dbg
 	                 SECVAR_TOOL=$(addprefix $(BIN_DIR)/,$<) \
 	                 check
 
-CPPCHECK_FLAGS =  --enable=all --force -q
+CPPCHECK_FLAGS =  --enable=all --force -q --error-exitcode=1
 CPPCHECK_FLAGS += --suppress=missingIncludeSystem
 CPPCHECK_FLAGS += --suppress=unusedFunction       # false positive on validateTS
 CPPCHECK_FLAGS += --suppress=internalAstError     # false positive on ccan/list_for_each
