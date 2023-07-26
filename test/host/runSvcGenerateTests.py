@@ -485,6 +485,7 @@ if __name__ == '__main__':
             GNUTLS = args.gnutls
         if args.secvarctl != None:
             SECTOOLS = args.secvarctl
+            GEN[0] = args.secvarctl
 
         del sys.argv[1:]
         createEnvironment()
