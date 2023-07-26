@@ -1078,6 +1078,13 @@ static int toAuth(const unsigned char *newESL, size_t eslSize, struct Arguments 
 	unsigned char *pkcs7 = NULL;
 	struct efi_variable_authentication_2 authHeader;
 
+	if ((newESL == NULL) && (eslSize != 0)) {
+		prlog(PR_ERR, "%s: newESL is NULL but eslSize is nonzero, this is probably a bug\n",
+		      __func__);
+		rc = ALLOC_FAIL;
+		goto out;
+	}
+
 	// generate PKCS7
 	rc = toPKCS7ForSecVar(newESL, eslSize, args, hashFunct, &pkcs7, &pkcs7Size);
 	if (rc) {
@@ -1108,7 +1115,8 @@ static int toAuth(const unsigned char *newESL, size_t eslSize, struct Arguments 
 	memcpy(*outBuff + offset, pkcs7, pkcs7Size);
 	offset += pkcs7Size;
 	prlog(PR_INFO, "\t+ PKCS7 %zu bytes\n", pkcs7Size);
-	memcpy(*outBuff + offset, newESL, eslSize);
+	if (newESL != NULL)
+		memcpy(*outBuff + offset, newESL, eslSize);
 	offset += eslSize;
 	prlog(PR_INFO, "\t+ new ESL %zu bytes\n\t= %zu total bytes\n", eslSize, offset);
 
