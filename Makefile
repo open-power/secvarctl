@@ -114,6 +114,7 @@ DEPS = $(OBJS:.o=.d)
 _CFLAGS += $(CFLAGS) $(INCLUDES)
 _LDFLAGS += $(LDFLAGS)
 
+ifneq ($(DISABLE_ASAN),1)
 SANITIZE_FLAGS = -fsanitize=address              \
                  -fsanitize=undefined            \
                  -fno-sanitize-recover=all       \
@@ -121,6 +122,7 @@ SANITIZE_FLAGS = -fsanitize=address              \
                  -fsanitize=float-cast-overflow  \
                  -fno-sanitize=null              \
                  -fno-sanitize=alignment
+endif
 
 DEBUG_CFLAGS = -g -O0 --coverage
 RELEASE_CFLAGS = -s -O2
