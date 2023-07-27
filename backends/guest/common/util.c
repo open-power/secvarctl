@@ -6,6 +6,7 @@
 #include <string.h>
 #include <endian.h>
 #include "err.h"
+#include "external/edk2/common.h"
 #include "prlog.h"
 #include "util.h"
 #include "pseries.h"
@@ -17,6 +18,25 @@
 #define SBAT_TYPE (uint8_t *)"SBAT"
 #define DELETE_TYPE (uint8_t *)"DELETE-ALL"
 #define UNKNOWN_TYPE (uint8_t *)"UNKNOWN"
+
+// clang-format off
+const struct signature_type_info signature_type_list[] = {
+	[ST_X509]             = { .name = "X509",       .uuid = &PKS_CERT_X509_GUID },
+	[ST_RSA2048]          = { .name = "RSA2048",    .uuid = &PKS_CERT_RSA2048_GUID },
+	[ST_PKCS7]            = { .name = "PKCS7",      .uuid = &AUTH_CERT_TYPE_PKCS7_GUID },
+	[ST_SBAT]             = { .name = "SBAT",       .uuid = &PKS_CERT_SBAT_GUID },
+	[ST_DELETE]           = { .name = "DELETE-ALL", .uuid = &PKS_CERT_DELETE_GUID },
+	[ST_HASH_SHA1]        = { .name = "SHA1",       .uuid = &PKS_CERT_SHA1_GUID },
+	[ST_HASH_SHA224]      = { .name = "SHA224",     .uuid = &PKS_CERT_SHA224_GUID },
+	[ST_HASH_SHA256]      = { .name = "SHA256",     .uuid = &PKS_CERT_SHA256_GUID },
+	[ST_HASH_SHA384]      = { .name = "SHA384",     .uuid = &PKS_CERT_SHA384_GUID },
+	[ST_HASH_SHA512]      = { .name = "SHA512",     .uuid = &PKS_CERT_SHA512_GUID },
+	[ST_X509_HASH_SHA256] = { .name = "SHA256",     .uuid = &PKS_CERT_X509_SHA256_GUID },
+	[ST_X509_HASH_SHA384] = { .name = "SHA384",     .uuid = &PKS_CERT_X509_SHA384_GUID },
+	[ST_X509_HASH_SHA512] = { .name = "SHA512",     .uuid = &PKS_CERT_X509_SHA512_GUID },
+	[ST_UNKNOWN]          = { .name = "UNKNOWN",    .uuid = NULL},
+};
+// clang-format on
 
 static uint8_t append[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
 static uint8_t replace[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -144,28 +164,12 @@ int get_x509_hash_function(const char *name, hash_func_t **returnfunct)
  */
 uint8_t *get_signature_type(const uuid_t type)
 {
-	for (int i = 0; i < sizeof(x509_hash_functions) / sizeof(hash_func_t); i++) {
-		if (uuid_equals(&type, x509_hash_functions[i].guid))
-			return (uint8_t *)x509_hash_functions[i].name;
+	for (int i = ST_LIST_START; i < ST_UNKNOWN; i++) {
+		if (uuid_equals(&type, signature_type_list[i].uuid))
+			return (uint8_t *)signature_type_list[i].name;
 	}
 
-	for (int i = 0; i < sizeof(hash_functions) / sizeof(hash_func_t); i++) {
-		if (uuid_equals(&type, hash_functions[i].guid))
-			return (uint8_t *)hash_functions[i].name;
-	}
-
-	if (uuid_equals(&type, &PKS_CERT_X509_GUID))
-		return X509_TYPE;
-	else if (uuid_equals(&type, &PKS_CERT_RSA2048_GUID))
-		return RSA2048_TYPE;
-	else if (uuid_equals(&type, &AUTH_CERT_TYPE_PKCS7_GUID))
-		return PKCS7_TYPE;
-	else if (uuid_equals(&type, &PKS_CERT_SBAT_GUID))
-		return SBAT_TYPE;
-	else if (uuid_equals(&type, &PKS_CERT_DELETE_GUID))
-		return DELETE_TYPE;
-
-	return UNKNOWN_TYPE;
+	return (uint8_t *)"UNKNOWN";
 }
 
 /*

@@ -21,6 +21,34 @@ static const uuid_t PKS_CERT_DELETE_GUID = { { 0x00, 0x00, 0x00, 0x00, 0x00, 0x0
 
 enum file_types { AUTH_FILE, PKCS7_FILE, ESL_FILE, CERT_FILE, UNKNOWN_FILE };
 
+// Enum for each possible signature type
+//  Start at 1, so 0 can be reserved for some kind of error type
+//  Alias ST_LIST_START as the first value for iteration purposes
+enum signature_type {
+	ST_LIST_START = 1,
+	ST_X509 = 1,
+	ST_RSA2048,
+	ST_PKCS7,
+	ST_SBAT,
+	ST_DELETE,
+	ST_HASH_SHA1,
+	ST_HASH_SHA224,
+	ST_HASH_SHA256,
+	ST_HASH_SHA384,
+	ST_HASH_SHA512,
+	ST_X509_HASH_SHA256,
+	ST_X509_HASH_SHA384,
+	ST_X509_HASH_SHA512,
+	ST_UNKNOWN, // NOTE: Expected to be last in the enum for iteration end
+};
+
+struct signature_type_info {
+	const char *name;
+	const uuid_t *uuid;
+};
+
+extern const struct signature_type_info signature_type_list[];
+
 /*
  * creates the append header using append flag
  */
