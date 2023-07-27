@@ -25,21 +25,26 @@ enum file_types { AUTH_FILE, PKCS7_FILE, ESL_FILE, CERT_FILE, UNKNOWN_FILE };
 //  Start at 1, so 0 can be reserved for some kind of error type
 //  Alias ST_LIST_START as the first value for iteration purposes
 enum signature_type {
-	ST_LIST_START = 1,
+#define ST_LIST_START ST_X509
 	ST_X509 = 1,
 	ST_RSA2048,
 	ST_PKCS7,
 	ST_SBAT,
 	ST_DELETE,
+#define ST_HASHES_START ST_HASH_SHA1
 	ST_HASH_SHA1,
 	ST_HASH_SHA224,
 	ST_HASH_SHA256,
 	ST_HASH_SHA384,
 	ST_HASH_SHA512,
+#define ST_HASHES_END ST_HASH_SHA512
+#define ST_X509_HASHES_START ST_X509_HASH_SHA256
 	ST_X509_HASH_SHA256,
 	ST_X509_HASH_SHA384,
 	ST_X509_HASH_SHA512,
-	ST_UNKNOWN, // NOTE: Expected to be last in the enum for iteration end
+#define ST_X509_HASHES_END ST_X509_HASH_SHA512
+	ST_UNKNOWN,
+#define ST_LIST_END ST_UNKNOWN
 };
 
 struct signature_type_info {
@@ -62,12 +67,18 @@ size_t extract_append_header(const uint8_t *auth_info, const size_t auth_len);
 /*
  * check it whether given signature type is DELETE-ALL or not
  */
-bool is_delete(const uint8_t *signature_type);
+static inline bool is_delete(enum signature_type st)
+{
+	return st == ST_DELETE;
+};
 
 /*
  * check it whether given signature type is SBAT or not
  */
-bool is_sbat(const uint8_t *signature_type);
+static inline bool is_sbat(enum signature_type st)
+{
+	return st == ST_SBAT;
+};
 
 /*
  * validate the SBAT data format
@@ -95,22 +106,31 @@ int get_x509_hash_function(const char *name, hash_func_t **returnfunct);
 /*
  * check it whether given signature type is hash or not
  */
-bool is_hash(const uint8_t *signature_type);
+static inline bool is_hash(enum signature_type st)
+{
+	return (ST_HASHES_START <= st) && (st <= ST_X509_HASHES_END);
+}
 
 /*
  * check it whether given signature type is x509 or not
  */
-bool is_cert(const uint8_t *signature_type);
+static inline bool is_cert(enum signature_type st)
+{
+	return st == ST_X509;
+}
 
 /*
  * check it whether given signature type is PKCS7 or not
  */
-bool is_pkcs7(const uint8_t *signature_type);
+static inline bool is_pkcs7(enum signature_type st)
+{
+	return st == ST_PKCS7;
+}
 
 /*
  * validates the signature type
  */
-bool validate_signature_type(const uint8_t *signature_type);
+bool validate_signature_type(enum signature_type);
 
 /*
  * finds format type given by guid
@@ -118,7 +138,7 @@ bool validate_signature_type(const uint8_t *signature_type);
  * @param type uuid_t of guid of file
  * @return string of format type, "UNKNOWN" if type doesnt match any known formats
  */
-uint8_t *get_signature_type(const uuid_t type);
+enum signature_type get_signature_type(const uuid_t type);
 
 /*
  * checks to see if string is a valid variable name
@@ -141,5 +161,16 @@ uint8_t *get_wide_character(const uint8_t *var_name, const size_t var_name_len);
  * auth Header.
  */
 size_t extract_pkcs7_len(const auth_info_t *auth);
+
+/*
+ * Get the printable string for a signature type uuid
+ *
+ * @param uuid
+ * @return const human-friendly string corresponding to the uuid
+ */
+static inline const char *get_signature_type_string(const uuid_t uuid)
+{
+	return signature_type_list[get_signature_type(uuid)].name;
+}
 
 #endif

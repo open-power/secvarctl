@@ -91,10 +91,10 @@ int create_esl(const uint8_t *data, const size_t data_size, const uuid_t guid, u
 	sv_esl_t esl;
 	size_t offset = 0;
 
-	prlog(PR_INFO, "creating esl from %s... adding:\n", get_signature_type(guid));
+	prlog(PR_INFO, "creating esl from %s... adding:\n", get_signature_type_string(guid));
 
 	if (verbose >= PR_INFO) {
-		prlog(PR_INFO, "\t%s guid - ", get_signature_type(guid));
+		prlog(PR_INFO, "\t%s guid - ", get_signature_type_string(guid));
 		print_signature_type(&guid);
 	}
 

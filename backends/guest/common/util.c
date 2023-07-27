@@ -64,19 +64,6 @@ size_t extract_append_header(const uint8_t *auth_info, const size_t auth_len)
 }
 
 /*
- * check it whether given signature type is SBAT or not
- */
-bool is_sbat(const uint8_t *signature_type)
-{
-	size_t len = strlen((char *)signature_type);
-
-	if (memcmp(signature_type, SBAT_TYPE, len) == 0)
-		return true;
-
-	return false;
-}
-
-/*
  * validate the SBAT data format
  */
 bool validate_sbat(const uint8_t *sbat_data, size_t sbat_len)
@@ -162,88 +149,22 @@ int get_x509_hash_function(const char *name, hash_func_t **returnfunct)
  * @param type uuid_t of guid of file
  * @return string of format type, "UNKNOWN" if type doesnt match any known formats
  */
-uint8_t *get_signature_type(const uuid_t type)
+enum signature_type get_signature_type(const uuid_t type)
 {
-	for (int i = ST_LIST_START; i < ST_UNKNOWN; i++) {
+	for (int i = ST_LIST_START; i < ST_LIST_END; i++) {
 		if (uuid_equals(&type, signature_type_list[i].uuid))
-			return (uint8_t *)signature_type_list[i].name;
+			return i;
 	}
 
-	return (uint8_t *)"UNKNOWN";
-}
-
-/*
- * check it whether given signature type is hash or not
- */
-bool is_hash(const uint8_t *signature_type)
-{
-	int i = 0;
-	size_t len = strlen((char *)signature_type);
-
-	for (i = 0; i < sizeof(hash_functions) / sizeof(hash_func_t); i++) {
-		if (memcmp(signature_type, hash_functions[i].name, len) == 0)
-			return true;
-	}
-
-	for (i = 0; i < sizeof(x509_hash_functions) / sizeof(hash_func_t); i++) {
-		if (memcmp(signature_type, x509_hash_functions[i].name, len) == 0)
-			return true;
-	}
-
-	return false;
-}
-
-/*
- * check it whether given signature type is x509 or not
- */
-bool is_cert(const uint8_t *signature_type)
-{
-	size_t len = strlen((char *)signature_type);
-
-	if (memcmp(signature_type, X509_TYPE, len) == 0)
-		return true;
-
-	return false;
-}
-
-/*
- * check it whether given signature type is PKCS7 or not
- */
-bool is_pkcs7(const uint8_t *signature_type)
-{
-	size_t len = strlen((char *)signature_type);
-
-	if (memcmp(signature_type, PKCS7_TYPE, len) == 0)
-		return true;
-
-	return false;
-}
-
-/*
- * check it whether given signature type is DELETE-ALL or not
- */
-bool is_delete(const uint8_t *signature_type)
-{
-	size_t len = strlen((char *)signature_type);
-
-	if (memcmp(signature_type, DELETE_TYPE, len) == 0)
-		return true;
-
-	return false;
+	return ST_UNKNOWN;
 }
 
 /*
  * validates the signature type
  */
-bool validate_signature_type(const uint8_t *signature_type)
+bool validate_signature_type(enum signature_type st)
 {
-	if (is_hash(signature_type))
-		return true;
-
-	if (is_cert(signature_type) || is_sbat(signature_type) || is_delete(signature_type))
-		return true;
-
-	return false;
+	return is_hash(st) || is_cert(st) || is_sbat(st) || is_delete(st);
 }
 
 /*
