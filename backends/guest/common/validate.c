@@ -112,7 +112,8 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 {
 	ssize_t cert_size;
 	int rc;
-	uint8_t *cert = NULL, *signature_type = NULL;
+	uint8_t *cert = NULL;
+	enum signature_type sig_type = 0;
 	sv_esl_t *sig_list;
 
 	*next_esl = 0;
@@ -156,8 +157,8 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 		return ESL_FAIL;
 	}
 
-	signature_type = get_signature_type(sig_list->signature_type);
-	if (!validate_signature_type(signature_type)) {
+	sig_type = get_signature_type(sig_list->signature_type);
+	if (!validate_signature_type(sig_type)) {
 		prlog(PR_ERR, "ERROR: signature list is not a valid format\n");
 		return ESL_FAIL;
 	}
@@ -169,10 +170,10 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 		return ESL_FAIL;
 	}
 
-	if (is_hash(signature_type)) {
+	if (is_hash(sig_type)) {
 		if (!validate_hash(sig_list->signature_type, cert_size)) {
 			prlog(PR_ERR, "ERROR: type %s and number of bytes %zd, is invalid\n",
-			      get_signature_type(sig_list->signature_type), cert_size);
+			      get_signature_type_string(sig_list->signature_type), cert_size);
 			rc = HASH_FAIL;
 		} else
 			rc = SUCCESS;
@@ -181,9 +182,9 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 			prlog(PR_INFO, "\tHash: ");
 			print_hex(cert, cert_size);
 		}
-	} else if (is_cert(signature_type))
+	} else if (is_cert(sig_type))
 		rc = validate_cert(cert, cert_size);
-	else if (is_sbat(signature_type)) {
+	else if (is_sbat(sig_type)) {
 		if (!validate_sbat(cert, cert_size)) {
 			prlog(PR_ERR, "ERROR: SBAT data format is invalid\n");
 			rc = INVALID_SBAT;
@@ -194,7 +195,7 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 			prlog(PR_INFO, "\tSBAT: ");
 			print_raw((char *)cert, cert_size);
 		}
-	} else if (is_delete(signature_type)) {
+	} else if (is_delete(sig_type)) {
 		if (verbose >= PR_INFO) {
 			prlog(PR_INFO, "\tDELETE-MSG: ");
 			print_raw((char *)cert, cert_size);
@@ -363,7 +364,7 @@ int validate_auth(const uint8_t *auth_data, size_t auth_data_len)
 {
 	int rc;
 	size_t auth_size, pkcs7_size, append_flag;
-	uint8_t *signature_type = NULL;
+	enum signature_type sig_type = 0;
 	auth_info_t *auth = NULL;
 
 	prlog(PR_INFO, "VALIDATING AUTH FILE:\n");
@@ -401,9 +402,9 @@ int validate_auth(const uint8_t *auth_data, size_t auth_data_len)
 		print_signature_type(&auth->auth_cert.cert_type);
 	}
 
-	signature_type = get_signature_type(auth->auth_cert.cert_type);
+	sig_type = get_signature_type(auth->auth_cert.cert_type);
 	/* make sure guid is PKCS7 */
-	if (!is_pkcs7(signature_type)) {
+	if (!is_pkcs7(sig_type)) {
 		prlog(PR_ERR, "ERROR: Auth file does not contain PKCS7 guid\n");
 		return AUTH_FAIL;
 	}

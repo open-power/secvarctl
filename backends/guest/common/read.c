@@ -83,7 +83,8 @@ void print_esl_info(sv_esl_t *sig_list)
 	printf("\tESL SIG LIST SIZE: %u\n", sig_list->signature_list_size);
 	printf("\tGUID is : ");
 	print_signature_type(&sig_list->signature_type);
-	printf("\tSignature type is: %s\n", get_signature_type(sig_list->signature_type));
+	printf("\tSignature type is: %s\n",
+	       get_signature_type_string(sig_list->signature_type));
 }
 
 /* prints info on x509 */
@@ -125,7 +126,8 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *va
 	int rc;
 	ssize_t esl_data_size = buffer_size, cert_size;
 	size_t count = 0, offset = 0;
-	uint8_t *cert = NULL, *signature_type = NULL, *esl_data = (uint8_t *)buffer;
+	uint8_t *cert = NULL, *esl_data = (uint8_t *)buffer;
+	enum signature_type sig_type;
 	sv_esl_t *sig_list;
 	sv_esd_t *esd = NULL;
 	crypto_x509_t *x509 = NULL;
@@ -147,7 +149,7 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *va
 		sig_list = extract_esl_signature_list(buffer + offset, esl_data_size);
 		esl_size = sig_list->signature_list_size;
 		signature_size = cpu_to_le32(sig_list->signature_size);
-		signature_type = get_signature_type(sig_list->signature_type);
+		sig_type = get_signature_type(sig_list->signature_type);
 
 		if (esl_size < sizeof(sv_esl_t) || esl_size > esl_data_size) {
 			prlog(PR_ERR, "ERROR: invalid ESL size (%zu)\n", esl_size);
@@ -169,10 +171,11 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *va
 			cert = esd->signature_data;
 			cert_size = data_size;
 
-			if (is_hash(signature_type)) {
+			switch (sig_type) {
+			case ST_HASHES_START ... ST_X509_HASHES_END:
 				printf("\tData-%zu: ", count);
 				print_hex(cert, cert_size);
-			} else if (is_cert(signature_type)) {
+			case ST_X509:
 				rc = crypto.get_x509_certificate(cert, cert_size, &x509);
 				if (rc)
 					break;
@@ -183,21 +186,23 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *va
 
 				crypto.release_x509_certificate(x509);
 				x509 = NULL;
-			} else if (is_sbat(signature_type)) {
+				break;
+			case ST_SBAT:
 				printf("\tData: ");
 				print_raw((char *)cert, cert_size);
-			} else if (is_delete(signature_type)) {
+			case ST_DELETE:
 				printf("\tDELETE-MSG: ");
 				print_raw((char *)cert, cert_size);
-			} else {
+			default:
 				prlog(PR_ERR, "ERROR: invalid signature type\n");
-				break;
+				goto outside;
 			}
 
 			count++;
 			esl_size -= signature_size;
 			sig_offset += signature_size;
 		}
+	outside:
 
 		/* we read all esl_size bytes so iterate to next esl */
 		esl_data += next_esl_size;
