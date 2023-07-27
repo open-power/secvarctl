@@ -111,7 +111,7 @@ OBJS = $(addprefix $(OBJ_DIR)/,$(SRCS:.c=.o))
 OBJDBG = $(patsubst %.o, %.dbg.o,$(OBJS))
 DEPS = $(OBJS:.o=.d)
 
-_CFLAGS += $(CFLAGS) $(INCLUDES)
+_CFLAGS += $(CFLAGS)
 _LDFLAGS += $(LDFLAGS)
 
 ifneq ($(DISABLE_ASAN),1)
@@ -140,7 +140,7 @@ $(OBJ_DIR)/%.o: %.c
 
 $(OBJ_DIR)/%.dbg.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(DEBUG_CFLAGS) $(_CFLAGS) $(SANITIZE_FLAGS) -c  $< -o $@
+	$(CC) $(DEBUG_CFLAGS) $(_CFLAGS) $(SANITIZE_FLAGS) $(INCLUDES) -c  $< -o $@
 
 $(BIN_DIR)/secvarctl: $(OBJS) $(LIBSTB_SECVAR)
 	@mkdir -p $(BIN_DIR)
