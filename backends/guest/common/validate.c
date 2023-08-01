@@ -225,12 +225,12 @@ int validate_esl(const uint8_t *esl_data, size_t esl_data_len)
 {
 	ssize_t esl_data_size = esl_data_len;
 	size_t esl_size = 0;
-	int count = 0, offset = 0, rc = SUCCESS;
+	int count = 0, offset = 0;
 
 	prlog(PR_INFO, "VALIDATING ESL:\n");
 
 	while (esl_data_size > 0) {
-		rc = validate_single_esl(esl_data + offset, esl_data_size, &esl_size);
+		int rc = validate_single_esl(esl_data + offset, esl_data_size, &esl_size);
 		/* verify current esl to ensure it is a valid sig_list, if 1 is returned break or error */
 		if (rc) {
 			prlog(PR_ERR, "ERROR: sig List #%d is not structured correctly\n", count);
@@ -251,7 +251,7 @@ int validate_esl(const uint8_t *esl_data, size_t esl_data_len)
 	if (!count)
 		return ESL_FAIL;
 
-	return rc;
+	return SUCCESS;
 }
 
 /*
