@@ -69,7 +69,7 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 		if (args->help_flag)
 			break;
 		else if ((rc = validate_variables_arguments(args)) != SUCCESS)
-			return rc;
+			argp_usage(state);
 		break;
 	}
 
