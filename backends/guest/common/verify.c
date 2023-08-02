@@ -245,6 +245,11 @@ static int verify_update_variable(const struct verify_args *args, const uint8_t 
 					     kek_esl_data, kek_esl_data_size, append_update,
 					     &new_esl_data, &new_esl_data_size);
 
+		free(current_esl_data);
+		free(new_esl_data);
+		current_esl_data = NULL;
+		new_esl_data = NULL;
+
 		if ((rc == SUCCESS || rc == DELETE_EVERYTHING) && args->write_flag &&
 		    args->variable_path != NULL) {
 			rc = write_to_variable(args->variable_path, args->update_variable[i],
