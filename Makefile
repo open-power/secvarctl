@@ -197,10 +197,13 @@ HEADERS = $(shell find . ! \( -path ./external -prune \) -name "*.h" -type f)
 format:
 	@$(CLANG_FORMAT) --style=file:external/linux/.clang-format -i $(MAIN_SRCS) $(HEADERS)
 
+formatcheck:
+	@$(CLANG_FORMAT) --style=file:external/linux/.clang-format -Werror --dry-run $(MAIN_SRCS) $(HEADERS)
+
 clean:
 	@$(MAKE) -C test clean
 	$(MAKE) -C external/libstb-secvar/ clean
 	rm -rf $(BIN_DIR)
 	rm -rf $(OBJ_DIR)
 
-.PHONY: all generate install uninstall format clean
+.PHONY: all generate install uninstall format formatcheck clean
