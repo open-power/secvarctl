@@ -14,8 +14,4 @@ jobs:
       run: sudo apt install clang-format
 
     - name: test if formatting is appropriate
-      run: |
-           make format
-           git status
-           git diff
-           [[ -z $(git status -s) ]]
+      run: make formatcheck
