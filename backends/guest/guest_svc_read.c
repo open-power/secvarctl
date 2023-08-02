@@ -81,7 +81,7 @@ static int get_variable_path(const char *path, const char *variable_name, char *
  * @return SUCCESS or error number
  */
 static int read_cert(const uint8_t *cert_data, const size_t cert_data_len, const int is_print_raw,
-		     const uint8_t *variable_name)
+		     const char *variable_name)
 {
 	int rc = SUCCESS;
 	crypto_x509_t *x509;
@@ -140,7 +140,7 @@ static int read_cert(const uint8_t *cert_data, const size_t cert_data_len, const
  * @return SUCCESS or error number
  */
 static int read_esl(const uint8_t *esl_data, const size_t esl_data_len, const int is_print_raw,
-		    const uint8_t *variable_name)
+		    const char *variable_name)
 {
 	int rc = SUCCESS;
 
@@ -164,7 +164,7 @@ static int read_esl(const uint8_t *esl_data, const size_t esl_data_len, const in
  * @return SUCCESS or error number
  */
 static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int is_print_raw,
-		     const uint8_t *variable_name)
+		     const char *variable_name)
 {
 	int rc = SUCCESS, cert_num = 0;
 	size_t auth_size, pkcs7_size, append_flag;
@@ -257,8 +257,7 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 				print_raw((char *)esl_data, esl_data_size);
 			else if (esl_data_size >= TIMESTAMP_LEN)
 				rc = print_variables(esl_data + TIMESTAMP_LEN,
-						     esl_data_size - TIMESTAMP_LEN,
-						     (uint8_t *)variable_name);
+						     esl_data_size - TIMESTAMP_LEN, variable_name);
 			else
 				prlog(PR_WARNING, "WARNING: The %s database is empty.\n",
 				      variable_name);
@@ -282,12 +281,12 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 			if (rc == SUCCESS) {
 				if (is_print_raw ||
 				    (esl_data_size == DEFAULT_PK_LEN &&
-				     memcmp(defined_sb_variables[i], PK_VARIABLE, PK_LEN) == 0))
+				     strcmp(defined_sb_variables[i], PK_VARIABLE) == 0))
 					print_raw((char *)esl_data, esl_data_size);
 				else if (esl_data_size >= TIMESTAMP_LEN)
 					rc = print_variables(esl_data + TIMESTAMP_LEN,
 							     esl_data_size - TIMESTAMP_LEN,
-							     (uint8_t *)defined_sb_variables[i]);
+							     defined_sb_variables[i]);
 				else
 					prlog(PR_WARNING, "WARNING: The %s database is empty.\n",
 					      defined_sb_variables[i]);
@@ -441,13 +440,13 @@ int guest_read_command(int argc, char *argv[])
 
 	switch (args.input_form) {
 	case CERT_FILE:
-		rc = read_cert(buffer, buffer_size, args.print_raw, (uint8_t *)args.variable_name);
+		rc = read_cert(buffer, buffer_size, args.print_raw, args.variable_name);
 		break;
 	case ESL_FILE:
-		rc = read_esl(buffer, buffer_size, args.print_raw, (uint8_t *)args.variable_name);
+		rc = read_esl(buffer, buffer_size, args.print_raw, args.variable_name);
 		break;
 	case AUTH_FILE:
-		rc = read_auth(buffer, buffer_size, args.print_raw, (uint8_t *)args.variable_name);
+		rc = read_auth(buffer, buffer_size, args.print_raw, args.variable_name);
 		break;
 	default:
 		rc = read_path(args.path, args.print_raw, args.variable_name);

@@ -16,28 +16,17 @@
 /*
  * check it whether given variable is PK or KEK
  */
-static bool is_global_variable(const uint8_t *variable_name)
+static bool is_global_variable(const char *variable_name)
 {
-	int len = strlen((char *)variable_name);
-
-	if (memcmp(variable_name, PK_VARIABLE, len) == 0 ||
-	    memcmp(variable_name, KEK_VARIABLE, len) == 0)
-		return true;
-
-	return false;
+	return !strcmp(variable_name, PK_VARIABLE) || !strcmp(variable_name, KEK_VARIABLE);
 }
 
 /*
  * check it whether given variable is SBAT
  */
-static bool is_sbat_variable(const uint8_t *variable_name)
+static bool is_sbat_variable(const char *variable_name)
 {
-	int len = strlen((char *)variable_name);
-
-	if (memcmp(variable_name, SBAT_VARIABLE, len) == 0)
-		return true;
-
-	return false;
+	return !strcmp(variable_name, SBAT_VARIABLE);
 }
 
 /*
@@ -67,11 +56,11 @@ static int generate_esl(const uint8_t *buffer, size_t buffer_size, struct genera
 		esl_guid = &PKS_CERT_DELETE_GUID;
 		break;
 	case 'f':
-		if (is_global_variable((uint8_t *)args->variable_name)) {
+		if (is_global_variable(args->variable_name)) {
 			prlog(PR_ERR,
 			      "ERROR: PK and KEK are not allowed to generate hash from file\n");
 			return INVALID_VAR_NAME;
-		} else if (is_sbat_variable((uint8_t *)args->variable_name)) {
+		} else if (is_sbat_variable(args->variable_name)) {
 			if (!validate_sbat(buffer, buffer_size)) {
 				prlog(PR_ERR, "ERROR: invalid SBAT file\n");
 				return INVALID_SBAT;
@@ -250,8 +239,7 @@ static int generate_authorpkcs7(const uint8_t *buffer, size_t buffer_size,
 				      "reset file\n");
 			rc = INVALID_FILE;
 			break;
-		} else if (memcmp(PK_VARIABLE, args->variable_name, strlen(args->variable_name)) ==
-			   0) {
+		} else if (strcmp(PK_VARIABLE, args->variable_name) == 0) {
 			buffer = (const uint8_t *)WIPE_SB_MAGIC;
 			buffer_size = strlen(WIPE_SB_MAGIC);
 		} else
@@ -288,8 +276,7 @@ static int generate_authorpkcs7(const uint8_t *buffer, size_t buffer_size,
 		goto out;
 	}
 
-	var_name = (uint16_t *)get_wide_character((uint8_t *)args->variable_name,
-						  strlen(args->variable_name));
+	var_name = (uint16_t *)get_wide_character(args->variable_name, strlen(args->variable_name));
 	if (var_name == NULL) {
 		rc = ALLOC_FAIL;
 		goto out;
@@ -348,7 +335,7 @@ static int generate_data(const uint8_t *buffer, size_t buffer_size, struct gener
 		rc = CERT_FAIL; /* cannot generate a cert */
 		break;
 	case 'h':
-		if (is_global_variable((uint8_t *)args->variable_name)) {
+		if (is_global_variable(args->variable_name)) {
 			prlog(PR_ERR, "ERROR: PK and KEK are not allowed to generate hash\n");
 			return INVALID_VAR_NAME;
 		}
@@ -529,8 +516,7 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 			      "option\n");
 		else if (args->output_file == NULL)
 			prlog(PR_ERR, "ERROR: no output file given, see usage below...\n");
-		else if (args->append_flag > 0 &&
-			 memcmp(PK_VARIABLE, args->variable_name, strlen(args->variable_name)) == 0)
+		else if (args->append_flag > 0 && strcmp(PK_VARIABLE, args->variable_name) == 0)
 			prlog(PR_ERR, "ERROR: append flag should be 0 for PK\n");
 		else
 			break;

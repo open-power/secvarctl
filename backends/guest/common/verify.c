@@ -21,7 +21,7 @@
  * verify the timestamp, auth data using PK or KEK keys and
  * extract the esl data from auth data
  */
-static int update_variable(const uint8_t *variable_name, const uint8_t *auth_data,
+static int update_variable(const char *variable_name, const uint8_t *auth_data,
 			   const size_t auth_data_size, const uint8_t *current_esl_data,
 			   const size_t current_esl_data_size, const uint8_t *pk_esl_data,
 			   const size_t pk_esl_data_size, const uint8_t *kek_esl_data,
@@ -34,11 +34,11 @@ static int update_variable(const uint8_t *variable_name, const uint8_t *auth_dat
 	size_t label_size = 0;
 	bool allow_unauthenticated_pk_update = false;
 
-	if (memcmp(variable_name, PK_VARIABLE, PK_LEN) == 0)
+	if (strcmp(variable_name, PK_VARIABLE) == 0)
 		allow_unauthenticated_pk_update = true;
 
 	label = get_wide_character(variable_name, strlen((char *)variable_name));
-	label_size = strlen((char *)variable_name) * 2;
+	label_size = strlen(variable_name) * 2;
 
 	rc = update_var_from_auth(label, label_size, auth_data, auth_data_size, current_esl_data,
 				  current_esl_data_size, allow_unauthenticated_pk_update,
@@ -119,7 +119,7 @@ static int get_current_esl_data(const uint8_t *esl_file, uint8_t **current_esl_d
 /*
  * extract the append header, auth data and its size from auth file
  */
-static int get_auth_data(const uint8_t *auth_file, uint8_t **auth_data, size_t *auth_data_size,
+static int get_auth_data(const char *auth_file, uint8_t **auth_data, size_t *auth_data_size,
 			 bool *append_update)
 {
 	int rc = SUCCESS;
@@ -150,7 +150,7 @@ static int get_auth_data(const uint8_t *auth_file, uint8_t **auth_data, size_t *
  * extract the ESL data and its size from ESL file on given secvar path or
  * current variables
  */
-static int get_current_esl(const struct verify_args *args, const uint8_t *update_variable,
+static int get_current_esl(const struct verify_args *args, const char *update_variable,
 			   uint8_t **current_esl_data, size_t *current_esl_data_size)
 {
 	int i = 0, rc = SUCCESS;
@@ -162,8 +162,7 @@ static int get_current_esl(const struct verify_args *args, const uint8_t *update
 
 	// Handle current variables
 	for (i = 0; i < args->current_variable_size; i += 2) {
-		if (memcmp(args->current_variable[i], update_variable,
-			   strlen((char *)update_variable)) == 0) {
+		if (strcmp(args->current_variable[i], update_variable) == 0) {
 			// Target variable found in current variable arg list
 			rc = get_current_esl_data((uint8_t *)args->current_variable[i + 1],
 						  &current_esl, &current_esl_size);
@@ -225,20 +224,20 @@ static int verify_update_variable(const struct verify_args *args, const uint8_t 
 	bool append_update;
 
 	for (i = 0; i < args->update_variable_size; i += 2) {
-		if ((memcmp(args->update_variable[i], PK_VARIABLE, PK_LEN) == 0 ||
-		     memcmp(args->update_variable[i], KEK_VARIABLE, KEK_LEN) == 0) &&
+		if ((strncmp(args->update_variable[i], PK_VARIABLE, PK_LEN) == 0 ||
+		     strncmp(args->update_variable[i], KEK_VARIABLE, KEK_LEN) == 0) &&
 		    flag)
 			continue;
 
-		rc = get_auth_data((uint8_t *)args->update_variable[i + 1], &auth_data,
-				   &auth_data_size, &append_update);
+		rc = get_auth_data(args->update_variable[i + 1], &auth_data, &auth_data_size,
+				   &append_update);
 		if (rc != SUCCESS)
 			continue;
 
-		rc = get_current_esl(args, (uint8_t *)args->update_variable[i], &current_esl_data,
+		rc = get_current_esl(args, args->update_variable[i], &current_esl_data,
 				     &current_esl_data_size);
 		if (rc == SUCCESS)
-			rc = update_variable((uint8_t *)args->update_variable[i],
+			rc = update_variable(args->update_variable[i],
 					     auth_data + APPEND_HEADER_LEN,
 					     auth_data_size - APPEND_HEADER_LEN, current_esl_data,
 					     current_esl_data_size, pk_esl_data, pk_esl_data_size,
@@ -342,12 +341,10 @@ static int get_pk_and_kek_from_update_var(const struct verify_args *args, uint8_
 		uint8_t **target_data;
 		size_t *target_size;
 
-		if (memcmp(args->update_variable[i], PK_VARIABLE,
-			   strlen(args->update_variable[i])) == 0) {
+		if (strcmp(args->update_variable[i], PK_VARIABLE) == 0) {
 			target_data = pk_esl_data;
 			target_size = pk_esl_data_size;
-		} else if (memcmp(args->update_variable[i], KEK_VARIABLE,
-				  strlen(args->update_variable[i])) == 0) {
+		} else if (strcmp(args->update_variable[i], KEK_VARIABLE) == 0) {
 			target_data = kek_esl_data;
 			target_size = kek_esl_data_size;
 		} else {
@@ -355,14 +352,13 @@ static int get_pk_and_kek_from_update_var(const struct verify_args *args, uint8_
 			continue;
 		}
 
-		rc = get_auth_data((uint8_t *)args->update_variable[i + 1], &auth_data,
-				   &auth_data_size, &append_update);
+		rc = get_auth_data(args->update_variable[i + 1], &auth_data, &auth_data_size,
+				   &append_update);
 		if (rc != SUCCESS) {
 			continue;
 		}
 
-		rc = update_variable((uint8_t *)args->update_variable[i],
-				     auth_data + APPEND_HEADER_LEN,
+		rc = update_variable(args->update_variable[i], auth_data + APPEND_HEADER_LEN,
 				     auth_data_size - APPEND_HEADER_LEN, current_esl_data,
 				     current_esl_data_size, *pk_esl_data, *pk_esl_data_size,
 				     *kek_esl_data, *kek_esl_data_size, append_update, target_data,
@@ -396,12 +392,10 @@ int verify_variables(struct verify_args *args)
 						  &kek_esl_data, &kek_esl_data_size);
 	else if (args->current_variable_size > 0) {
 		for (int i = 0; i < args->current_variable_size; i += 2) {
-			if (memcmp(args->current_variable[i], PK_VARIABLE,
-				   strlen(args->current_variable[i])) == 0)
+			if (strcmp(args->current_variable[i], PK_VARIABLE) == 0)
 				rc = get_current_esl_data((uint8_t *)args->current_variable[i + 1],
 							  &pk_esl_data, &pk_esl_data_size);
-			else if (memcmp(args->current_variable[i], KEK_VARIABLE,
-					strlen(args->current_variable[i])) == 0)
+			else if (strcmp(args->current_variable[i], KEK_VARIABLE) == 0)
 				rc = get_current_esl_data((uint8_t *)args->current_variable[i + 1],
 							  &kek_esl_data, &kek_esl_data_size);
 			if (pk_esl_data != NULL && kek_esl_data != NULL)

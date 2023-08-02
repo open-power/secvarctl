@@ -83,8 +83,7 @@ void print_esl_info(sv_esl_t *sig_list)
 	printf("\tESL SIG LIST SIZE: %u\n", sig_list->signature_list_size);
 	printf("\tGUID is : ");
 	print_signature_type(&sig_list->signature_type);
-	printf("\tSignature type is: %s\n",
-	       get_signature_type_string(sig_list->signature_type));
+	printf("\tSignature type is: %s\n", get_signature_type_string(sig_list->signature_type));
 }
 
 /* prints info on x509 */
@@ -121,7 +120,7 @@ int print_cert_info(crypto_x509_t *x509)
  * @param var_name, secure boot variable name
  * @return SUCCESS or error number if failure
  */
-int print_variables(const uint8_t *buffer, size_t buffer_size, const uint8_t *var_name)
+int print_variables(const uint8_t *buffer, size_t buffer_size, const char *var_name)
 {
 	int rc;
 	ssize_t esl_data_size = buffer_size, cert_size;

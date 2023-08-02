@@ -221,7 +221,7 @@ static int create_prehash(const uint8_t *esl, const size_t esl_size,
 
 	/* expand char name to wide character width */
 	varlen = strlen(args->variable_name) * 2;
-	wkey = get_wide_character((uint8_t *)args->variable_name, strlen(args->variable_name));
+	wkey = get_wide_character(args->variable_name, strlen(args->variable_name));
 	if (wkey == NULL)
 		return ALLOC_FAIL;
 
