@@ -242,7 +242,8 @@ static int create_prehash(const uint8_t *esl, const size_t esl_size,
 	ptr += sizeof(attr);
 	memcpy(ptr, args->time, sizeof(timestamp_t));
 	ptr += sizeof(*args->time);
-	memcpy(ptr, esl, esl_size);
+	if (esl)
+		memcpy(ptr, esl, esl_size);
 
 	free(wkey);
 
@@ -400,7 +401,8 @@ int create_auth_msg(const uint8_t *new_esl, const size_t new_esl_size,
 	memcpy(*out_buffer + offset, pkcs7, pkcs7_size);
 	offset += pkcs7_size;
 	prlog(PR_INFO, "\t+ pkcs7 %zu bytes\n", pkcs7_size);
-	memcpy(*out_buffer + offset, new_esl, new_esl_size);
+	if (new_esl)
+		memcpy(*out_buffer + offset, new_esl, new_esl_size);
 	offset += new_esl_size;
 	prlog(PR_INFO, "\t+ new esl %zu bytes\n\t= %zu total bytes\n", new_esl_size, offset);
 
