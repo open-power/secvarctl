@@ -154,7 +154,7 @@ bool is_secure_boot_variable(const char *var);
  * @param var_name_len, length of variable name
  * @return the new keylen with double length, remember to unalloc
  */
-uint8_t *get_wide_character(const uint8_t *var_name, const size_t var_name_len);
+uint8_t *get_wide_character(const char *var_name, const size_t var_name_len);
 
 /*
  * Extracts size of the PKCS7 signed data embedded in the

@@ -95,7 +95,7 @@ int get_hash_function(const char *name, hash_func_t **returnfunct)
 	int i = 0;
 
 	for (i = 0; i < sizeof(hash_functions) / sizeof(hash_func_t); i++) {
-		if (memcmp(hash_functions[i].name, name, strlen(name)) == 0) {
+		if (strcmp(hash_functions[i].name, name) == 0) {
 			*returnfunct = (hash_func_t *)&hash_functions[i];
 			return SUCCESS;
 		}
@@ -125,7 +125,7 @@ int get_x509_hash_function(const char *name, hash_func_t **returnfunct)
 	int i = 0;
 
 	for (i = 0; i < sizeof(x509_hash_functions) / sizeof(hash_func_t); i++) {
-		if (memcmp(x509_hash_functions[i].name, name, strlen(name)) == 0) {
+		if (strcmp(x509_hash_functions[i].name, name) == 0) {
 			*returnfunct = (hash_func_t *)&x509_hash_functions[i];
 			return SUCCESS;
 		}
@@ -177,7 +177,7 @@ bool is_secure_boot_variable(const char *var)
 	int i = 0;
 
 	for (i = 0; i < defined_sb_variable_len; i++) {
-		if (memcmp((char *)defined_sb_variables[i], var, strlen(var)) == 0)
+		if (strcmp(defined_sb_variables[i], var) == 0)
 			return true;
 	}
 
@@ -191,7 +191,7 @@ bool is_secure_boot_variable(const char *var)
  * @param keylen, length of key
  * @return the new keylen with double length, remember to unalloc
  */
-uint8_t *get_wide_character(const uint8_t *key, const size_t keylen)
+uint8_t *get_wide_character(const char *key, const size_t keylen)
 {
 	int i;
 	uint8_t *str;
