@@ -13,7 +13,7 @@ jobs:
         submodules: 'recursive'
 
     - name: install openssl and valgrind for running test script
-      run:  sudo apt-get update && sudo apt-get install -y openssl valgrind libssl-dev libmbedtls-dev cppcheck
+      run:  sudo apt-get update && sudo apt-get install -y openssl valgrind libssl-dev libmbedtls-dev cppcheck cmake
 
     - name: run cppcheck
       run: make cppcheck
@@ -21,26 +21,10 @@ jobs:
     - name: run test cases
       run: make check
 
-    # TODO: Disabled until cmake build returns
-    # - name: run and test cmake builds
-    #   run: |
-    #     sudo apt install cmake
-    #     mkdir build
-    #     cd build
-    #     cmake ../ .
-    #     cmake --build .
-    #     mv  secvarctl ../secvarctl-cov
-    #     cd ../test
-    #     make
-    #     make clean 
-    #     cd ../build
-    #     rm -r *
-    #     cmake ../ -DOPENSSL=1 .
-    #     cmake --build .
-    #     mv  secvarctl ../secvarctl-cov
-    #     cd ../test
-    #     make OPENSSL=1
-    #     make clean
-    #     cd ..
+    - name: run and test cmake builds
+      run: |
+        cmake -Bbuild . -DUSE_ASAN=ON -DCMAKE_BUILD_TYPE=Debug
+        cmake --build build
+        make check SECVAR_TOOL=$(pwd)/build/secvarctl
         
   
