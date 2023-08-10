@@ -8,9 +8,12 @@ import sys
 import argparse
 
 MEM_ERR = 101
-SECTOOLS="../../bin/secvarctl-dbg"
+SECTOOLS="../bin/secvarctl-dbg"
 SECVARPATH="/sys/firmware/secvar/vars/"
 MEMCHECK = False
+DATAPATH = "./testdata/host"
+TESTENV = "./testenv/host"
+
 
 goodAuths=[]
 badAuths=[]
@@ -37,16 +40,16 @@ ppcSecVarsRead=[
 #=[[command], return expected]
 readCommands=[
 	
-	[["-p","./testenv/"], True], #no args and change path 
-	[["-f", "./testenv/PK/data"], True], #give esl file
-	[["-p","./testenv/","PK"], True],[["-p","./testenv/","KEK"], True],
-	[["-p","./testenv/","db"], True],[["-p","./testenv/","dbx"], True],#print only PK, KEK,and dbx
+	[["-p",f"{TESTENV}/"], True], #no args and change path 
+	[["-f", f"{TESTENV}/PK/data"], True], #give esl file
+	[["-p",f"{TESTENV}/","PK"], True],[["-p",f"{TESTENV}/","KEK"], True],
+	[["-p",f"{TESTENV}/","db"], True],[["-p",f"{TESTENV}/","dbx"], True],#print only PK, KEK,and dbx
 	[["--usage"], True],[["--help"], True], #usage and help
-	[["-f", "./testenv/db/data", "-r"], True],#print raw data from file
-	[["-p", "./testenv/", "-r"], True], #print raw data from current vars
+	[["-f", f"{TESTENV}/db/data", "-r"], True],#print raw data from file
+	[["-p", f"{TESTENV}/", "-r"], True], #print raw data from current vars
 
 	[["-p", "."], False],#bad path
-	[["-f", "./testdata/db_by_PK.auth"], False],#given authfile instead of esl
+	[["-f", f"{DATAPATH}/db_by_PK.auth"], False],#given authfile instead of esl
 	[["-p"], False], #only -p no path
 	[["-f"], False],#only -f no file
 	[["-f","-p","-f"], False], #idek but should fail
@@ -56,41 +59,41 @@ readCommands=[
 ]
 verifyCommands=[
 [["--usage"], True],[["--help"], True],
-[["-c", "PK","./testenv/PK/data", "-u", "db","./testdata/db_by_PK.auth"], True],#update with current vars set and update set
-[["-c", "PK","./testenv/PK/data","KEK","./testenv/KEK/data","db","./testenv/db/data","-u", "db","./testdata/db_by_PK.auth", "KEK", "./testdata/KEK_by_PK.auth", "PK", "./testdata/PK_by_PK.auth" ], True], #update chain with given current vars set
-[["-p","./testenv/","-u", "db","./testdata/db_by_PK.auth", "KEK", "./testdata/KEK_by_PK.auth", "PK", "./testdata/PK_by_PK.auth" ], True], #update chain with path set
-[["-p", "./testenv/", "-u", "db", "./testdata/db_by_PK.auth", "db", "./testdata/db_by_KEK.auth"], True], #submit newer update after older
-[["-c", "PK","./testenv/PK/data", "KEK", "./testenv/KEK/foo", "-u", "db","./testdata/db_by_PK.auth"], True],#KEK bad path, should continue
-[["-p","./testenv/", "-u", "db", "./testdata/brokenFiles/1db_by_PK.auth","KEK", "./testdata/KEK_by_PK.auth", "PK", "./testdata/PK_by_PK.auth" ], False], #update chain with one broken auth file should fail
-[["-p","./testenv/", "-u", "db", "./testdata/db_by_PK.auth","KEK", "./testdata/KEK_by_PK.auth", "PK", "./testdata/bad_PK_by_db.auth" ], False], #update chain with one improperly signed auth file should fail
-[["-u" ,"db", "./testdata/db_by_PK.auth","-p"], False], #no path given, should fail
+[["-c", "PK",f"{TESTENV}/PK/data", "-u", "db",f"{DATAPATH}/db_by_PK.auth"], True],#update with current vars set and update set
+[["-c", "PK",f"{TESTENV}/PK/data","KEK",f"{TESTENV}/KEK/data","db",f"{TESTENV}/db/data","-u", "db",f"{DATAPATH}/db_by_PK.auth", "KEK", f"{DATAPATH}/KEK_by_PK.auth", "PK", f"{DATAPATH}/PK_by_PK.auth" ], True], #update chain with given current vars set
+[["-p",f"{TESTENV}/","-u", "db",f"{DATAPATH}/db_by_PK.auth", "KEK", f"{DATAPATH}/KEK_by_PK.auth", "PK", f"{DATAPATH}/PK_by_PK.auth" ], True], #update chain with path set
+[["-p", f"{TESTENV}/", "-u", "db", f"{DATAPATH}/db_by_PK.auth", "db", f"{DATAPATH}/db_by_KEK.auth"], True], #submit newer update after older
+[["-c", "PK",f"{TESTENV}/PK/data", "KEK", f"{TESTENV}/KEK/foo", "-u", "db",f"{DATAPATH}/db_by_PK.auth"], True],#KEK bad path, should continue
+[["-p",f"{TESTENV}/", "-u", "db", f"{DATAPATH}/brokenFiles/1db_by_PK.auth","KEK", f"{DATAPATH}/KEK_by_PK.auth", "PK", f"{DATAPATH}/PK_by_PK.auth" ], False], #update chain with one broken auth file should fail
+[["-p",f"{TESTENV}/", "-u", "db", f"{DATAPATH}/db_by_PK.auth","KEK", f"{DATAPATH}/KEK_by_PK.auth", "PK", f"{DATAPATH}/bad_PK_by_db.auth" ], False], #update chain with one improperly signed auth file should fail
+[["-u" ,"db", f"{DATAPATH}/db_by_PK.auth","-p"], False], #no path given, should fail
 [["-c","-u"], False],#no vars given
-[["-c","PK","./testenv/PK/data"], False],#no updates given
-[["-p", "./testenv", "-u", "db", "./testdata/db_by_KEK.auth", "db", "./testdata/db_by_PK.auth"], False], #submit older update after newer
-[["-p","./testenv/","-u",  "KEK", "./testdata/KEK_by_PK.auth", "PK", "./testdata/PK_by_PK.auth","db","./testdata/db_by_PK.auth" ], False],#update chain with bad order
+[["-c","PK",f"{TESTENV}/PK/data"], False],#no updates given
+[["-p", f"{TESTENV}", "-u", "db", f"{DATAPATH}/db_by_KEK.auth", "db", f"{DATAPATH}/db_by_PK.auth"], False], #submit older update after newer
+[["-p",f"{TESTENV}/","-u",  "KEK", f"{DATAPATH}/KEK_by_PK.auth", "PK", f"{DATAPATH}/PK_by_PK.auth","db",f"{DATAPATH}/db_by_PK.auth" ], False],#update chain with bad order
 [["-v"], False], #verify no args
 [["-u", "db", "notRealFile.auth"], False], #not real file
-[["-u", "./testenv/db_by_PK.auth", "db"], False],#wrong order
+[["-u", f"{TESTENV}/db_by_PK.auth", "db"], False],#wrong order
 [["-u", "PK"], False],#no file given
-[["-v", "-w", "-c", "PK","./testenv/PK/data","KEK","./testenv/KEK/data","db","./testenv/db/data","-u", "db","./testdata/db_by_PK.auth", "KEK", "./testdata/KEK_by_PK.auth", "PK", "./testdata/PK_by_PK.auth" ], False],#no where to write it too so should fail
-[["-p", "./testenv/", "-u", "TS", "testdata/db_by_KEK.auth"], False], #cannot update TS variable, Its illegal, dont do it...ever
-[["-c", "PK","./testenv/PK/data", "-u", "db","./testdata/db_by_PK.auth","-u", "KEK","./testdata/KEK_by_PK.auth"], False],#update vars set twice
-[["-c", "PK","./testenv/PK/data", "./testenv/KEK/data", "KEK", "-u", "db","./testdata/db_by_PK.auth"], False],#current vars bad format 
-[["-c", "PK", "KEK", "./testenv/PK/data", "./testenv/KEK/data", "-u", "db","./testdata/db_by_PK.auth"], False],#current vars bad format 
-[["-c", "PK", "./testenv/PK/data", "KEK", "-u", "db","./testdata/db_by_PK.auth"], False],#current vars bad format 
-[["-c", "KEK", "./testenv/KEK/data", "-u", "PK", "./testdata/PK_by_PK.auth", "db", "./testdata/bad_db_by_db.auth"], False]
+[["-v", "-w", "-c", "PK",f"{TESTENV}/PK/data","KEK",f"{TESTENV}/KEK/data","db",f"{TESTENV}/db/data","-u", "db",f"{DATAPATH}/db_by_PK.auth", "KEK", f"{DATAPATH}/KEK_by_PK.auth", "PK", f"{DATAPATH}/PK_by_PK.auth" ], False],#no where to write it too so should fail
+[["-p", f"{TESTENV}/", "-u", "TS", f"{DATAPATH}/db_by_KEK.auth"], False], #cannot update TS variable, Its illegal, dont do it...ever
+[["-c", "PK",f"{TESTENV}/PK/data", "-u", "db",f"{DATAPATH}/db_by_PK.auth","-u", "KEK",f"{DATAPATH}/KEK_by_PK.auth"], False],#update vars set twice
+[["-c", "PK",f"{TESTENV}/PK/data", f"{TESTENV}/KEK/data", "KEK", "-u", "db",f"{DATAPATH}/db_by_PK.auth"], False],#current vars bad format 
+[["-c", "PK", "KEK", f"{TESTENV}/PK/data", f"{TESTENV}/KEK/data", "-u", "db",f"{DATAPATH}/db_by_PK.auth"], False],#current vars bad format 
+[["-c", "PK", f"{TESTENV}/PK/data", "KEK", "-u", "db",f"{DATAPATH}/db_by_PK.auth"], False],#current vars bad format 
+[["-c", "KEK", f"{TESTENV}/KEK/data", "-u", "PK", f"{DATAPATH}/PK_by_PK.auth", "db", f"{DATAPATH}/bad_db_by_db.auth"], False]
 ]
 
 writeCommands=[
 [["--usage"], True],[["--help"], True],
-[["KEK","./testdata/KEK_by_PK.auth", "-p", "./testenv/"], True], #different ordering should still work
-[["KEK","./testdata/KEK_by_PK.auth", "-p", "./testenv/","-v"], True], #different ordering should still work with verbose
-[["TS", "./testdata/KEK_by_PK.auth", "-p", "./testenv/"], False], #no TS varible updates allowed
+[["KEK",f"{DATAPATH}/KEK_by_PK.auth", "-p", f"{TESTENV}/"], True], #different ordering should still work
+[["KEK",f"{DATAPATH}/KEK_by_PK.auth", "-p", f"{TESTENV}/","-v"], True], #different ordering should still work with verbose
+[["TS", f"{DATAPATH}/KEK_by_PK.auth", "-p", f"{TESTENV}/"], False], #no TS varible updates allowed
 [["db", "foo.file"], False], #bad auth file 
-[["KEK","-v", "-p", "./testenv/"], False], #should fail, no file
-[["KEK","./testdata/KEK_by_PK.auth", "-p"], False],#no path should fail
-[["KeK","./testdata/KEK_by_PK.auth", "-p", "./testenv/"], False], #bad var name should fail
-[["KEK","./testdata/KEK_by_PK.auth", "-p", "./testenvironement/"], False], #bad path should fail
+[["KEK","-v", "-p", f"{TESTENV}/"], False], #should fail, no file
+[["KEK",f"{DATAPATH}/KEK_by_PK.auth", "-p"], False],#no path should fail
+[["KeK",f"{DATAPATH}/KEK_by_PK.auth", "-p", f"{TESTENV}/"], False], #bad var name should fail
+[["KEK",f"{DATAPATH}/KEK_by_PK.auth", "-p", f"{TESTENV}ironement/"], False], #bad path should fail
 [["db"], False], #no authfile
 [[], False]#no auth or var
 
@@ -102,24 +105,24 @@ validateCommands=[
 [["-e"], False], #no esl
 [["-c"], False], # no crt
 [["-p"], False],#no pkcs7
-[["-p","./testdata/db_by_PK.auth"], False],#give auth as pkcs7
+[["-p",f"{DATAPATH}/db_by_PK.auth"], False],#give auth as pkcs7
 ]
 
 
 # these really arnt tests with bad envs, its more so tests that use two commands to run.
 badEnvCommands=[ #[arr command to skew env, output of first command, arr command for sectool, expected result]
-[["rm", "./testenv/KEK/size"],None,["-m","host","read", "-p", "./testenv/", "KEK"], False], #remove size and it should fail
-[["rm", "./testenv/KEK/size"],None,["-m","host","read", "-p", "./testenv/"], True], #remove size but as long as one is readable then it is ok
-[['echo', '"hey fail!"'],"./testenv/db/size",["-m","host","read", "-p", "./testenv/", "db"], False], #read from ascii size file should fail
-[["dd" , "if=./testdata/goldenKeys/KEK/data", "of=./testenv/KEK/data", "count=100", "bs=1"],"log.txt",["-m","host","verify", "-v","-p", "./testenv/", "-u","db", "./testdata/db_by_KEK.auth"], False], #verify against path with bad esl files should fail, modified THAT SHOULD NEVER HAPPEN!
-[["rm", "-r", "./testenv/db","./testenv/dbx","./testenv/KEK","./testenv/PK", "./testenv/TS" ],None,["-m","host","verify","-v","-p", "./testenv/","-u","PK", "./testdata/PK_by_PK.auth"], True],# no data in path should enter setup mode
-[["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["-m","host","verify","-v","-p", "./testenv/","-u","PK", "./testdata/PK_by_PK.auth"], True],# no data in pk ==setup mode
-[["rm","./testenv/db/update"],None,["-m","host","verify","-v","-w","-p", "./testenv/","-u","db", "./testdata/db_by_PK.auth"], False],# no update file should exit
-[["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["-m","host","read","-p", "./testenv/"], True],# Pk will be empty but other files will have things
-[["cp","./testdata/brokenFiles/empty.esl" ,"./testenv/PK/data" ],None,["-m","host","read","-p", "./testenv/", "PK"], False],# Pk will be empty, nothing else read so overall failure
-[["echo", "16"], "./testenv/TS/size", ["-m","host","verify", "-v" , "-p", "./testenv/", "-u", "PK", "./testdata/PK_by_PK.auth"], False],
-[["dd", "if=/dev/zero", "of=./testenv/TS/data", "count=4", "bs=16"], None, ["-m","host","verify", "-p", "./testenv/", "-u", "PK", "testdata/PK_by_PK.auth"], True], #If timestamp entry for a variable is empty than thats okay
-[["echo", "0"], "./testenv/KEK/size", ["-m","host","verify", "-p", "./testenv/", "-u", "db", "./testdata/db_by_PK.auth"], True] #an empty KEK should not interupt db by PK verification
+[["rm", f"{TESTENV}/KEK/size"],None,["-m","host","read", "-p", f"{TESTENV}/", "KEK"], False], #remove size and it should fail
+[["rm", f"{TESTENV}/KEK/size"],None,["-m","host","read", "-p", f"{TESTENV}/"], True], #remove size but as long as one is readable then it is ok
+[['echo', '"hey fail!"'],f"{TESTENV}/db/size",["-m","host","read", "-p", f"{TESTENV}/", "db"], False], #read from ascii size file should fail
+[["dd" , f"if={DATAPATH}/goldenKeys/KEK/data", f"of={TESTENV}/KEK/data", "count=100", "bs=1"],"log.txt",["-m","host","verify", "-v","-p", f"{TESTENV}/", "-u","db", f"{DATAPATH}/db_by_KEK.auth"], False], #verify against path with bad esl files should fail, modified THAT SHOULD NEVER HAPPEN!
+[["rm", "-r", f"{TESTENV}/db",f"{TESTENV}/dbx",f"{TESTENV}/KEK",f"{TESTENV}/PK", f"{TESTENV}/TS" ],None,["-m","host","verify","-v","-p", f"{TESTENV}/","-u","PK", f"{DATAPATH}/PK_by_PK.auth"], True],# no data in path should enter setup mode
+[["cp",f"{DATAPATH}/brokenFiles/empty.esl" ,f"{TESTENV}/PK/data" ],None,["-m","host","verify","-v","-p", f"{TESTENV}/","-u","PK", f"{DATAPATH}/PK_by_PK.auth"], True],# no data in pk ==setup mode
+[["rm",f"{TESTENV}/db/update"],None,["-m","host","verify","-v","-w","-p", f"{TESTENV}/","-u","db", f"{DATAPATH}/db_by_PK.auth"], False],# no update file should exit
+[["cp",f"{DATAPATH}/brokenFiles/empty.esl" ,f"{TESTENV}/PK/data" ],None,["-m","host","read","-p", f"{TESTENV}/"], True],# Pk will be empty but other files will have things
+[["cp",f"{DATAPATH}/brokenFiles/empty.esl" ,f"{TESTENV}/PK/data" ],None,["-m","host","read","-p", f"{TESTENV}/", "PK"], False],# Pk will be empty, nothing else read so overall failure
+[["echo", "16"], f"{TESTENV}/TS/size", ["-m","host","verify", "-v" , "-p", f"{TESTENV}/", "-u", "PK", f"{DATAPATH}/PK_by_PK.auth"], False],
+[["dd", "if=/dev/zero", f"of={TESTENV}/TS/data", "count=4", "bs=16"], None, ["-m","host","verify", "-p", f"{TESTENV}/", "-u", "PK", f"{DATAPATH}/PK_by_PK.auth"], True], #If timestamp entry for a variable is empty than thats okay
+[["echo", "0"], f"{TESTENV}/KEK/size", ["-m","host","verify", "-p", f"{TESTENV}/", "-u", "db", f"{DATAPATH}/db_by_PK.auth"], True] #an empty KEK should not interupt db by PK verification
 ]
 
 def command(args, out=None):#stores last log of function into log file
@@ -150,9 +153,10 @@ def getCmdResult(args, out, self):
 
 def setupTestEnv():
 	out="log.txt"
-	command(["cp", "-a", "./testdata/goldenKeys/.", "testenv/"], out)
+	command(["mkdir", "-p", f"{TESTENV}"])
+	command(["cp", "-a", f"{DATAPATH}/goldenKeys/.", f"{TESTENV}/"], out)
 def setupArrays():
-	for file in os.listdir("./testdata"):
+	for file in os.listdir(f"{DATAPATH}"):
 		if file.endswith(".auth"):
 			if file.startswith("bad_"):
 				fileName=file[4:-5];
@@ -182,15 +186,15 @@ def setupArrays():
 				fileName=file[:-4]
 				arr=fileName.split("_")
 				goodCRTs.append([file,arr[0],arr[2]])
-	for file in os.listdir("./testdata/brokenFiles"): #sort broken files into esl's crts and auths
+	for file in os.listdir(f"{DATAPATH}/brokenFiles"): #sort broken files into esl's crts and auths
 		if file.endswith(".esl"):
-			brokenESLs.append("./testdata/brokenFiles/"+file)
+			brokenESLs.append(f"{DATAPATH}/brokenFiles/"+file)
 		elif file.endswith(".der") or file.endswith(".crt"):
-			brokenCrts.append("./testdata/brokenFiles/"+file)
+			brokenCrts.append(f"{DATAPATH}/brokenFiles/"+file)
 		elif file.endswith(".auth"):
-			brokenAuths.append("./testdata/brokenFiles/"+file)
+			brokenAuths.append(f"{DATAPATH}/brokenFiles/"+file)
 		elif file.endswith(".pkcs7"):
-			brokenPkcs7s.append("./testdata/brokenFiles/"+file)
+			brokenPkcs7s.append(f"{DATAPATH}/brokenFiles/"+file)
 def compareFiles(a,b):
 		if filecmp.cmp(a,b):
 			return True
@@ -222,12 +226,12 @@ class Test(unittest.TestCase):
 		cmd=[SECTOOLS]
 		#cmd+=["-m","host","verify"]
 		for fileInfo in goodAuths:
-			file="./testdata/"+fileInfo[0]
-			self.assertEqual( getCmdResult(cmd+["-m","host","verify","-w", "-p", "testenv/","-u",fileInfo[1],file],out, self), True)#verify all auths are signed by keys in testenv
-			self.assertEqual(compareFiles("testenv/"+fileInfo[1]+"/update", file), True)#assert files wrote correctly
+			file=f"{DATAPATH}/"+fileInfo[0]
+			self.assertEqual( getCmdResult(cmd+["-m","host","verify","-w", "-p", f"{TESTENV}/","-u",fileInfo[1],file],out, self), True)#verify all auths are signed by keys in testenv
+			self.assertEqual(compareFiles(f"{TESTENV}/"+fileInfo[1]+"/update", file), True)#assert files wrote correctly
 		for fileInfo in badAuths:
-			file="./testdata/"+fileInfo[0]
-			self.assertEqual( getCmdResult(cmd+["-m","host","verify","-p", "testenv/","-u",fileInfo[1],file],out, self), False)#verify all bad auths are not signed correctly
+			file=f"{DATAPATH}/"+fileInfo[0]
+			self.assertEqual( getCmdResult(cmd+["-m","host","verify","-p", f"{TESTENV}/","-u",fileInfo[1],file],out, self), False)#verify all bad auths are not signed correctly
 		for i in verifyCommands:
 			self.assertEqual( getCmdResult(cmd+["-m","host","verify"]+i[0],out, self),i[1])
 	def test_validate(self):
@@ -237,21 +241,21 @@ class Test(unittest.TestCase):
 		for i in validateCommands:
 			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 		for i in goodAuths:		#validate all auths
-			file="./testdata/"+i[0]
+			file=f"{DATAPATH}/"+i[0]
 			if i[1] != "dbx":
 				
 				self.assertEqual( getCmdResult(cmd+[file],out, self), True)
 			else:
 				self.assertEqual( getCmdResult(cmd+[file, "-x"],out, self), True)
 		for i in goodESLs:
-			file="./testdata/"+i[0]
+			file=f"{DATAPATH}/"+i[0]
 			if i[1] != "dbx":
-				file="./testdata/"+i[0]
+				file=f"{DATAPATH}/"+i[0]
 				self.assertEqual( getCmdResult(cmd+["-e",file],out, self), True)
 			else:
 				self.assertEqual( getCmdResult(cmd+["-e", file, "-x"],out, self), True)
 		for i in goodCRTs:
-			file="./testdata/"+i[0]
+			file=f"{DATAPATH}/"+i[0]
 			self.assertEqual( getCmdResult(cmd+["-v","-c",file],out, self), True)
 		for i in brokenAuths:
 			self.assertEqual( getCmdResult(cmd+["-v", i],out, self), False)
@@ -270,7 +274,7 @@ class Test(unittest.TestCase):
 			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 		for i in brokenESLs:
 			#read should read sha and rsa esl's w no problem
-			if i.startswith("./testdata/brokenFiles/sha") or i.startswith("./testdata/brokenFiles/rsa"):
+			if i.startswith(f"{DATAPATH}/brokenFiles/sha") or i.startswith(f"{DATAPATH}/brokenFiles/rsa"):
 							self.assertEqual( getCmdResult(cmd+["-f", i],out, self), True) 
 			else:
 				self.assertEqual( getCmdResult(cmd+["-f", i],out, self), False) #all truncated esls should fail to print human readable info
@@ -278,11 +282,11 @@ class Test(unittest.TestCase):
 		out="writelog.txt"
 		cmd=[SECTOOLS]
 		cmd+=["-m","host","write"]
-		path="./testenv/"
+		path=f"{TESTENV}/"
 		for i in writeCommands:
 			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
 		for i in goodAuths:	#try write with good auths, validation included
-			file="./testdata/"+i[0]
+			file=f"{DATAPATH}/"+i[0]
 			preUpdate=file#get auth
 			postUpdate=path+i[1]+"/update" #./testenv/<varname>/update
 			self.assertEqual( getCmdResult(cmd+[ "-p", path,i[1],file],out, self), True)#assert command runs
