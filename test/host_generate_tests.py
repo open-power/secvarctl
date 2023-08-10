@@ -17,6 +17,7 @@ OUTDIR = "./generatedTestData/"
 MEMCHECK = False
 OPENSSL = True
 GNUTLS = False
+DATAPATH = f"./testdata/host"
 
 # fTOh = [#[generateCommand], resultofGenerateCommand, [validatation Command], result
 # [["-h", "SHA512", "-i", ]]
@@ -35,53 +36,53 @@ secvarctlGenCommands = [
 [["f:t", "-i", SECTOOLS, "-o", "out.hash"], False], #output type DNE
 ]
 badESLcommands =[
-[["t:e", "-i", "./testdata/db_by_PK.crt", "-o", OUTDIR+"foo.esl"], False], #input type dne
-[["c:e", "-i", "./testdata/db_by_PK.der", "-o",OUTDIR+"foo.esl"], False], #not PEM format
-[["c:e", "-i", "./testdata/brokenFiles/rsa4096.crt", "-o", OUTDIR+"foo.esl"], False], #cert will not pass prevalidation, rsa 4096
-[["c:e", "-i", "./testdata/brokenFiles/SHA384.crt", "-o", OUTDIR+"foo.esl"], False], #cert will not pass prevalidation, sha384
+[["t:e", "-i", f"{DATAPATH}/db_by_PK.crt", "-o", OUTDIR+"foo.esl"], False], #input type dne
+[["c:e", "-i", f"{DATAPATH}/db_by_PK.der", "-o",OUTDIR+"foo.esl"], False], #not PEM format
+[["c:e", "-i", f"{DATAPATH}/brokenFiles/rsa4096.crt", "-o", OUTDIR+"foo.esl"], False], #cert will not pass prevalidation, rsa 4096
+[["c:e", "-i", f"{DATAPATH}/brokenFiles/SHA384.crt", "-o", OUTDIR+"foo.esl"], False], #cert will not pass prevalidation, sha384
 [["f:e", "-i", SECTOOLS, "-o", OUTDIR+"foo.esl", "-h"], False], #no hash function
 [["f:e", "-i", SECTOOLS, "-o", OUTDIR+"foo.esl", "-h", "SHAFOO"], False], #invalid hash function
 [["h:e", "-i", SECTOOLS, "-o", OUTDIR+"foo.esl", "-h", "SHA256"], False], #input file is not SHA246
 
 ]
 badSignedCommands = [
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n"], False], #no var name
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "foo"], False], #Invalid var
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t","2020-10-2010:2:20", ], False], #Wrong timestamp format
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "10:2:20T2020-10-20"], False], #Wrong timestamp order
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-50-20T10:2:20" ], False], #bad month
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-200T10:2:20" ], False], #bad day
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T25:2:20" ], False], #bad hour
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:61:20" ], False], #bad minute
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:61" ], False], #bad sec
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t" ], False], #no timestammp arg
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #no key file
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k","./testdata/goldenKeys/PK/PK.key", "-c","-n", "db"], False], #no crt file
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k","./testdata/goldenKeys/PK/PK.key","-c", "./testdata/goldenKeys/PK/PK.crt",  "-c", "./testdata/goldenKeys/KEK/KEK.crt", "-n", "db"], False], #crt != #keys
-[["e:a", "-i", "foo.bar", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #invalid input file
-[["t:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #invalid input format for auth
-[["t:p", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #invalid input format for pkcs7
-[["c:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #bad input data for auth
-[["c:p", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #bad input data for pkcs7
-[["e:p", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "TS"], False], #update var is TS for pkcs7
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "TS"], False], #update var is TS for auth
-[["e:p", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt"], False], #no update var pkcs7
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt"], False], #no update var auth
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "./testdata/goldenKeys/KEK/KEK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #mismatched cert and key pair
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth",  "-n", "db"], False], #no signing keys given
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-c", "./testdata/goldenKeys/PK/PK.key", "-k", "./testdata/goldenKeys/PK/PK.key", "-n", "db"], False], #key given for crt
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-c", "./testdata/goldenKeys/PK/PK.crt", "-k", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #cert given for key
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-c", "./testdata/goldenKeys/PK/foo.crt", "-k", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #cert is not a file
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n"], False], #no var name
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "foo"], False], #Invalid var
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t","2020-10-2010:2:20", ], False], #Wrong timestamp format
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "10:2:20T2020-10-20"], False], #Wrong timestamp order
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-50-20T10:2:20" ], False], #bad month
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-200T10:2:20" ], False], #bad day
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T25:2:20" ], False], #bad hour
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:61:20" ], False], #bad minute
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:61" ], False], #bad sec
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t" ], False], #no timestammp arg
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db"], False], #no key file
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k",f"{DATAPATH}/goldenKeys/PK/PK.key", "-c","-n", "db"], False], #no crt file
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k",f"{DATAPATH}/goldenKeys/PK/PK.key","-c", f"{DATAPATH}/goldenKeys/PK/PK.crt",  "-c", f"{DATAPATH}/goldenKeys/KEK/KEK.crt", "-n", "db"], False], #crt != #keys
+[["e:a", "-i", "foo.bar", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db"], False], #invalid input file
+[["t:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db"], False], #invalid input format for auth
+[["t:p", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db"], False], #invalid input format for pkcs7
+[["c:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db"], False], #bad input data for auth
+[["c:p", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db"], False], #bad input data for pkcs7
+[["e:p", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "TS"], False], #update var is TS for pkcs7
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "TS"], False], #update var is TS for auth
+[["e:p", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt"], False], #no update var pkcs7
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt"], False], #no update var auth
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-k", f"{DATAPATH}/goldenKeys/KEK/KEK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db"], False], #mismatched cert and key pair
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth",  "-n", "db"], False], #no signing keys given
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-c", f"{DATAPATH}/goldenKeys/PK/PK.key", "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-n", "db"], False], #key given for crt
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-k", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db"], False], #cert given for key
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-c", f"{DATAPATH}/goldenKeys/PK/foo.crt", "-k", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db"], False], #cert is not a file
 
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-c", "./testdata/goldenKeys/PK/data", "-k", "./testdata/goldenKeys/PK/PK.crt", "-n", "db"], False], #cert is nnot PEM
-[["e:a", "-i", "./testdata/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-c", "./testdata/goldenKeys/PK/PK.crt", "-k", "./testdata/goldenKeys/PK/data", "-n", "db"], False], #key is not PEM
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-c", f"{DATAPATH}/goldenKeys/PK/data", "-k", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db"], False], #cert is nnot PEM
+[["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", OUTDIR+"foo.auth", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-k", f"{DATAPATH}/goldenKeys/PK/data", "-n", "db"], False], #key is not PEM
 
 ]
 
 toeslCommands=[
 [["-i", "-o", "out.esl"], False],#no input file
-[["-i", "./testdata/db_by_PK.auth", "-o"], False],#no output file
-[["-i", "./testdata/db_by_PK.auth"], False],#no output option
+[["-i", f"{DATAPATH}/db_by_PK.auth", "-o"], False],#no output file
+[["-i", f"{DATAPATH}/db_by_PK.auth"], False],#no output option
 ]
 
 def command(args,out=None, addCMDRan=True):#stores last log of function into log file
@@ -113,12 +114,12 @@ def getCmdResult(args, out, self):
 
 def setupTestEnv():
 	out="log.txt"
-	command(["cp", "-a", "./testdata/goldenKeys/.", "testenv/"],out)
+	command(["cp", "-a", f"{DATAPATH}/goldenKeys/.", "testenv/host/"],out)
 
 def createEnvironment():
 	f = "log.txt"
 	command(["mkdir", "./generatedTestData"],f)
-	command(["mkdir", "./testenv"],f)
+	command(["mkdir", "./testenv/host/"],f)
 	command(["mkdir", "./generatedTestData/brokenFiles"],f)
 
 def compareFiles(a,b):
@@ -148,7 +149,7 @@ class Test(unittest.TestCase):
 		#get previously generated dbx esl's, they were made with the certs so alls we gotta do is use the same input and the ouput should match
 		dbxFiles = []
 		
-		for file in os.listdir("./testdata"):
+		for file in os.listdir(f"{DATAPATH}"):
 			if file.startswith("dbx"):
 				if file.endswith(".esl") : #we know the nature of how these were made, the input files have the same name but different extension
 					fileName=file[:-4]; #remove .esl
@@ -156,14 +157,14 @@ class Test(unittest.TestCase):
 		for efiGen in dbxFiles:
 			hashMade = OUTDIR + efiGen + ".hash"
 			eslMade = OUTDIR + efiGen + ".esl"
-			eslDesired =  "./testdata/" + efiGen + ".esl"
+			eslDesired =  f"{DATAPATH}/" + efiGen + ".esl"
 			#first do it with file to has to ESL
-			self.assertEqual( getCmdResult(cmd + ["f:h", "-i", "./testdata/" + efiGen + ".crt", "-o" ,hashMade], out, self), True) #assert the hashfile can be made
+			self.assertEqual( getCmdResult(cmd + ["f:h", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o" ,hashMade], out, self), True) #assert the hashfile can be made
 			self.assertEqual( getCmdResult(cmd + ["h:e", "-i", hashMade, "-o" , eslMade], out, self), True) #assert the ESL is valid
 			self.assertEqual( getCmdResult([SECTOOLS , "-m", "host", "validate", "-e", "-x", eslMade], out, self), True) #assert the ESL is correctly formated
 			# self.assertEqual( compareFile(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 			#then do it with the file to ESL (hash generation done internally)
-			self.assertEqual( getCmdResult(cmd + ["f:e", "-i", "./testdata/" + efiGen + ".crt", "-o" ,eslMade], out, self), True) #assert the esl can be made from a file
+			self.assertEqual( getCmdResult(cmd + ["f:e", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o" ,eslMade], out, self), True) #assert the esl can be made from a file
 			self.assertEqual( getCmdResult([SECTOOLS , "-m", "host", "validate", "-e", "-x", eslMade], out, self), True) #assert the ESL is correctly formated
 			# self.assertEqual( compareFile(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 	def test_genEsl(self):
@@ -171,16 +172,16 @@ class Test(unittest.TestCase):
 			cmd = GEN
 			#get previously generated esl's, they were made with the certs so alls we gotta do is use the same input and the ouput should match
 			eslFiles = []
-			for file in os.listdir("./testdata"):
+			for file in os.listdir(f"{DATAPATH}"):
 				if file.endswith(".esl") : #we know the nature of how these were made, the input files have the same name but different extension
 					if not file.startswith("dbx") and not file.startswith("empty"):
 						fileName=file[:-4]; #remove .esl
 						eslFiles.append(fileName)
 			for efiGen in eslFiles:
 				eslMade = OUTDIR + efiGen + ".esl"
-				eslDesired =  "./testdata/" + efiGen + ".esl"
+				eslDesired =  f"{DATAPATH}/" + efiGen + ".esl"
 				#first do it with file to has to ESL
-				self.assertEqual( getCmdResult(cmd + ["c:e", "-i", "./testdata/" + efiGen + ".crt", "-o" , eslMade], out, self), True) #assert the hashfile can be made
+				self.assertEqual( getCmdResult(cmd + ["c:e", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o" , eslMade], out, self), True) #assert the hashfile can be made
 				self.assertEqual( getCmdResult([SECTOOLS , "-m", "host", "validate", "-e", eslMade], out, self), True) #assert the ESL is correctly formated
 				self.assertEqual( compareFiles(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 			for i in badESLcommands:
@@ -190,7 +191,7 @@ class Test(unittest.TestCase):
 		auths = [] #array of[filename, key being updated, key signing]
 		cmd = GEN
 		#get all the 'valid' auths we made in /testdata, we will compare our results to these
-		for file in os.listdir("./testdata"):
+		for file in os.listdir(f"{DATAPATH}"):
 			if file.endswith(".auth"):
 				if file.startswith("bad_"):
 					fileName=file[4:-5];
@@ -207,15 +208,15 @@ class Test(unittest.TestCase):
 					auths.append([file,arr[0],arr[2]])
 		for i in auths:
 			fileBaseName=i[0][:-5]
-			authDesired = "./testdata/"+i[0]
+			authDesired = f"{DATAPATH}/"+i[0]
 			genE2A = OUTDIR + i[0][0:-5]+"_fromESL.auth"
 			genE2P = OUTDIR + i[0][0:-5]+"_fromESL.pkcs7"
 			genC2A = OUTDIR + i[0][0:-5]+"_fromCert.auth"
 			genC2P = OUTDIR + i[0][0:-5]+"_fromCert.pkcs7"
-			signerKey= "./testdata/goldenKeys/"+i[2]+"/"+i[2]+".key"
-			signerCrt= "./testdata/goldenKeys/"+i[2]+"/"+i[2]+".crt"
+			signerKey= f"{DATAPATH}/goldenKeys/"+i[2]+"/"+i[2]+".key"
+			signerCrt= f"{DATAPATH}/goldenKeys/"+i[2]+"/"+i[2]+".crt"
 			if i[0].startswith("empty"):
-				esl = "./testdata/empty.esl"
+				esl = f"{DATAPATH}/empty.esl"
 				#should fail if no force flag
 				self.assertEqual( getCmdResult(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2A ], out, self), False)
 				self.assertEqual( getCmdResult(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2A, "-f"], out, self), True)
@@ -223,8 +224,8 @@ class Test(unittest.TestCase):
 				self.assertEqual( getCmdResult(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2P ], out, self), False)
 				self.assertEqual( getCmdResult(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2P, "-f"], out, self), True)
 			else:
-				esl = "./testdata/"+fileBaseName+".esl"
-				cert = "./testdata/"+fileBaseName+".crt"
+				esl = f"{DATAPATH}/"+fileBaseName+".esl"
+				cert = f"{DATAPATH}/"+fileBaseName+".crt"
 				self.assertEqual( getCmdResult(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o",  genE2A], out, self), True)
 				#build pkcs7
 				self.assertEqual( getCmdResult(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o",  genE2P], out, self), True)
@@ -259,20 +260,20 @@ class Test(unittest.TestCase):
 					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", "-p", genC2P], out, self), True)
 			#all files besides the one that start with bad should be verified, bad means signed incorrectly
 			if i[0].startswith("bad"):
-				self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genE2A], out, self), False)
+				self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genE2A], out, self), False)
 				if not i[0].startswith("empty"):
-					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genC2A], out, self), False)
+					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genC2A], out, self), False)
 			else:
-				self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genE2A], out, self), True)
+				self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genE2A], out, self), True)
 				if not i[0].startswith("empty"):
-					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host",  "verify", "-p", "./testdata/goldenKeys/", "-u", i[1], genC2A], out, self), True)
+					self.assertEqual( getCmdResult([SECTOOLS, "-m", "host",  "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genC2A], out, self), True)
  
 		#now test custom timestamp works
 		customTSAuth1 = OUTDIR+"db_by_PK_customTS1.auth"
 		customTSAuth2 = OUTDIR+"db_by_PK_customTS2.auth"
-		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth1, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8" ], out, self), True) 
+		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", customTSAuth1, "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8" ], out, self), True) 
 		time.sleep(4)
-		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", "./testdata/db_by_PK.esl", "-o", customTSAuth2, "-k", "./testdata/goldenKeys/PK/PK.key", "-c", "./testdata/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8" ], out, self), True) 
+		self.assertEqual( getCmdResult(cmd+ ["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", customTSAuth2, "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8" ], out, self), True) 
 		self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", customTSAuth1], out, self), True)
 		self.assertEqual( getCmdResult([SECTOOLS, "-m", "host", "validate", customTSAuth2], out, self), True)
 		self.assertEqual( compareFiles(customTSAuth1, customTSAuth2), True)
@@ -284,7 +285,7 @@ class Test(unittest.TestCase):
 		#to test generating reset files we will use the 'generate a:e' command, this command was already tested in runTests.py
 		out = 'genResetFilesLog.txt'
 		cmd = GEN + ["reset"]
-		inpDir = "./testdata/goldenKeys/"
+		inpDir = f"{DATAPATH}/goldenKeys/"
 		goodResetKeys = [ #[ key to be reset, signer]
 		["db", "KEK"],
 		["db", "PK"],
@@ -344,9 +345,9 @@ class Test(unittest.TestCase):
 			return
 
 		timestamp = ["-t", "2020-1-1T1:1:1"]
-		inpCrt = "./testdata/db_by_KEK.crt"
-		sigCrt = "./testdata/goldenKeys/KEK/KEK.crt"
-		sigKey = "./testdata/goldenKeys/KEK/KEK.key"
+		inpCrt = f"{DATAPATH}/db_by_KEK.crt"
+		sigCrt = f"{DATAPATH}/goldenKeys/KEK/KEK.crt"
+		sigKey = f"{DATAPATH}/goldenKeys/KEK/KEK.key"
 		outDigest = OUTDIR + "digest_db_by_KEK.hash"
 		digestHeaderTxt = OUTDIR + "digest_Header.txt"
 		digestHeader = OUTDIR +"digest_Header.bin"
@@ -373,7 +374,7 @@ class Test(unittest.TestCase):
 		
 	def test_genHash(self):
 		out = "genHashLog.txt"
-		inpDir = "./testdata/"
+		inpDir = f"{DATAPATH}/"
 		hashes = [ #hashes and there respective lengths in bytes
 			["SHA1", 20],
 			["SHA224", 28],
@@ -384,7 +385,7 @@ class Test(unittest.TestCase):
 		#basic test, invalid inForm for generating hash 't'
 		self.assertEqual( getCmdResult(GEN + ["t:h", "-i", inpDir+"db_by_PK.auth", "-o", "foo.bar"], out, self), False)
 		for function in hashes:
-			inpDir = "./testdata/"
+			inpDir = f"{DATAPATH}/"
 			for file in os.listdir(inpDir):
 			 	outFile = OUTDIR+function[0]+"_"+file+".hash"
 			 	if file.endswith(".auth"):
@@ -405,7 +406,7 @@ class Test(unittest.TestCase):
 			 		else:
 			 			self.assertEqual( getCmdResult(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out, self), True)
 			 		self.assertEqual(os.path.getsize(outFile), function[1])
-			inpDir = "./testdata/brokenFiles/"
+			inpDir = f"{DATAPATH}/brokenFiles/"
 			#these should all fail unless forced
 			for file in os.listdir(inpDir):
 				outFile = OUTDIR+function[0]+"_"+file+".hash"
@@ -439,17 +440,17 @@ class Test(unittest.TestCase):
 	def test_authtoesl(self):
 		out="authtoesllog.txt"
 		cmd=[SECTOOLS, "-m", "host", "generate", "a:e"]
-		inpDir = "./testdata/"
+		inpDir = f"{DATAPATH}/"
 		postUpdate="testGenerated.esl"
 		for file in os.listdir(inpDir):
 			if not file.endswith(".auth"):
 				continue;
 			file = inpDir+file
-			if file.startswith("./testdata/empty"):
-				preUpdate = "./testdata/empty.esl"
+			if file.startswith(f"{DATAPATH}/empty"):
+				preUpdate = f"{DATAPATH}/empty.esl"
 			else:
 				preUpdate=file[:-4]+"esl"#get esl in auth
-			if file.startswith("./testdata/dbx"):
+			if file.startswith(f"{DATAPATH}/dbx"):
 				self.assertEqual( getCmdResult(cmd+[ "-n",  "dbx", "-i", file, "-o", postUpdate],out, self), True)#assert command runs
 			else:
 				self.assertEqual( getCmdResult(cmd+[ "-i", file, "-o", postUpdate],out, self), True)#assert command runs
@@ -457,7 +458,7 @@ class Test(unittest.TestCase):
 		command(["rm",postUpdate])
 		for i in toeslCommands:
 			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
-		inpDir = './testdata/brokenFiles/'
+		inpDir = f"{DATAPATH}/brokenFiles/"
 		for file in os.listdir(inpDir):
 			if not file.endswith(".auth"):
 				continue;
