@@ -15,13 +15,11 @@ HOST_BACKEND = 1
 GUEST_BACKEND = 1
 
 define test_host
-	@cd host/ && \
-	$(py) runTests.py -s $(SECVAR_TOOL) && \
-	$(py) runSvcGenerateTests.py -o $(OPENSSL) -g $(GNUTLS) -s $(SECVAR_TOOL)
+	$(py) host_tests.py -s $(SECVAR_TOOL) && \
+	$(py) host_generate_tests.py -o $(OPENSSL) -g $(GNUTLS) -s $(SECVAR_TOOL)
 endef
 
 define test_guest
-	@cd guest/ && \
 	$(py) guest_tests.py -s $(SECVAR_TOOL)
 endef
 
