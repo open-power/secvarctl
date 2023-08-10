@@ -8,9 +8,10 @@ import sys
 import argparse
 
 MEM_ERR = 101
-SECTOOLS = ["../../bin/secvarctl-dbg", "-m", "guest"]
+SECTOOLS = ["../bin/secvarctl-dbg", "-m", "guest"]
 SECVARPATH = "/sys/firmware/secvar/vars/"
 MEMCHECK = False
+DATAPATH = "./testdata/guest"
 
 auth_files = []
 esl_files = []
@@ -62,10 +63,10 @@ reset_variable_by_KEK = [
 	                ]
 
 variables = ["PK", "KEK", "db", "dbx", "grubdb", "grubdbx", "moduledb", "trustedcadb", "sbat"]
-test_dir = ["./testdata/eslfiles/", "./testdata/authfiles/", "./testdata/x509certs/",
-            "./testdata/goldenkeys/", "./testdata/pkcs7files/"]
+test_dir = [f"{DATAPATH}/eslfiles/", f"{DATAPATH}/authfiles/", f"{DATAPATH}/x509certs/",
+            f"{DATAPATH}/goldenkeys/", f"{DATAPATH}/pkcs7files/"]
 
-test_env_path = "./testenv/"
+test_env_path = "./testenv/guest/"
 log_dir = "./log/"
 gen_dir = "./generated-data/"
 SBAT_name = "sbat"
@@ -119,8 +120,10 @@ def get_cmd_result (args, out, self):
 def setup_test_environments ():
 	command (["mkdir", "-p", log_dir])
 	command (["mkdir", "-p", gen_dir])
+	command (["mkdir", "-p", "testenv/guest/"])
 	out= log_dir + "log.txt"
-	command (["cp", "-a", test_dir[3], "testenv/"], out)
+	# the "/." is significant, otherwise it just copies the directory instead of the contents
+	command (["cp", "-a", test_dir[3] + "/.", "testenv/guest/"], out)
 
 def collect_test_data ():
 	for file in os.listdir (test_dir[0]):
