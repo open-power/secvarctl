@@ -158,11 +158,12 @@ secvarctl: $(BIN_DIR)/secvarctl
 secvarctl-dbg: $(BIN_DIR)/secvarctl-dbg
 debug: $(BIN_DIR)/secvarctl-dbg
 .PHONY: secvarctl secvarctl-dbg debug
+SECVAR_TOOL ?= $(BIN_DIR)/secvarctl-dbg
 
-check: secvarctl-dbg
+check: $(SECVAR_TOOL)
 	@$(MAKE) -C test MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
 	                 HOST_BACKEND=$(HOST_BACKEND) \
-	                 SECVAR_TOOL=$(addprefix $(BIN_DIR)/,$<) \
+	                 SECVAR_TOOL=$< \
 	                 check
 
 CPPCHECK_FLAGS =  --enable=all --force -q --error-exitcode=1
