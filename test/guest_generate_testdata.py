@@ -5,6 +5,8 @@ import os #for getting size of file
 import sys
 import time
 
+DATAPATH = "./testdata/guest"
+
 #[nameoffile,var,signing var]
 variable_by_PK = [
 		    ["PK_by_PK","PK","PK"],
@@ -36,8 +38,8 @@ variables = ["PK", "KEK", "db", "dbx", "grubdb", "grubdbx", "moduledb", "trusted
 sbat_data = ["sbat,1\n", "grub,1\n", "grub.ibm.grub,1\n", "grub.fedora,1"]
 SBAT_name = "sbat"
 
-test_dir = ["./testdata/eslfiles/", "./testdata/authfiles/", "./testdata/x509certs/",
-            "./testdata/goldenkeys/", "./testdata/pkcs7files/"]
+test_dir = [f"{DATAPATH}/eslfiles/", f"{DATAPATH}/authfiles/", f"{DATAPATH}/x509certs/",
+            f"{DATAPATH}/goldenkeys/", f"{DATAPATH}/pkcs7files/"]
 
 cert_to_esl = "c:e"
 file_to_esl = "f:e"
