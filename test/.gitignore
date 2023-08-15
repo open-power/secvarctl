@@ -1,5 +1,7 @@
 # test inputs, env and results
+__pycache__
 *.txt
 testenv
+testdata
 generatedTestData
 generated-data
