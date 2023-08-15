@@ -46,7 +46,6 @@ ifeq ("$(wildcard $(SECVAR_TOOL))","")
 endif
 
 clean:
-	rm -rf guest/*.txt guest/generated-data guest/testenv guest/log
-	rm -rf host/*.txt host/generatedTestData host/testenv
+	rm -rf *.txt log/ generated-data generatedTestData testenv/
 
 .PHONY: all coverage clean check check-%
