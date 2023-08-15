@@ -6,11 +6,10 @@ import os
 import filecmp
 import sys
 import argparse
+from common import SecvarctlTest
 
-MEM_ERR = 101
 SECTOOLS="../bin/secvarctl-dbg"
 SECVARPATH="/sys/firmware/secvar/vars/"
-MEMCHECK = False
 DATAPATH = "./testdata/host"
 TESTENV = "./testenv/host"
 
@@ -135,26 +134,12 @@ def command(args, out=None):#stores last log of function into log file
 			return result
 	return subprocess.call(args,stdout=out , stderr=out)
 
-def getCmdResult(args, out, self):
-	if MEMCHECK:
-		mem_cmd = ["valgrind", "-q", "--error-exitcode="+str(MEM_ERR), "--leak-check=full"] + args
-		with open(out, "w") as f:
-			f.write("\n\n**********COMMAND RAN: $"+ ' '.join(mem_cmd) +"\n")
-			result = subprocess.call(mem_cmd, stdout=f , stderr=f)
-			f.close()
-			self.assertNotEqual(result, MEM_ERR)
-	#we run twice because valgrind interprets a -1 return code as a 0, which stinks
-	rc = command(args, out)
-	if rc == 0:
-		return True
-	else:
-		return False
 
+# def setupTestEnv():
+# 	out="log.txt"
+# 	command(["mkdir", "-p", f"{TESTENV}"])
+# 	command(["cp", "-a", f"{DATAPATH}/goldenKeys/.", f"{TESTENV}/"], out)
 
-def setupTestEnv():
-	out="log.txt"
-	command(["mkdir", "-p", f"{TESTENV}"])
-	command(["cp", "-a", f"{DATAPATH}/goldenKeys/.", f"{TESTENV}/"], out)
 def setupArrays():
 	for file in os.listdir(f"{DATAPATH}"):
 		if file.endswith(".auth"):
@@ -200,13 +185,21 @@ def compareFiles(a,b):
 			return True
 		return False
 
-class Test(unittest.TestCase):
+class Test(SecvarctlTest):
+	out = "temp"
+	log_dir = "./log/"
+	test_env_dir = f"{TESTENV}"
+	test_data_dir = f"{DATAPATH}"
+
+	def setUp(self):
+		self.setupTestEnvironment()
+	
 	def test_secvarctl_basic(self):
 		out="secvarctlBasiclog.txt"
 		cmd=[SECTOOLS]
 		cmd+=["-m","host"]
 		for i in secvarctlCommands:
-			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
+			self.assertEqual(self.getCmdResult(cmd+i[0],out),i[1])
 	def test_ppcSecVarsRead(self):
 		out="ppcSecVarsReadlog.txt"
 		cmd=[SECTOOLS]
@@ -214,7 +207,7 @@ class Test(unittest.TestCase):
 		#if power sysfs exists read current keys
 		if os.path.isdir(SECVARPATH):
 			for i in ppcSecVarsRead:
-				self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
+				self.assertEqual(self.getCmdResult(cmd+i[0],out),i[1])
 		else:
 			with open(out, "w") as f:
 				f.write("POWER SECVAR LOCATION ( "+ SECVARPATH  + " ) DOES NOT EXIST SO NO TESTS RAN\n")
@@ -227,81 +220,80 @@ class Test(unittest.TestCase):
 		#cmd+=["-m","host","verify"]
 		for fileInfo in goodAuths:
 			file=f"{DATAPATH}/"+fileInfo[0]
-			self.assertEqual( getCmdResult(cmd+["-m","host","verify","-w", "-p", f"{TESTENV}/","-u",fileInfo[1],file],out, self), True)#verify all auths are signed by keys in testenv
+			self.assertEqual(self.getCmdResult(cmd+["-m","host","verify","-w", "-p", f"{TESTENV}/","-u",fileInfo[1],file],out), True)#verify all auths are signed by keys in testenv
 			self.assertEqual(compareFiles(f"{TESTENV}/"+fileInfo[1]+"/update", file), True)#assert files wrote correctly
 		for fileInfo in badAuths:
 			file=f"{DATAPATH}/"+fileInfo[0]
-			self.assertEqual( getCmdResult(cmd+["-m","host","verify","-p", f"{TESTENV}/","-u",fileInfo[1],file],out, self), False)#verify all bad auths are not signed correctly
+			self.assertEqual(self.getCmdResult(cmd+["-m","host","verify","-p", f"{TESTENV}/","-u",fileInfo[1],file],out), False)#verify all bad auths are not signed correctly
 		for i in verifyCommands:
-			self.assertEqual( getCmdResult(cmd+["-m","host","verify"]+i[0],out, self),i[1])
+			self.assertEqual(self.getCmdResult(cmd+["-m","host","verify"]+i[0],out),i[1])
 	def test_validate(self):
 		out="validatelog.txt"
 		cmd=[SECTOOLS]
 		cmd+=["-m","host","validate"]
 		for i in validateCommands:
-			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
+			self.assertEqual(self.getCmdResult(cmd+i[0],out),i[1])
 		for i in goodAuths:		#validate all auths
 			file=f"{DATAPATH}/"+i[0]
 			if i[1] != "dbx":
 				
-				self.assertEqual( getCmdResult(cmd+[file],out, self), True)
+				self.assertEqual(self.getCmdResult(cmd+[file],out), True)
 			else:
-				self.assertEqual( getCmdResult(cmd+[file, "-x"],out, self), True)
+				self.assertEqual(self.getCmdResult(cmd+[file, "-x"],out), True)
 		for i in goodESLs:
 			file=f"{DATAPATH}/"+i[0]
 			if i[1] != "dbx":
 				file=f"{DATAPATH}/"+i[0]
-				self.assertEqual( getCmdResult(cmd+["-e",file],out, self), True)
+				self.assertEqual(self.getCmdResult(cmd+["-e",file],out), True)
 			else:
-				self.assertEqual( getCmdResult(cmd+["-e", file, "-x"],out, self), True)
+				self.assertEqual(self.getCmdResult(cmd+["-e", file, "-x"],out), True)
 		for i in goodCRTs:
 			file=f"{DATAPATH}/"+i[0]
-			self.assertEqual( getCmdResult(cmd+["-v","-c",file],out, self), True)
+			self.assertEqual(self.getCmdResult(cmd+["-v","-c",file],out), True)
 		for i in brokenAuths:
-			self.assertEqual( getCmdResult(cmd+["-v", i],out, self), False)
+			self.assertEqual(self.getCmdResult(cmd+["-v", i],out), False)
 		for i in brokenESLs:
-			self.assertEqual( getCmdResult(cmd+["-v", "-e", i],out, self), False)
+			self.assertEqual(self.getCmdResult(cmd+["-v", "-e", i],out), False)
 		for i in brokenCrts:
-			self.assertEqual( getCmdResult(cmd+["-v", "-c", i],out, self), False)
+			self.assertEqual(self.getCmdResult(cmd+["-v", "-c", i],out), False)
 		for i in brokenPkcs7s:
-			self.assertEqual( getCmdResult(cmd+["-v", "-p", i],out, self), False)
+			self.assertEqual(self.getCmdResult(cmd+["-v", "-p", i],out), False)
 	def test_read(self):
 		out="readlog.txt"
 		cmd=[SECTOOLS]
 		cmd+=["-m","host","read"]
 		#self.assertEqual(not not not command(cmd,out, self), True) #no args
 		for i in readCommands:
-			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
+			self.assertEqual(self.getCmdResult(cmd+i[0],out),i[1])
 		for i in brokenESLs:
 			#read should read sha and rsa esl's w no problem
 			if i.startswith(f"{DATAPATH}/brokenFiles/sha") or i.startswith(f"{DATAPATH}/brokenFiles/rsa"):
-							self.assertEqual( getCmdResult(cmd+["-f", i],out, self), True) 
+							self.assertEqual(self.getCmdResult(cmd+["-f", i],out), True) 
 			else:
-				self.assertEqual( getCmdResult(cmd+["-f", i],out, self), False) #all truncated esls should fail to print human readable info
+				self.assertEqual(self.getCmdResult(cmd+["-f", i],out), False) #all truncated esls should fail to print human readable info
 	def test_write(self):
 		out="writelog.txt"
 		cmd=[SECTOOLS]
 		cmd+=["-m","host","write"]
 		path=f"{TESTENV}/"
 		for i in writeCommands:
-			self.assertEqual( getCmdResult(cmd+i[0],out, self),i[1])
+			self.assertEqual(self.getCmdResult(cmd+i[0],out),i[1])
 		for i in goodAuths:	#try write with good auths, validation included
 			file=f"{DATAPATH}/"+i[0]
 			preUpdate=file#get auth
 			postUpdate=path+i[1]+"/update" #./testenv/<varname>/update
-			self.assertEqual( getCmdResult(cmd+[ "-p", path,i[1],file],out, self), True)#assert command runs
+			self.assertEqual(self.getCmdResult(cmd+[ "-p", path,i[1],file],out), True)#assert command runs
 			self.assertEqual(compareFiles(preUpdate,postUpdate), True)# assert auths esl is equal to data written to update file
 		for i in brokenAuths:
-			self.assertEqual( getCmdResult(cmd+["-p", path, "KEK",i],out, self), False)#broken auths should fail
-			self.assertEqual( getCmdResult(cmd+["-p", path ,"-f", "KEK",i],out, self), True)#if forced, they should work
+			self.assertEqual(self.getCmdResult(cmd+["-p", path, "KEK",i],out), False)#broken auths should fail
+			self.assertEqual(self.getCmdResult(cmd+["-p", path ,"-f", "KEK",i],out), True)#if forced, they should work
 			self.assertEqual(compareFiles(i,path+"KEK/update"), True)
 	def test_badenv(self):
 		out="badEnvLog.txt"
 		for i in badEnvCommands:
-			setupTestEnv()
+			self.setupTestEnvironment()
 			command(i[0],i[1])
-			self.assertEqual( getCmdResult([SECTOOLS]+i[2],out, self),i[3])
-			setupTestEnv()
+			self.assertEqual(self.getCmdResult([SECTOOLS]+i[2],out),i[3])
 
 if __name__ == '__main__':
 
@@ -320,5 +312,4 @@ if __name__ == '__main__':
 
         del sys.argv[1:]
         setupArrays()
-        setupTestEnv()
         unittest.main()
