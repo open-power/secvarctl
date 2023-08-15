@@ -4,6 +4,9 @@ import subprocess #for commmands
 import os #for getting size of file
 import sys
 import time
+
+DATAPATH = f"./testdata/host"
+
 #[nameoffile,var,signing var]
 goodUpdates=[
 		["PK_by_PK","PK","PK"],
@@ -40,22 +43,22 @@ def command(args, err=None, out=None):#stores last log of function into log file
 		return subprocess.call(args, stderr=err, stdout=out)
 def createEnvironment():
 	with open("log.txt", "w") as f:
-		command(["mkdir", "./testdata"],f,f)
-		command(["mkdir", "./testenv"],f,f)
-		command(["mkdir", "./testdata/goldenKeys"],f,f)
-		command(["mkdir", "./testdata/brokenFiles"],f,f)
+		command(["mkdir", f"{DATAPATH}"],f,f)
+		command(["mkdir", "./testenv/host/"],f,f)
+		command(["mkdir", f"{DATAPATH}/goldenKeys"],f,f)
+		command(["mkdir", f"{DATAPATH}/brokenFiles"],f,f)
 		for i in variables:
-			command(["mkdir" ,"./testdata/goldenKeys/"+i],f,f)
+			command(["mkdir" ,f"{DATAPATH}/goldenKeys/"+i],f,f)
 
-def pemToDer(path="./testdata",inp="default.crt",out="default.der"):
+def pemToDer(path=f"{DATAPATH}",inp="default.crt",out="default.der"):
 	command([ "openssl", "x509", "-outform", "der", "-in", path+inp, "-out" ,path+out])
 
-def generateX509(path="./testdata/",priv="default.key",pub="default.crt",crtType="-x509",rsa="rsa:2048", sha="-sha256", nodes="-nodes",subj="/C=NC/O=testing corp" ):
+def generateX509(path=f"{DATAPATH}/",priv="default.key",pub="default.crt",crtType="-x509",rsa="rsa:2048", sha="-sha256", nodes="-nodes",subj="/C=NC/O=testing corp" ):
 	command(["openssl", "req", "-new" ,crtType ,"-newkey", rsa, "-keyout",path+priv, "-out", path+pub,nodes, sha, "-subj",subj])
 	pemToDer(path,pub,pub[:-4]+".der")
 	return
 
-def generateESL(path="./testdata/",inp="default.crt",out="default.esl"):
+def generateESL(path=f"{DATAPATH}/",inp="default.crt",out="default.esl"):
 	command([efitools+"cert-to-efi-sig-list", path+inp, path+out])
 
 def createSizeFile(path):
@@ -63,23 +66,23 @@ def createSizeFile(path):
 	with open(path+"size", "w") as f:
 		f.write(str(size));
 
-def generateHashESL(path="./testdata/", inp="dbx.crt", out="dbx.esl"):
+def generateHashESL(path=f"{DATAPATH}/", inp="dbx.crt", out="dbx.esl"):
 	# command(["openssl", "dgst", "-sha256", "-binary", "-out", path+out+"hash", path+inp]) #we now know hash is done internally
 	command([efitools+"hash-to-efi-sig-list-modified", path+inp, path+out])
 
 def createDbx():
-	path="./testdata/goldenKeys/dbx/"
+	path=f"{DATAPATH}/goldenKeys/dbx/"
 	generateHashESL(path=path, inp="dbx.crt", out="data")
 	createSizeFile(path)
 def createGoldenFiles():
 	for i in variables:#generate valid pub and private keys
-		generateX509("./testdata/goldenKeys/"+i+"/",i+".key",i+".crt")
-		generateESL("./testdata/goldenKeys/"+i+"/", i+".crt", "data")
-		command(["touch", "./testdata/goldenKeys/"+i+"/update"])
-		createSizeFile("./testdata/goldenKeys/"+i+"/")
+		generateX509(f"{DATAPATH}/goldenKeys/"+i+"/",i+".key",i+".crt")
+		generateESL(f"{DATAPATH}/goldenKeys/"+i+"/", i+".crt", "data")
+		command(["touch", f"{DATAPATH}/goldenKeys/"+i+"/update"])
+		createSizeFile(f"{DATAPATH}/goldenKeys/"+i+"/")
 	createDbx()
 def createTS():
-	path="./testdata/goldenKeys/"
+	path=f"{DATAPATH}/goldenKeys/"
 	command(["mkdir", path+"TS"])
 	command(["touch", path+"TS/data"])
 	command(["touch", path+"TS/update"])
@@ -98,9 +101,9 @@ def createTS():
 	file_object.close()
 	createSizeFile(path+"TS/")
 
-def generateAuth(var,signer,out="default.auth",path="./testdata/", inp="default.esl"):
+def generateAuth(var,signer,out="default.auth",path=f"{DATAPATH}/", inp="default.esl"):
 	time.sleep(1)
-	command([efitools+"sign-efi-sig-list", "-k", "./testdata/goldenKeys/"+signer+"/"+signer+".key","-c", "./testdata/goldenKeys/"+signer+"/"+signer+".crt",var, path+inp,path+out])
+	command([efitools+"sign-efi-sig-list", "-k", f"{DATAPATH}/goldenKeys/"+signer+"/"+signer+".key","-c", f"{DATAPATH}/goldenKeys/"+signer+"/"+signer+".crt",var, path+inp,path+out])
 def generatePKCS7(inp, out, signCrt, signKey, hashAlg):
 	command(["openssl", "cms", "-sign", "-binary", "-in", inp ,"-signer", signCrt, "-inkey", signKey, "-out", out,"-noattr", "-outform", "DER", "-md", hashAlg])
 
@@ -119,7 +122,7 @@ def createUpdates():
 		generateHashESL(inp=i[0]+".crt", out=i[0]+".esl")
 		generateAuth(i[1],i[2],i[0]+".auth", inp=i[0]+".esl")
 def createTruncatedFiles():
-	path="./testdata/"
+	path=f"{DATAPATH}/"
 	outPath=path+"brokenFiles/"
 	for i in goodUpdates:
 		count=0
@@ -161,22 +164,22 @@ def createTruncatedFiles():
 
 
 def createBadCerts():
-	path="./testdata/brokenFiles/"
+	path=f"{DATAPATH}/brokenFiles/"
 	for i in badCerts:
 		#output name, crtType, rsa,sha
 		generateX509(path=path,pub=i[0]+".crt",priv=i[0]+".key", crtType=i[1], rsa=i[2],sha=i[3])
 		generateESL(path=path,inp=i[0]+".crt", out=i[0]+".esl")
 		generateAuth(path=path,var="db",signer="PK",out=i[0]+".auth",inp=i[0]+".esl")
 def createEmptyAuths():
-	path = "./testdata/"
+	path = f"{DATAPATH}/"
 	command(["touch", path+"empty.esl"])
 	for i in goodUpdates:
 		generateAuth(i[1],i[2],"empty_"+i[0]+".auth",inp="empty.esl")
 def createBrokenPKCS7():
-	path = "./testdata/brokenFiles/"
-	inp = "./testdata/db_by_PK.crt"
-	signCrt = "./testdata/goldenKeys/PK/PK.crt"
-	signKey = "./testdata/goldenKeys/PK/PK.key"
+	path = f"{DATAPATH}/brokenFiles/"
+	inp = f"{DATAPATH}/db_by_PK.crt"
+	signCrt = f"{DATAPATH}/goldenKeys/PK/PK.crt"
+	signKey = f"{DATAPATH}/goldenKeys/PK/PK.key"
 	hashFunct = ["SHA512", "SHA1", "SHA384"]
 	for i in hashFunct:
 		out = path+i+".pkcs7"
