@@ -11,11 +11,9 @@ import filecmp
 import argparse
 from common import SecvarctlTest
 
-MEM_ERR = 101
 SECTOOLS="../../bin/secvarctl-dbg"
 GEN = [SECTOOLS, "-m", "host", "generate", "-v"]
 OUTDIR = "./generatedTestData/"
-MEMCHECK = False
 OPENSSL = True
 GNUTLS = False
 DATAPATH = "./testdata/host"
@@ -447,14 +445,11 @@ class Test(SecvarctlTest):
 
 if __name__ == '__main__':
         argParser = argparse.ArgumentParser()
-        argParser.add_argument("-m", "--memcheck", type=int, help="enable/disable memory leak check")
         argParser.add_argument("-o", "--openssl", type=int, help="enable/disable OPENSSL")
         argParser.add_argument("-g", "--gnutls", type=int, help="enable/disable GNUTLS")
         argParser.add_argument("-s", "--secvarctl", help="set secvarctl tool")
         args = argParser.parse_args()
 
-        if args.memcheck != None:
-            MEMCHECK = args.memcheck
         if args.openssl != None:
             OPENSSL = args.openssl
         if args.gnutls != None:

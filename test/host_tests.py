@@ -298,13 +298,10 @@ class Test(SecvarctlTest):
 if __name__ == '__main__':
 
         argParser = argparse.ArgumentParser()
-        argParser.add_argument("-m", "--memcheck", type=int, help="enable/disable memory leak check")
         argParser.add_argument("-s", "--secvarctl", help="set secvarctl tool")
         argParser.add_argument("-p", "--secvarpath", help="set secvar path")
         args = argParser.parse_args()
 
-        if args.memcheck != None:
-            MEMCHECK = args.memcheck
         if args.secvarctl != None:
             SECTOOLS = args.secvarctl
         if args.secvarpath != None:
