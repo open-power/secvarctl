@@ -1,16 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 IBM Corp.
 import unittest
-import subprocess
 import os
 import filecmp
 import sys
 import argparse
+from common import SecvarctlTest
 
-MEM_ERR = 101
 SECTOOLS = ["../bin/secvarctl-dbg", "-m", "guest"]
 SECVARPATH = "/sys/firmware/secvar/vars/"
-MEMCHECK = False
 DATAPATH = "./testdata/guest"
 
 auth_files = []
@@ -64,7 +62,7 @@ reset_variable_by_KEK = [
 
 variables = ["PK", "KEK", "db", "dbx", "grubdb", "grubdbx", "moduledb", "trustedcadb", "sbat"]
 test_dir = [f"{DATAPATH}/eslfiles/", f"{DATAPATH}/authfiles/", f"{DATAPATH}/x509certs/",
-            f"{DATAPATH}/goldenkeys/", f"{DATAPATH}/pkcs7files/"]
+            f"{DATAPATH}/goldenKeys/", f"{DATAPATH}/pkcs7files/"]
 
 test_env_path = "./testenv/guest/"
 log_dir = "./log/"
@@ -89,41 +87,6 @@ force = "-f"
 non_force = ""
 auth_reset = "reset"
 
-def command (args, out=None):#stores last log of function into log file
-	#print (args)
-	if out:
-		#if memory tests being done, use valgrind as well
-		with open (out, "w") as f:
-			f.write ("\n\n**********COMMAND RAN: $" + ' '.join (args) + "\n")
-			result = subprocess.call (args, stdout=f , stderr=f)
-			f.close ()
-			return result
-	return subprocess.call (args,stdout=out , stderr=out)
-
-def get_cmd_result (args, out, self):
-	#print (args)
-	if MEMCHECK:
-		mem_cmd = ["valgrind", "-q", "--error-exitcode=" + str (MEM_ERR), "--leak-check=full"] + args
-		#print (mem_cmd)
-		with open (out, "w") as f:
-			f.write ("\n\n**********COMMAND RAN: $" + ' '.join (mem_cmd) + "\n")
-			result = subprocess.call (mem_cmd, stdout=f , stderr=f)
-			f.close ()
-			self.assertNotEqual (result, MEM_ERR)
-	#we run twice because valgrind interprets a -1 return code as a 0, which stinks
-	rc = command (args, out)
-	if rc == 0:
-		return True
-	else:
-		return False
-
-def setup_test_environments ():
-	command (["mkdir", "-p", log_dir])
-	command (["mkdir", "-p", gen_dir])
-	command (["mkdir", "-p", "testenv/guest/"])
-	out= log_dir + "log.txt"
-	# the "/." is significant, otherwise it just copies the directory instead of the contents
-	command (["cp", "-a", test_dir[3] + "/.", "testenv/guest/"], out)
 
 def collect_test_data ():
 	for file in os.listdir (test_dir[0]):
@@ -193,13 +156,22 @@ def generate_auth (variable_name, signer_key_file, signer_cert_file, cert_file, 
 		gen_cmd = gen_cmd + [force]
 	return SECTOOLS + ["generate"] + gen_cmd
 
-class Test (unittest.TestCase):
+class Test (SecvarctlTest):
+	out = "temp"
+	log_dir = "./log/"
+	test_env_dir = f"{test_env_path}"
+	test_data_dir = f"{DATAPATH}"
+	
+	def setUp(self):
+		self.setupTestEnvironment()
+		self.command(["mkdir", "-p", gen_dir])
+	
 	def test_ppcsecvar_path_read (self):
 		out = log_dir + "ppcsecvarspathreadlog.txt"
 		#if power sysfs exists read current keys
 		if os.path.isdir (SECVARPATH):
 			cmd = get_read_command ("", "")
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 		else:
 			with open (out, "w") as f:
 				f.write ("POWER SECVAR LOCATION ( "+ SECVARPATH  + " ) DOES NOT EXIST SO NO TESTS RAN\n")
@@ -219,7 +191,7 @@ class Test (unittest.TestCase):
 		                cert_file = test_dir[2] + var_name + ".crt"
 
 		        cmd = generate_esl (var_name, format_type, cert_file, esl_file)
-		        self.assertEqual (get_cmd_result (cmd, out, self), True)
+		        self.assertEqual (self.getCmdResult(cmd, out), True)
 
 	def test_generate_auth_files (self):
 		out = log_dir + "generatelog.txt"
@@ -236,7 +208,7 @@ class Test (unittest.TestCase):
 		                cert_file = test_dir[2] + var_by_PK[0] + ".crt"
 
 		        cmd = generate_auth (var_by_PK[1], PK_key_file, PK_cert_file, cert_file, auth_file, format_type, non_force)
-		        self.assertEqual (get_cmd_result (cmd, out, self), True)
+		        self.assertEqual (self.getCmdResult(cmd, out), True)
 
 		for var_by_KEK in variable_by_KEK:
 		        auth_file = gen_dir + var_by_KEK[0] + ".auth"
@@ -251,7 +223,7 @@ class Test (unittest.TestCase):
 		                cert_file = test_dir[2] + var_by_KEK[0] + ".crt"
 
 		        cmd = generate_auth (var_by_KEK[1], KEK_key_file, KEK_cert_file, cert_file, auth_file, format_type, non_force)
-		        self.assertEqual (get_cmd_result (cmd, out, self), True)
+		        self.assertEqual (self.getCmdResult(cmd, out), True)
 
 	def test_generate_reset_auth_files (self):
 		out = log_dir + "generatelog.txt"
@@ -262,66 +234,66 @@ class Test (unittest.TestCase):
 		        PK_key_file = test_dir[3] + var_by_PK[2] + "/" + var_by_PK[2] + ".key"
 		        PK_cert_file = test_dir[3] + var_by_PK[2] + "/" + var_by_PK[2] + ".crt"
 		        cmd = generate_auth (var_by_PK[1], PK_key_file, PK_cert_file, cert_file, auth_file, format_type, non_force)
-		        self.assertEqual (get_cmd_result (cmd, out, self), True)
+		        self.assertEqual (self.getCmdResult(cmd, out), True)
 
 		for var_by_KEK in variable_by_KEK:
 		        auth_file = gen_dir + auth_reset + "_" + var_by_KEK[0] + ".auth"
 		        KEK_key_file = test_dir[3] + var_by_KEK[2] + "/" + var_by_KEK[2] + ".key"
 		        KEK_cert_file = test_dir[3] + var_by_KEK[2] + "/" + var_by_KEK[2] + ".crt"
 		        cmd = generate_auth (var_by_KEK[1], KEK_key_file, KEK_cert_file, cert_file, auth_file, format_type, non_force)
-		        self.assertEqual (get_cmd_result (cmd, out, self), True)
+		        self.assertEqual (self.getCmdResult(cmd, out), True)
 
 	def test_read (self):
 		out = log_dir + "readlog.txt"
 		for cert_file in cert_files:
 			cmd = get_read_command (cert_type, cert_file)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 		for esl_file in esl_files:
 			cmd = get_read_command (esl_type, esl_file)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 		for auth_file in auth_files:
 			cmd = get_read_command (auth_type, auth_file)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 
 		cmd = get_read_command (path_type, test_env_path)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 
 	def test_validate (self):
 		out = log_dir + "validatelog.txt"
 		for cert_file in cert_files:
 			cmd = get_validate_command (cert_type, cert_file)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 		for pkcs7_file in pkcs7_files:
 			cmd = get_validate_command (pkcs7_type, pkcs7_file)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 		for esl_file in esl_files:
 			cmd = get_validate_command (esl_type, esl_file)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 		for auth_file in auth_files:
 			cmd = get_validate_command (auth_type, auth_file)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 
 	def test_write (self):
 		out = log_dir + "writelog.txt"
 		for var_by_PK in variable_by_PK:
 			auth_file = test_dir[1] + var_by_PK[0] + ".auth"
 			cmd = get_write_command (var_by_PK[1], auth_file, test_env_path, non_force)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 		for var_by_KEK in variable_by_KEK:
 			auth_file = test_dir[1] + var_by_KEK[0] + ".auth"
 			cmd = get_write_command (var_by_KEK[1], auth_file, test_env_path, non_force)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 
 	def test_write_with_force (self):
 		out = log_dir + "writelog.txt"
 		for var_by_PK in variable_by_PK:
 			auth_file = test_dir[1] + var_by_PK[0] + ".auth"
 			cmd = get_write_command (var_by_PK[1], auth_file, test_env_path, force)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 		for var_by_KEK in variable_by_KEK:
 			auth_file = test_dir[1] + var_by_KEK[0] + ".auth"
 			cmd = get_write_command (var_by_KEK[1], auth_file, test_env_path, force)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 
 	def test_verify (self):
 		out = log_dir + "verifylog.txt"
@@ -334,15 +306,15 @@ class Test (unittest.TestCase):
 			update_variables.append (var_by_PK[1])
 			update_variables.append (auth_file)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			current_variables.append (var_by_PK[2])
 			current_variables.append (current_var)
 			cmd = get_verify_command (update_variables, current_variables, empty_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables, empty_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), False)
+			self.assertEqual (self.getCmdResult(cmd, out), False)
 			update_variables.clear ()
 			current_variables.clear ()
 
@@ -354,15 +326,15 @@ class Test (unittest.TestCase):
 			update_variables.append (var_by_KEK[1])
 			update_variables.append (auth_file)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			current_variables.append (var_by_KEK[2])
 			current_variables.append (current_var)
 			cmd = get_verify_command (update_variables, current_variables, empty_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables, empty_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), False)
+			self.assertEqual (self.getCmdResult(cmd, out), False)
 			update_variables.clear ()
 			current_variables.clear ()
 
@@ -374,23 +346,23 @@ class Test (unittest.TestCase):
 			update_variables.append (var_by_PK[1])
 			update_variables.append (auth_file)
 			cmd = get_verify_command (update_variables, current_variables_empty, test_env_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables_empty, test_env_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			current_variables.append (var_by_PK[1])
 			current_variables.append (current_var)
 			cmd = get_verify_command (update_variables, current_variables, empty_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables, empty_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), False)
+			self.assertEqual (self.getCmdResult(cmd, out), False)
 		cmd = get_verify_command (update_variables, current_variables_empty, test_env_path, non_write)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 		cmd = get_verify_command (update_variables, current_variables_empty, test_env_path, write)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 		cmd = get_verify_command (update_variables, current_variables, empty_path, non_write)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 		cmd = get_verify_command (update_variables, current_variables, empty_path, write)
-		self.assertEqual (get_cmd_result (cmd, out, self), False)
+		self.assertEqual (self.getCmdResult(cmd, out), False)
 
 		update_variables.clear ()
 		current_variables.clear ()
@@ -400,26 +372,26 @@ class Test (unittest.TestCase):
 			update_variables.append (var_by_KEK[1])
 			update_variables.append (auth_file)
 			cmd = get_verify_command (update_variables, current_variables_empty, test_env_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables_empty, test_env_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			if current_variables == []:
 			        current_variables.append (var_by_KEK[2])
 			        current_variables.append (test_dir[3] + var_by_KEK[2] + "/" + "data")
 			current_variables.append (var_by_KEK[1])
 			current_variables.append (current_var)
 			cmd = get_verify_command (update_variables, current_variables, empty_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables, empty_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), False)
+			self.assertEqual (self.getCmdResult(cmd, out), False)
 		cmd = get_verify_command (update_variables, current_variables_empty, test_env_path, non_write)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 		cmd = get_verify_command (update_variables, current_variables_empty, test_env_path, write)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 		cmd = get_verify_command (update_variables, current_variables, empty_path, non_write)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 		cmd = get_verify_command (update_variables, current_variables, empty_path, write)
-		self.assertEqual (get_cmd_result (cmd, out, self), False)
+		self.assertEqual (self.getCmdResult(cmd, out), False)
 
 	def test_verify_reset_auth (self):
 		out = log_dir + "verifylog.txt"
@@ -430,9 +402,9 @@ class Test (unittest.TestCase):
 			update_variables.append (var_by_PK[1])
 			update_variables.append (auth_file)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			update_variables.clear ()
 
 		for var_by_KEK in reset_variable_by_KEK:
@@ -440,9 +412,9 @@ class Test (unittest.TestCase):
 			update_variables.append (var_by_KEK[1])
 			update_variables.append (auth_file)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			update_variables.clear ()
 
 		for var_by_PK in reset_variable_by_PK:
@@ -450,26 +422,26 @@ class Test (unittest.TestCase):
 			update_variables.append (var_by_PK[1])
 			update_variables.append (auth_file)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 		cmd = get_verify_command (update_variables, current_variables, test_env_path, non_write)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 		cmd = get_verify_command (update_variables, current_variables, test_env_path, write)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 
 		for var_by_KEK in reset_variable_by_KEK:
 			auth_file = test_dir[1] + var_by_KEK[0] + ".auth"
 			update_variables.append (var_by_KEK[1])
 			update_variables.append (auth_file)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, non_write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 			cmd = get_verify_command (update_variables, current_variables, test_env_path, write)
-			self.assertEqual (get_cmd_result (cmd, out, self), True)
+			self.assertEqual (self.getCmdResult(cmd, out), True)
 		cmd = get_verify_command (update_variables, current_variables, test_env_path, non_write)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 		cmd = get_verify_command (update_variables, current_variables, test_env_path, write)
-		self.assertEqual (get_cmd_result (cmd, out, self), True)
+		self.assertEqual (self.getCmdResult(cmd, out), True)
 
 if __name__ == '__main__':
 
@@ -488,5 +460,4 @@ if __name__ == '__main__':
 
         del sys.argv[1:]
         collect_test_data ()
-        setup_test_environments ()
         unittest.main()
