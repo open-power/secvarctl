@@ -18,10 +18,6 @@ class SecvarctlTest(unittest.TestCase):
                 return not result
         return not subprocess.call(args, stdout=out, stderr=out)
 
-    # TODO: slated for removal or merge with command
-    def getCmdResult(self, args, out):
-        return bool(self.command(args, out))
-
     def assertCmd(self, args, out, expected: bool):
         tmp_assert, msg = {
             True: (self.assertTrue, f"Expected success, but failed: '{' '.join(args)}'"),

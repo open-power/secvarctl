@@ -98,7 +98,7 @@ class Test(SecvarctlTest):
         out = "secvarctlGenBasiclog.txt"
         cmd = GEN
         for i in secvarctlGenCommands:
-            self.assertEqual(self.getCmdResult(cmd+i[0], out), i[1])
+            self.assertCmd(cmd+i[0], out, i[1])
 
     def test_dbxEsl(self):
         out = "genDbxEslLog.txt"
@@ -143,7 +143,7 @@ class Test(SecvarctlTest):
             self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", "-e", eslMade], out)  # assert the ESL is correctly formated
             self.assertTrue(filecmp.cmp(eslMade, eslDesired))  # make sure the generated file is byte for byte the same as the one we know is correct
         for i in badESLcommands:
-            self.assertEqual(self.getCmdResult(cmd + i[0], out), i[1])
+            self.assertCmd(cmd + i[0], out, i[1])
 
     def test_genSignedFilesGen(self):
         out = "genSignedFilesLog.txt"
@@ -239,7 +239,7 @@ class Test(SecvarctlTest):
 
         # now test incorrect generate commands
         for i in badSignedCommands:
-            self.assertEqual(self.getCmdResult(cmd + i[0], out), i[1])
+            self.assertCmd(cmd + i[0], out, i[1])
 
     def test_genResetFiles(self):
         # to test generating reset files we will use the 'generate a:e' command, this command was already tested in runTests.py
@@ -418,7 +418,7 @@ class Test(SecvarctlTest):
             self.assertTrue(filecmp.cmp(preUpdate, postUpdate))
         self.command(["rm", postUpdate])
         for i in toeslCommands:
-            self.assertEqual(self.getCmdResult(cmd+i[0], out), i[1])
+            self.assertCmd(cmd+i[0], out, i[1])
         inpDir = f"{DATAPATH}/brokenFiles/"
         for file in os.listdir(inpDir):
             if not file.endswith(".auth"):
