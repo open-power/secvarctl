@@ -10,7 +10,7 @@ import filecmp
 import argparse
 from common import SecvarctlTest
 
-SECTOOLS = "../../bin/secvarctl-dbg"
+SECTOOLS = "../bin/secvarctl-dbg"
 GEN = [SECTOOLS, "-m", "host", "generate", "-v"]
 OUTDIR = "./generatedTestData/"
 OPENSSL = True
