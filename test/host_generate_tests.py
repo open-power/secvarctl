@@ -83,17 +83,6 @@ toeslCommands = [
 ]
 
 
-# def generateESL(path="./generatedTestData/",inp="default.crt",out="default.esl"):
-#     return command(GEN+["c:e", "-i", path+inp, "-o", path+out])
-# def createSizeFile(path):
-#     size=os.path.getsize(path+"data")
-#     with open(path+"size", "w") as f:
-#         f.write(str(size));
-# def generateHashESL(path="./generatedTestData/", inp="dbx.crt", out="dbx.esl", hashF = "SHA256"):
-#     command(GEN + ["f:h", "-h", hashF, "-o", path+"dbx.hash", "-i", path+inp])
-#     command(GEN + ["h:e", "-h", hashF, "-i", path+"dbx.hash", "-o", path+out])
-
-
 class Test(SecvarctlTest):
     out = "temp"
     log_dir = "./log/"
