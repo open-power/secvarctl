@@ -195,7 +195,7 @@ class Test(SecvarctlTest):
                 format_type = file_to_esl
             else:
                 format_type = cert_to_esl
-                key_file = test_dir[2] + var_name + ".key"
+                # key_file = test_dir[2] + var_name + ".key" # not used, so commenting out
                 cert_file = test_dir[2] + var_name + ".crt"
 
             cmd = generate_esl(var_name, format_type, cert_file, esl_file)
