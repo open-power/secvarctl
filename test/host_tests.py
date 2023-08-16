@@ -178,7 +178,7 @@ class Test(SecvarctlTest):
         cmd = [SECTOOLS]
         cmd += ["-m", "host"]
         for i in secvarctlCommands:
-            self.assertEqual(self.getCmdResult(cmd+i[0], out), i[1])
+            self.assertCmd(cmd+i[0], out, i[1])
 
     def test_ppcSecVarsRead(self):
         out = "ppcSecVarsReadlog.txt"
@@ -187,7 +187,7 @@ class Test(SecvarctlTest):
         # if power sysfs exists read current keys
         if os.path.isdir(SECVARPATH):
             for i in ppcSecVarsRead:
-                self.assertEqual(self.getCmdResult(cmd+i[0], out), i[1])
+                self.assertCmd(cmd+i[0], out, i[1])
         else:
             with open(out, "w") as f:
                 f.write(f"POWER SECVAR LOCATION ( {SECVARPATH} ) DOES NOT EXIST SO NO TESTS RAN\n")
@@ -206,14 +206,14 @@ class Test(SecvarctlTest):
             file = f"{DATAPATH}/"+fileInfo[0]
             self.assertCmdFalse(cmd+["-m", "host", "verify", "-p", f"{TESTENV}/", "-u", fileInfo[1], file], out)  # verify all bad auths are not signed correctly
         for i in verifyCommands:
-            self.assertEqual(self.getCmdResult(cmd+["-m", "host", "verify"]+i[0], out), i[1])
+            self.assertCmd(cmd+["-m", "host", "verify"]+i[0], out, i[1])
 
     def test_validate(self):
         out = "validatelog.txt"
         cmd = [SECTOOLS]
         cmd += ["-m", "host", "validate"]
         for i in validateCommands:
-            self.assertEqual(self.getCmdResult(cmd+i[0], out), i[1])
+            self.assertCmd(cmd+i[0], out, i[1])
         for i in goodAuths:  # validate all auths
             file = f"{DATAPATH}/"+i[0]
             if i[1] != "dbx":
@@ -245,7 +245,7 @@ class Test(SecvarctlTest):
         cmd += ["-m", "host", "read"]
         # self.assertEqual(not not not command(cmd, out, self), True) #no args
         for i in readCommands:
-            self.assertEqual(self.getCmdResult(cmd+i[0], out), i[1])
+            self.assertCmd(cmd+i[0], out, i[1])
         for i in brokenESLs:
             # read should read sha and rsa esl's w no problem
             if i.startswith(f"{DATAPATH}/brokenFiles/sha") or i.startswith(f"{DATAPATH}/brokenFiles/rsa"):
@@ -259,7 +259,7 @@ class Test(SecvarctlTest):
         cmd += ["-m", "host", "write"]
         path = f"{TESTENV}/"
         for i in writeCommands:
-            self.assertEqual(self.getCmdResult(cmd+i[0], out), i[1])
+            self.assertCmd(cmd+i[0], out, i[1])
         for i in goodAuths:  # try write with good auths, validation included
             file = f"{DATAPATH}/"+i[0]
             preUpdate = file  # get auth
@@ -276,7 +276,7 @@ class Test(SecvarctlTest):
         for i in badEnvCommands:
             self.setupTestEnvironment()
             self.command(i[0], i[1])
-            self.assertEqual(self.getCmdResult([SECTOOLS]+i[2], out), i[3])
+            self.assertCmd([SECTOOLS]+i[2], out, i[3])
 
 
 if __name__ == '__main__':
