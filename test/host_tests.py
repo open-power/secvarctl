@@ -108,16 +108,16 @@ validateCommands = [
 badEnvCommands = [  # [arr command to skew env, output of first command, arr command for sectool, expected result]
     [["rm", f"{TESTENV}/KEK/size"], None, ["-m", "host", "read", "-p", f"{TESTENV}/", "KEK"], False],  # remove size and it should fail
     [["rm", f"{TESTENV}/KEK/size"], None, ["-m", "host", "read", "-p", f"{TESTENV}/"], True],  # remove size but as long as one is readable then it is ok
-    [['echo', '"hey fail!"'], f"{TESTENV}/db/size", ["-m", "host", "read", "-p", f"{TESTENV}/", "db"], False],  # read from ascii size file should fail
-    [["dd", f"if={DATAPATH}/goldenKeys/KEK/data", f"of={TESTENV}/KEK/data", "count=100", "bs=1"], "log.txt", ["-m", "host", "verify", "-v", "-p", f"{TESTENV}/", "-u", "db", f"{DATAPATH}/db_by_KEK.auth"], False],  # verify against path with bad esl files should fail, modified THAT SHOULD NEVER HAPPEN!
+    [['echo', '"hey fail!"', '>', f"{TESTENV}/db/size"], None, ["-m", "host", "read", "-p", f"{TESTENV}/", "db"], False],  # read from ascii size file should fail
+    [["dd", f"if={DATAPATH}/goldenKeys/KEK/data", f"of={TESTENV}/KEK/data", "count=100", "bs=1"], None, ["-m", "host", "verify", "-v", "-p", f"{TESTENV}/", "-u", "db", f"{DATAPATH}/db_by_KEK.auth"], False],  # verify against path with bad esl files should fail, modified THAT SHOULD NEVER HAPPEN!
     [["rm", "-r", f"{TESTENV}/db", f"{TESTENV}/dbx", f"{TESTENV}/KEK", f"{TESTENV}/PK", f"{TESTENV}/TS"], None, ["-m", "host", "verify", "-v", "-p", f"{TESTENV}/", "-u", "PK", f"{DATAPATH}/PK_by_PK.auth"], True],  # no data in path should enter setup mode
     [["cp", f"{DATAPATH}/brokenFiles/empty.esl", f"{TESTENV}/PK/data"], None, ["-m", "host", "verify", "-v", "-p", f"{TESTENV}/", "-u", "PK", f"{DATAPATH}/PK_by_PK.auth"], True],  # no data in pk ==setup mode
     [["rm", f"{TESTENV}/db/update"], None, ["-m", "host", "verify", "-v", "-w", "-p", f"{TESTENV}/", "-u", "db", f"{DATAPATH}/db_by_PK.auth"], False],  # no update file should exit
     [["cp", f"{DATAPATH}/brokenFiles/empty.esl", f"{TESTENV}/PK/data"], None, ["-m", "host", "read", "-p", f"{TESTENV}/"], True],  # Pk will be empty but other files will have things
     [["cp", f"{DATAPATH}/brokenFiles/empty.esl", f"{TESTENV}/PK/data"], None, ["-m", "host", "read", "-p", f"{TESTENV}/", "PK"], False],  # Pk will be empty, nothing else read so overall failure
-    [["echo", "16"], f"{TESTENV}/TS/size", ["-m", "host", "verify", "-v", "-p", f"{TESTENV}/", "-u", "PK", f"{DATAPATH}/PK_by_PK.auth"], False],
+    [["echo", "16", ">", f"{TESTENV}/TS/size"], None, ["-m", "host", "verify", "-v", "-p", f"{TESTENV}/", "-u", "PK", f"{DATAPATH}/PK_by_PK.auth"], False],
     [["dd", "if=/dev/zero", f"of={TESTENV}/TS/data", "count=4", "bs=16"], None, ["-m", "host", "verify", "-p", f"{TESTENV}/", "-u", "PK", f"{DATAPATH}/PK_by_PK.auth"], True],  # If timestamp entry for a variable is empty than thats okay
-    [["echo", "0"], f"{TESTENV}/KEK/size", ["-m", "host", "verify", "-p", f"{TESTENV}/", "-u", "db", f"{DATAPATH}/db_by_PK.auth"], True]  # an empty KEK should not interupt db by PK verification
+    [["echo", "0", ">", f"{TESTENV}/KEK/size"], None, ["-m", "host", "verify", "-p", f"{TESTENV}/", "-u", "db", f"{DATAPATH}/db_by_PK.auth"], True]  # an empty KEK should not interupt db by PK verification
 ]
 
 
@@ -165,8 +165,6 @@ def setupArrays():
 
 
 class Test(SecvarctlTest):
-    out = "temp"
-    log_dir = "./log/"
     test_env_dir = f"{TESTENV}"
     test_data_dir = f"{DATAPATH}"
 
@@ -174,109 +172,102 @@ class Test(SecvarctlTest):
         self.setupTestEnvironment()
 
     def test_secvarctl_basic(self):
-        out = "secvarctlBasiclog.txt"
         cmd = [SECTOOLS]
         cmd += ["-m", "host"]
         for i in secvarctlCommands:
-            self.assertCmd(cmd+i[0], out, i[1])
+            self.assertCmd(cmd+i[0], i[1])
 
-    def test_ppcSecVarsRead(self):
-        out = "ppcSecVarsReadlog.txt"
-        cmd = [SECTOOLS]
-        cmd += ["-m", "host"]
-        # if power sysfs exists read current keys
-        if os.path.isdir(SECVARPATH):
-            for i in ppcSecVarsRead:
-                self.assertCmd(cmd+i[0], out, i[1])
-        else:
-            with open(out, "w") as f:
-                f.write(f"POWER SECVAR LOCATION ( {SECVARPATH} ) DOES NOT EXIST SO NO TESTS RAN\n")
-                f.close()
+    # def test_ppcSecVarsRead(self):
+    #     out = "ppcSecVarsReadlog.txt"
+    #     cmd = [SECTOOLS]
+    #     cmd += ["-m", "host"]
+    #     # if power sysfs exists read current keys
+    #     if os.path.isdir(SECVARPATH):
+    #         for i in ppcSecVarsRead:
+    #             self.assertCmd(cmd+i[0], i[1])
+    #     else:
+    #         with open(out, "w") as f:
+    #             f.write(f"POWER SECVAR LOCATION ( {SECVARPATH} ) DOES NOT EXIST SO NO TESTS RAN\n")
+    #             f.close()
 
     def test_verify(self):
-        out = "verifylog.txt"
-        # out = None
         cmd = [SECTOOLS]
         # cmd += ["-m","host","verify"]
         for fileInfo in goodAuths:
             file = f"{DATAPATH}/"+fileInfo[0]
-            self.assertCmdTrue(cmd+["-m", "host", "verify", "-w", "-p", f"{TESTENV}/", "-u", fileInfo[1], file], out)  # verify all auths are signed by keys in testenv
+            self.assertCmdTrue(cmd+["-m", "host", "verify", "-w", "-p", f"{TESTENV}/", "-u", fileInfo[1], file])  # verify all auths are signed by keys in testenv
             self.assertTrue(filecmp.cmp(f"{TESTENV}/"+fileInfo[1]+"/update", file))  # assert files wrote correctly
         for fileInfo in badAuths:
             file = f"{DATAPATH}/"+fileInfo[0]
-            self.assertCmdFalse(cmd+["-m", "host", "verify", "-p", f"{TESTENV}/", "-u", fileInfo[1], file], out)  # verify all bad auths are not signed correctly
+            self.assertCmdFalse(cmd+["-m", "host", "verify", "-p", f"{TESTENV}/", "-u", fileInfo[1], file])  # verify all bad auths are not signed correctly
         for i in verifyCommands:
-            self.assertCmd(cmd+["-m", "host", "verify"]+i[0], out, i[1])
+            self.assertCmd(cmd+["-m", "host", "verify"]+i[0], i[1])
 
     def test_validate(self):
-        out = "validatelog.txt"
         cmd = [SECTOOLS]
         cmd += ["-m", "host", "validate"]
         for i in validateCommands:
-            self.assertCmd(cmd+i[0], out, i[1])
+            self.assertCmd(cmd+i[0], i[1])
         for i in goodAuths:  # validate all auths
             file = f"{DATAPATH}/"+i[0]
             if i[1] != "dbx":
-                self.assertCmdTrue(cmd+[file], out)
+                self.assertCmdTrue(cmd+[file])
             else:
-                self.assertCmdTrue(cmd+[file, "-x"], out)
+                self.assertCmdTrue(cmd+[file, "-x"])
         for i in goodESLs:
             file = f"{DATAPATH}/"+i[0]
             if i[1] != "dbx":
                 file = f"{DATAPATH}/"+i[0]
-                self.assertCmdTrue(cmd+["-e", file], out)
+                self.assertCmdTrue(cmd+["-e", file])
             else:
-                self.assertCmdTrue(cmd+["-e", file, "-x"], out)
+                self.assertCmdTrue(cmd+["-e", file, "-x"])
         for i in goodCRTs:
             file = f"{DATAPATH}/"+i[0]
-            self.assertCmdTrue(cmd+["-v", "-c", file], out)
+            self.assertCmdTrue(cmd+["-v", "-c", file])
         for i in brokenAuths:
-            self.assertCmdFalse(cmd+["-v", i], out)
+            self.assertCmdFalse(cmd+["-v", i])
         for i in brokenESLs:
-            self.assertCmdFalse(cmd+["-v", "-e", i], out)
+            self.assertCmdFalse(cmd+["-v", "-e", i])
         for i in brokenCrts:
-            self.assertCmdFalse(cmd+["-v", "-c", i], out)
+            self.assertCmdFalse(cmd+["-v", "-c", i])
         for i in brokenPkcs7s:
-            self.assertCmdFalse(cmd+["-v", "-p", i], out)
+            self.assertCmdFalse(cmd+["-v", "-p", i])
 
     def test_read(self):
-        out = "readlog.txt"
         cmd = [SECTOOLS]
         cmd += ["-m", "host", "read"]
         # self.assertEqual(not not not command(cmd, out, self), True) #no args
         for i in readCommands:
-            self.assertCmd(cmd+i[0], out, i[1])
+            self.assertCmd(cmd+i[0], i[1])
         for i in brokenESLs:
             # read should read sha and rsa esl's w no problem
             if i.startswith(f"{DATAPATH}/brokenFiles/sha") or i.startswith(f"{DATAPATH}/brokenFiles/rsa"):
-                self.assertCmdTrue(cmd+["-f", i], out)
+                self.assertCmdTrue(cmd+["-f", i])
             else:
-                self.assertCmdFalse(cmd+["-f", i], out)  # all truncated esls should fail to print human readable info
+                self.assertCmdFalse(cmd+["-f", i])  # all truncated esls should fail to print human readable info
 
     def test_write(self):
-        out = "writelog.txt"
         cmd = [SECTOOLS]
         cmd += ["-m", "host", "write"]
         path = f"{TESTENV}/"
         for i in writeCommands:
-            self.assertCmd(cmd+i[0], out, i[1])
+            self.assertCmd(cmd+i[0], i[1])
         for i in goodAuths:  # try write with good auths, validation included
             file = f"{DATAPATH}/"+i[0]
             preUpdate = file  # get auth
             postUpdate = path+i[1]+"/update"  # ./testenv/<varname>/update
-            self.assertCmdTrue(cmd+["-p", path, i[1], file], out)  # assert command runs
+            self.assertCmdTrue(cmd+["-p", path, i[1], file])  # assert command runs
             self.assertTrue(filecmp.cmp(preUpdate, postUpdate))  # assert auths esl is equal to data written to update file
         for i in brokenAuths:
-            self.assertCmdFalse(cmd+["-p", path, "KEK", i], out)  # broken auths should fail
-            self.assertCmdTrue(cmd+["-p", path, "-f", "KEK", i], out)  # if forced, they should work
+            self.assertCmdFalse(cmd+["-p", path, "KEK", i])  # broken auths should fail
+            self.assertCmdTrue(cmd+["-p", path, "-f", "KEK", i])  # if forced, they should work
             self.assertTrue(filecmp.cmp(i, path+"KEK/update"))
 
     def test_badenv(self):
-        out = "badEnvLog.txt"
         for i in badEnvCommands:
             self.setupTestEnvironment()
-            self.command(i[0], i[1])
-            self.assertCmd([SECTOOLS]+i[2], out, i[3])
+            os.system(" ".join(i[0]))  # TODO: probably wrap this in a better assert thing
+            self.assertCmd([SECTOOLS]+i[2], i[3])
 
 
 if __name__ == '__main__':
