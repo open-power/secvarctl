@@ -15,12 +15,18 @@ class SecvarctlTest(unittest.TestCase):
                 f.write("\n\n**********COMMAND RAN: $" + " ".join(args) + "\n")
                 result = subprocess.call(args, stdout=f, stderr=f)
                 f.close()
-                return result
-        return subprocess.call(args, stdout=out, stderr=out)
+                return not result
+        return not subprocess.call(args, stdout=out, stderr=out)
 
     # TODO: slated for removal or merge with command
     def getCmdResult(self, args, out):
         return bool(self.command(args, out))
+
+    def assertCmdTrue(self, args, out):
+        self.assertTrue(self.command(args, out), msg=f"Expected success, but command failed: '{' '.join(args)}'")
+
+    def assertCmdFalse(self, args, out):
+        self.assertFalse(self.command(args, out), msg=f"Expected command failure, received success: '{' '.join(args)}'")
 
     def setupTestEnvironment(self):
         for var in ["out", "test_env_dir", "test_data_dir", "log_dir"]:
