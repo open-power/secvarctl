@@ -116,13 +116,13 @@ class Test(SecvarctlTest):
             eslMade = OUTDIR + efiGen + ".esl"
             # eslDesired = f"{DATAPATH}/" + efiGen + ".esl"  # unused
             # first do it with file to has to ESL
-            self.assertEqual(self.getCmdResult(cmd + ["f:h", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o", hashMade], out), True)  # assert the hashfile can be made
-            self.assertEqual(self.getCmdResult(cmd + ["h:e", "-i", hashMade, "-o", eslMade], out), True)  # assert the ESL is valid
-            self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", "-e", "-x", eslMade], out), True)  # assert the ESL is correctly formated
+            self.assertCmdTrue(cmd + ["f:h", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o", hashMade], out)  # assert the hashfile can be made
+            self.assertCmdTrue(cmd + ["h:e", "-i", hashMade, "-o", eslMade], out)  # assert the ESL is valid
+            self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", "-e", "-x", eslMade], out)  # assert the ESL is correctly formated
             # self.assertEqual( compareFile(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
             # then do it with the file to ESL (hash generation done internally)
-            self.assertEqual(self.getCmdResult(cmd + ["f:e", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o", eslMade], out), True)  # assert the esl can be made from a file
-            self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", "-e", "-x", eslMade], out), True)  # assert the ESL is correctly formated
+            self.assertCmdTrue(cmd + ["f:e", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o", eslMade], out)  # assert the esl can be made from a file
+            self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", "-e", "-x", eslMade], out)  # assert the ESL is correctly formated
             # self.assertEqual( compareFile(eslMade, eslDesired), True) #make sure the generated file is byte for byte the same as the one we know is correct
 
     def test_genEsl(self):
@@ -139,8 +139,8 @@ class Test(SecvarctlTest):
             eslMade = OUTDIR + efiGen + ".esl"
             eslDesired = f"{DATAPATH}/" + efiGen + ".esl"
             # first do it with file to has to ESL
-            self.assertEqual(self.getCmdResult(cmd + ["c:e", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o", eslMade], out), True)  # assert the hashfile can be made
-            self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", "-e", eslMade], out), True)  # assert the ESL is correctly formated
+            self.assertCmdTrue(cmd + ["c:e", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o", eslMade], out)  # assert the hashfile can be made
+            self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", "-e", eslMade], out)  # assert the ESL is correctly formated
             self.assertTrue(filecmp.cmp(eslMade, eslDesired))  # make sure the generated file is byte for byte the same as the one we know is correct
         for i in badESLcommands:
             self.assertEqual(self.getCmdResult(cmd + i[0], out), i[1])
@@ -177,64 +177,64 @@ class Test(SecvarctlTest):
             if i[0].startswith("empty"):
                 esl = f"{DATAPATH}/empty.esl"
                 # should fail if no force flag
-                self.assertEqual(self.getCmdResult(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2A], out), False)
-                self.assertEqual(self.getCmdResult(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2A, "-f"], out), True)
+                self.assertCmdFalse(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2A], out)
+                self.assertCmdTrue(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2A, "-f"], out)
                 # build PKCS7 as well
-                self.assertEqual(self.getCmdResult(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2P], out), False)
-                self.assertEqual(self.getCmdResult(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2P, "-f"], out), True)
+                self.assertCmdFalse(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2P], out)
+                self.assertCmdTrue(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o", genE2P, "-f"], out)
             else:
                 esl = f"{DATAPATH}/"+fileBaseName+".esl"
                 cert = f"{DATAPATH}/"+fileBaseName+".crt"
-                self.assertEqual(self.getCmdResult(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o",  genE2A], out), True)
+                self.assertCmdTrue(cmd + ["e:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o",  genE2A], out)
                 # build pkcs7
-                self.assertEqual(self.getCmdResult(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o",  genE2P], out), True)
+                self.assertCmdTrue(cmd + ["e:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", esl, "-o",  genE2P], out)
                 # build auth/pkcs7 from certs
                 if i[1] == "dbx":
-                    self.assertEqual(self.getCmdResult(cmd + ["f:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2A], out), True)
+                    self.assertCmdTrue(cmd + ["f:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2A], out)
                     # build pkcs7
-                    self.assertEqual(self.getCmdResult(cmd + ["f:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2P], out), True)
+                    self.assertCmdTrue(cmd + ["f:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2P], out)
                 else:
-                    self.assertEqual(self.getCmdResult(cmd + ["c:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2A], out), True)
+                    self.assertCmdTrue(cmd + ["c:a", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2A], out)
                     # build pkcs7
-                    self.assertEqual(self.getCmdResult(cmd + ["c:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2P], out), True)
+                    self.assertCmdTrue(cmd + ["c:p", "-k", signerKey, "-c", signerCrt, "-n", i[1], "-i", cert, "-o",  genC2P], out)
 
             # all files should be valid format, check if dbx though
             if i[1] == "dbx":
-                self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", "-x", genE2A], out), True)
+                self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", "-x", genE2A], out)
                 # validate pkcs7
-                self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", "-x", "-p", genE2P], out), True)
+                self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", "-x", "-p", genE2P], out)
                 # validate auth/pkcs7 from certs
                 if not i[0].startswith("empty"):
-                    self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", "-x", genC2A], out), True)
+                    self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", "-x", genC2A], out)
                     # validate pkcs7
-                    self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", "-x", "-p", genC2P], out), True)
+                    self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", "-x", "-p", genC2P], out)
             else:
-                self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", genE2A], out), True)
+                self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", genE2A], out)
                 # validate pkcs7
-                self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", "-p", genE2P], out), True)
+                self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", "-p", genE2P], out)
                 # validate auth/pkcs7 from certs
                 if not i[0].startswith("empty"):
-                    self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", genC2A], out), True)
+                    self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", genC2A], out)
                     # validate pkcs7
-                    self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", "-p", genC2P], out), True)
+                    self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", "-p", genC2P], out)
             # all files besides the one that start with bad should be verified, bad means signed incorrectly
             if i[0].startswith("bad"):
-                self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genE2A], out), False)
+                self.assertCmdFalse([SECTOOLS, "-m", "host", "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genE2A], out)
                 if not i[0].startswith("empty"):
-                    self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genC2A], out), False)
+                    self.assertCmdFalse([SECTOOLS, "-m", "host", "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genC2A], out)
             else:
-                self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genE2A], out), True)
+                self.assertCmdTrue([SECTOOLS, "-m", "host", "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genE2A], out)
                 if not i[0].startswith("empty"):
-                    self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host",  "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genC2A], out), True)
+                    self.assertCmdTrue([SECTOOLS, "-m", "host",  "verify", "-p", f"{DATAPATH}/goldenKeys/", "-u", i[1], genC2A], out)
 
         # now test custom timestamp works
         customTSAuth1 = OUTDIR+"db_by_PK_customTS1.auth"
         customTSAuth2 = OUTDIR+"db_by_PK_customTS2.auth"
-        self.assertEqual(self.getCmdResult(cmd + ["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", customTSAuth1, "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8"], out), True)
+        self.assertCmdTrue(cmd + ["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", customTSAuth1, "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8"], out)
         time.sleep(4)
-        self.assertEqual(self.getCmdResult(cmd + ["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", customTSAuth2, "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8"], out), True)
-        self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", customTSAuth1], out), True)
-        self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", customTSAuth2], out), True)
+        self.assertCmdTrue(cmd + ["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", customTSAuth2, "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8"], out)
+        self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", customTSAuth1], out)
+        self.assertCmdTrue([SECTOOLS, "-m", "host", "validate", customTSAuth2], out)
         self.assertTrue(filecmp.cmp(customTSAuth1, customTSAuth2))
 
         # now test incorrect generate commands
@@ -273,11 +273,11 @@ class Test(SecvarctlTest):
             crt = inpDir + i[1]+"/"+i[1]+".crt"
             key = inpDir + i[1]+"/"+i[1]+".key"
             # make sure it generates
-            self.assertEqual(self.getCmdResult(cmd + ["-n", i[0], "-k", key, "-c", crt, "-o", outFile], out), True)
+            self.assertCmdTrue(cmd + ["-n", i[0], "-k", key, "-c", crt, "-o", outFile], out)
             # make sure it verifies (verify calls validate)
-            self.assertEqual(self.getCmdResult(verifyCommand + [i[0], outFile], out), True)
+            self.assertCmdTrue(verifyCommand + [i[0], outFile], out)
             # make sure its appended ESL is empty
-            self.assertEqual(self.getCmdResult(toESLCommand + [outFile], out), True)
+            self.assertCmdTrue(toESLCommand + [outFile], out)
             self.assertTrue(filecmp.cmp(emptyESLDesired, emptyESLActual))
             # cleanup
             self.command(["rm", emptyESLActual])
@@ -287,11 +287,11 @@ class Test(SecvarctlTest):
             crt = inpDir + i[1]+"/"+i[1]+".crt"
             key = inpDir + i[1]+"/"+i[1]+".key"
             # make sure it generates
-            self.assertEqual(self.getCmdResult(cmd + ["-n", i[0], "-k", key, "-c", crt, "-o", outFile], out), True)
+            self.assertCmdTrue(cmd + ["-n", i[0], "-k", key, "-c", crt, "-o", outFile], out)
             # make sure it doesn't verify (verify calls validate)
-            self.assertEqual(self.getCmdResult(verifyCommand + [i[0], outFile], out), False)
+            self.assertCmdFalse(verifyCommand + [i[0], outFile], out)
             # make sure its appended ESL is empty
-            self.assertEqual(self.getCmdResult(toESLCommand + [outFile], out), True)
+            self.assertCmdTrue(toESLCommand + [outFile], out)
             self.assertTrue(filecmp.cmp(emptyESLDesired, emptyESLActual))
             # cleanup
             self.command(["rm", emptyESLActual])
@@ -316,9 +316,9 @@ class Test(SecvarctlTest):
         digestWHeader = OUTDIR + "digestWHeader_db_by_KEK.bin"
         genSig = OUTDIR + "ext_sig_db_by_KEK.sig"
         # generate expected file
-        self.assertEqual(self.getCmdResult(GEN + ["c:a", "-n", "db", "-k", sigKey, "-c", sigCrt, "-i", inpCrt, "-o", expectedOutput] + timestamp, out), True)
+        self.assertCmdTrue(GEN + ["c:a", "-n", "db", "-k", sigKey, "-c", sigCrt, "-i", inpCrt, "-o", expectedOutput] + timestamp, out)
         # generate digest
-        self.assertEqual(self.getCmdResult(GEN + ["c:x", "-n", "db", "-i", inpCrt, "-o", outDigest] + timestamp, out), True)
+        self.assertCmdTrue(GEN + ["c:x", "-n", "db", "-i", inpCrt, "-o", outDigest] + timestamp, out)
         # add SHA256 oid to file
         self.command(['echo', '"3031300D060960864801650304020105000420"'], digestHeaderTxt, False)
         # convert ascii to binry
@@ -328,7 +328,7 @@ class Test(SecvarctlTest):
         # do external signing
         self.command(["openssl", "rsautl", "-in", digestWHeader, "-sign", "-inkey", sigKey, "-pkcs", "-out", genSig])
         # use external signature to make authfile
-        self.assertEqual(self.getCmdResult(GEN + ["c:a", "-n", "db", "-s", genSig, "-c", sigCrt, "-i", inpCrt, "-o", actualOutput] + timestamp, out), True)
+        self.assertCmdTrue(GEN + ["c:a", "-n", "db", "-s", genSig, "-c", sigCrt, "-i", inpCrt, "-o", actualOutput] + timestamp, out)
         # two files should be eqaul
         self.assertTrue(filecmp.cmp(expectedOutput, actualOutput))
 
@@ -343,28 +343,28 @@ class Test(SecvarctlTest):
             ["SHA512", 64]
         ]
         # basic test, invalid inForm for generating hash 't'
-        self.assertEqual(self.getCmdResult(GEN + ["t:h", "-i", inpDir+"db_by_PK.auth", "-o", "foo.bar"], out), False)
+        self.assertCmdFalse(GEN + ["t:h", "-i", inpDir+"db_by_PK.auth", "-o", "foo.bar"], out)
         for function in hashes:
             inpDir = f"{DATAPATH}/"
             for file in os.listdir(inpDir):
                 outFile = OUTDIR+function[0]+"_"+file+".hash"
                 if file.endswith(".auth"):
                     if file.startswith("dbx"):
-                        self.assertEqual(self.getCmdResult(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+                        self.assertCmdTrue(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
                     else:
-                        self.assertEqual(self.getCmdResult(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+                        self.assertCmdTrue(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
                     self.assertEqual(os.path.getsize(outFile), function[1])
                 elif file.endswith(".esl") and not file.startswith("empty"):
                     if file.startswith("dbx"):
-                        self.assertEqual(self.getCmdResult(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+                        self.assertCmdTrue(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
                     else:
-                        self.assertEqual(self.getCmdResult(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+                        self.assertCmdTrue(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
                     self.assertEqual(os.path.getsize(outFile), function[1])
                 elif file.endswith(".crt"):
                     if file.startswith("dbx"):
-                        self.assertEqual(self.getCmdResult(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+                        self.assertCmdTrue(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
                     else:
-                        self.assertEqual(self.getCmdResult(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), True)
+                        self.assertCmdTrue(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
                     self.assertEqual(os.path.getsize(outFile), function[1])
             inpDir = f"{DATAPATH}/brokenFiles/"
             # these should all fail unless forced
@@ -372,29 +372,29 @@ class Test(SecvarctlTest):
                 outFile = OUTDIR+function[0]+"_"+file+".hash"
                 if file.endswith(".auth"):
                     if file.startswith("dbx"):
-                        self.assertEqual(self.getCmdResult(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-                        self.assertEqual(self.getCmdResult(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+                        self.assertCmdFalse(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
+                        self.assertCmdTrue(GEN + ["a:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out)
 
                     else:
-                        self.assertEqual(self.getCmdResult(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-                        self.assertEqual(self.getCmdResult(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+                        self.assertCmdFalse(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
+                        self.assertCmdTrue(GEN + ["a:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out)
                     self.assertEqual(os.path.getsize(outFile), function[1])
                 elif file.endswith(".esl"):
                     if file.startswith("dbx"):
-                        self.assertEqual(self.getCmdResult(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-                        self.assertEqual(self.getCmdResult(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+                        self.assertCmdFalse(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
+                        self.assertCmdTrue(GEN + ["e:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out)
                     else:
-                        self.assertEqual(self.getCmdResult(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-                        self.assertEqual(self.getCmdResult(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+                        self.assertCmdFalse(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
+                        self.assertCmdTrue(GEN + ["e:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out)
                     self.assertEqual(os.path.getsize(outFile), function[1])
                 elif file.endswith(".crt"):
                     if file.startswith("dbx"):
-                        self.assertEqual(self.getCmdResult(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-                        self.assertEqual(self.getCmdResult(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+                        self.assertCmdFalse(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
+                        self.assertCmdTrue(GEN + ["c:h", "-n", "dbx", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out)
 
                     else:
-                        self.assertEqual(self.getCmdResult(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out), False)
-                        self.assertEqual(self.getCmdResult(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out), True)
+                        self.assertCmdFalse(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile], out)
+                        self.assertCmdTrue(GEN + ["c:h", "-h", function[0], "-i", inpDir+file, "-o", outFile, "-f"], out)
 
                     self.assertEqual(os.path.getsize(outFile), function[1])
 
@@ -412,9 +412,9 @@ class Test(SecvarctlTest):
             else:
                 preUpdate = file[:-4]+"esl"  # get esl in auth
             if file.startswith(f"{DATAPATH}/dbx"):
-                self.assertEqual(self.getCmdResult(cmd + ["-n",  "dbx", "-i", file, "-o", postUpdate], out), True)
+                self.assertCmdTrue(cmd + ["-n",  "dbx", "-i", file, "-o", postUpdate], out)
             else:
-                self.assertEqual(self.getCmdResult(cmd + ["-i", file, "-o", postUpdate], out), True)
+                self.assertCmdTrue(cmd + ["-i", file, "-o", postUpdate], out)
             self.assertTrue(filecmp.cmp(preUpdate, postUpdate))
         self.command(["rm", postUpdate])
         for i in toeslCommands:
@@ -423,8 +423,8 @@ class Test(SecvarctlTest):
         for file in os.listdir(inpDir):
             if not file.endswith(".auth"):
                 continue
-            self.assertEqual(self.getCmdResult(cmd+["-i", file, "-o", postUpdate], out), False)  # all broken auths should fail to have correct esl
-            self.assertEqual(self.getCmdResult(["rm", postUpdate], out), False)  # removal of output file should fail since it was never made
+            self.assertCmdFalse(cmd+["-i", file, "-o", postUpdate], out)  # all broken auths should fail to have correct esl
+            self.assertCmdFalse(["rm", postUpdate], out)  # removal of output file should fail since it was never made
 
 
 if __name__ == '__main__':
