@@ -125,7 +125,7 @@ class Test(SecvarctlTest):
         for efiGen in dbxFiles:
             hashMade = OUTDIR + efiGen + ".hash"
             eslMade = OUTDIR + efiGen + ".esl"
-            eslDesired = f"{DATAPATH}/" + efiGen + ".esl"
+            # eslDesired = f"{DATAPATH}/" + efiGen + ".esl"  # unused
             # first do it with file to has to ESL
             self.assertEqual(self.getCmdResult(cmd + ["f:h", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o", hashMade], out), True)  # assert the hashfile can be made
             self.assertEqual(self.getCmdResult(cmd + ["h:e", "-i", hashMade, "-o", eslMade], out), True)  # assert the ESL is valid
@@ -178,7 +178,7 @@ class Test(SecvarctlTest):
                     auths.append([file, arr[0], arr[2]])
         for i in auths:
             fileBaseName = i[0][:-5]
-            authDesired = f"{DATAPATH}/"+i[0]
+            # authDesired = f"{DATAPATH}/"+i[0]  # unused
             genE2A = OUTDIR + i[0][0:-5]+"_fromESL.auth"
             genE2P = OUTDIR + i[0][0:-5]+"_fromESL.pkcs7"
             genC2A = OUTDIR + i[0][0:-5]+"_fromCert.auth"
