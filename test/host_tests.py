@@ -206,11 +206,11 @@ class Test(SecvarctlTest):
         # cmd += ["-m","host","verify"]
         for fileInfo in goodAuths:
             file = f"{DATAPATH}/"+fileInfo[0]
-            self.assertEqual(self.getCmdResult(cmd+["-m", "host", "verify", "-w", "-p", f"{TESTENV}/", "-u", fileInfo[1], file], out), True)  # verify all auths are signed by keys in testenv
+            self.assertCmdTrue(cmd+["-m", "host", "verify", "-w", "-p", f"{TESTENV}/", "-u", fileInfo[1], file], out)  # verify all auths are signed by keys in testenv
             self.assertEqual(compareFiles(f"{TESTENV}/"+fileInfo[1]+"/update", file), True)  # assert files wrote correctly
         for fileInfo in badAuths:
             file = f"{DATAPATH}/"+fileInfo[0]
-            self.assertEqual(self.getCmdResult(cmd+["-m", "host", "verify", "-p", f"{TESTENV}/", "-u", fileInfo[1], file], out), False)  # verify all bad auths are not signed correctly
+            self.assertCmdFalse(cmd+["-m", "host", "verify", "-p", f"{TESTENV}/", "-u", fileInfo[1], file], out)  # verify all bad auths are not signed correctly
         for i in verifyCommands:
             self.assertEqual(self.getCmdResult(cmd+["-m", "host", "verify"]+i[0], out), i[1])
 
@@ -223,27 +223,27 @@ class Test(SecvarctlTest):
         for i in goodAuths:  # validate all auths
             file = f"{DATAPATH}/"+i[0]
             if i[1] != "dbx":
-                self.assertEqual(self.getCmdResult(cmd+[file], out), True)
+                self.assertCmdTrue(cmd+[file], out)
             else:
-                self.assertEqual(self.getCmdResult(cmd+[file, "-x"], out), True)
+                self.assertCmdTrue(cmd+[file, "-x"], out)
         for i in goodESLs:
             file = f"{DATAPATH}/"+i[0]
             if i[1] != "dbx":
                 file = f"{DATAPATH}/"+i[0]
-                self.assertEqual(self.getCmdResult(cmd+["-e", file], out), True)
+                self.assertCmdTrue(cmd+["-e", file], out)
             else:
-                self.assertEqual(self.getCmdResult(cmd+["-e", file, "-x"], out), True)
+                self.assertCmdTrue(cmd+["-e", file, "-x"], out)
         for i in goodCRTs:
             file = f"{DATAPATH}/"+i[0]
-            self.assertEqual(self.getCmdResult(cmd+["-v", "-c", file], out), True)
+            self.assertCmdTrue(cmd+["-v", "-c", file], out)
         for i in brokenAuths:
-            self.assertEqual(self.getCmdResult(cmd+["-v", i], out), False)
+            self.assertCmdFalse(cmd+["-v", i], out)
         for i in brokenESLs:
-            self.assertEqual(self.getCmdResult(cmd+["-v", "-e", i], out), False)
+            self.assertCmdFalse(cmd+["-v", "-e", i], out)
         for i in brokenCrts:
-            self.assertEqual(self.getCmdResult(cmd+["-v", "-c", i], out), False)
+            self.assertCmdFalse(cmd+["-v", "-c", i], out)
         for i in brokenPkcs7s:
-            self.assertEqual(self.getCmdResult(cmd+["-v", "-p", i], out), False)
+            self.assertCmdFalse(cmd+["-v", "-p", i], out)
 
     def test_read(self):
         out = "readlog.txt"
@@ -255,9 +255,9 @@ class Test(SecvarctlTest):
         for i in brokenESLs:
             # read should read sha and rsa esl's w no problem
             if i.startswith(f"{DATAPATH}/brokenFiles/sha") or i.startswith(f"{DATAPATH}/brokenFiles/rsa"):
-                self.assertEqual(self.getCmdResult(cmd+["-f", i], out), True)
+                self.assertCmdTrue(cmd+["-f", i], out)
             else:
-                self.assertEqual(self.getCmdResult(cmd+["-f", i], out), False)  # all truncated esls should fail to print human readable info
+                self.assertCmdFalse(cmd+["-f", i], out)  # all truncated esls should fail to print human readable info
 
     def test_write(self):
         out = "writelog.txt"
@@ -270,11 +270,11 @@ class Test(SecvarctlTest):
             file = f"{DATAPATH}/"+i[0]
             preUpdate = file  # get auth
             postUpdate = path+i[1]+"/update"  # ./testenv/<varname>/update
-            self.assertEqual(self.getCmdResult(cmd+["-p", path, i[1], file], out), True)  # assert command runs
+            self.assertCmdTrue(cmd+["-p", path, i[1], file], out)  # assert command runs
             self.assertEqual(compareFiles(preUpdate, postUpdate), True)  # assert auths esl is equal to data written to update file
         for i in brokenAuths:
-            self.assertEqual(self.getCmdResult(cmd+["-p", path, "KEK", i], out), False)  # broken auths should fail
-            self.assertEqual(self.getCmdResult(cmd+["-p", path, "-f", "KEK", i], out), True)  # if forced, they should work
+            self.assertCmdFalse(cmd+["-p", path, "KEK", i], out)  # broken auths should fail
+            self.assertCmdTrue(cmd+["-p", path, "-f", "KEK", i], out)  # if forced, they should work
             self.assertEqual(compareFiles(i, path+"KEK/update"), True)
 
     def test_badenv(self):
