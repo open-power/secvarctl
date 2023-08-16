@@ -83,10 +83,6 @@ toeslCommands = [
 ]
 
 
-def compareFiles(a, b):
-    if filecmp.cmp(a, b):
-        return True
-    return False
 # def generateESL(path="./generatedTestData/",inp="default.crt",out="default.esl"):
 #     return command(GEN+["c:e", "-i", path+inp, "-o", path+out])
 # def createSizeFile(path):
@@ -156,7 +152,7 @@ class Test(SecvarctlTest):
             # first do it with file to has to ESL
             self.assertEqual(self.getCmdResult(cmd + ["c:e", "-i", f"{DATAPATH}/" + efiGen + ".crt", "-o", eslMade], out), True)  # assert the hashfile can be made
             self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", "-e", eslMade], out), True)  # assert the ESL is correctly formated
-            self.assertEqual(compareFiles(eslMade, eslDesired), True)  # make sure the generated file is byte for byte the same as the one we know is correct
+            self.assertTrue(filecmp.cmp(eslMade, eslDesired))  # make sure the generated file is byte for byte the same as the one we know is correct
         for i in badESLcommands:
             self.assertEqual(self.getCmdResult(cmd + i[0], out), i[1])
 
@@ -250,7 +246,7 @@ class Test(SecvarctlTest):
         self.assertEqual(self.getCmdResult(cmd + ["e:a", "-i", f"{DATAPATH}/db_by_PK.esl", "-o", customTSAuth2, "-k", f"{DATAPATH}/goldenKeys/PK/PK.key", "-c", f"{DATAPATH}/goldenKeys/PK/PK.crt", "-n", "db", "-t", "2020-10-20T10:2:8"], out), True)
         self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", customTSAuth1], out), True)
         self.assertEqual(self.getCmdResult([SECTOOLS, "-m", "host", "validate", customTSAuth2], out), True)
-        self.assertEqual(compareFiles(customTSAuth1, customTSAuth2), True)
+        self.assertTrue(filecmp.cmp(customTSAuth1, customTSAuth2))
 
         # now test incorrect generate commands
         for i in badSignedCommands:
@@ -293,7 +289,7 @@ class Test(SecvarctlTest):
             self.assertEqual(self.getCmdResult(verifyCommand + [i[0], outFile], out), True)
             # make sure its appended ESL is empty
             self.assertEqual(self.getCmdResult(toESLCommand + [outFile], out), True)
-            self.assertEqual(compareFiles(emptyESLDesired, emptyESLActual), True)
+            self.assertTrue(filecmp.cmp(emptyESLDesired, emptyESLActual))
             # cleanup
             self.command(["rm", emptyESLActual])
         # same process but verifying should fail
@@ -307,7 +303,7 @@ class Test(SecvarctlTest):
             self.assertEqual(self.getCmdResult(verifyCommand + [i[0], outFile], out), False)
             # make sure its appended ESL is empty
             self.assertEqual(self.getCmdResult(toESLCommand + [outFile], out), True)
-            self.assertEqual(compareFiles(emptyESLDesired, emptyESLActual), True)
+            self.assertTrue(filecmp.cmp(emptyESLDesired, emptyESLActual))
             # cleanup
             self.command(["rm", emptyESLActual])
         self.command(["rm", emptyESLDesired])
@@ -345,7 +341,7 @@ class Test(SecvarctlTest):
         # use external signature to make authfile
         self.assertEqual(self.getCmdResult(GEN + ["c:a", "-n", "db", "-s", genSig, "-c", sigCrt, "-i", inpCrt, "-o", actualOutput] + timestamp, out), True)
         # two files should be eqaul
-        self.assertEqual(compareFiles(expectedOutput, actualOutput), True)
+        self.assertTrue(filecmp.cmp(expectedOutput, actualOutput))
 
     def test_genHash(self):
         out = "genHashLog.txt"
@@ -430,7 +426,7 @@ class Test(SecvarctlTest):
                 self.assertEqual(self.getCmdResult(cmd + ["-n",  "dbx", "-i", file, "-o", postUpdate], out), True)
             else:
                 self.assertEqual(self.getCmdResult(cmd + ["-i", file, "-o", postUpdate], out), True)
-            self.assertEqual(compareFiles(preUpdate, postUpdate), True)
+            self.assertTrue(filecmp.cmp(preUpdate, postUpdate))
         self.command(["rm", postUpdate])
         for i in toeslCommands:
             self.assertEqual(self.getCmdResult(cmd+i[0], out), i[1])
