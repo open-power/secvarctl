@@ -164,12 +164,6 @@ def setupArrays():
             brokenPkcs7s.append(f"{DATAPATH}/brokenFiles/"+file)
 
 
-def compareFiles(a, b):
-    if filecmp.cmp(a, b):
-        return True
-    return False
-
-
 class Test(SecvarctlTest):
     out = "temp"
     log_dir = "./log/"
@@ -207,7 +201,7 @@ class Test(SecvarctlTest):
         for fileInfo in goodAuths:
             file = f"{DATAPATH}/"+fileInfo[0]
             self.assertCmdTrue(cmd+["-m", "host", "verify", "-w", "-p", f"{TESTENV}/", "-u", fileInfo[1], file], out)  # verify all auths are signed by keys in testenv
-            self.assertEqual(compareFiles(f"{TESTENV}/"+fileInfo[1]+"/update", file), True)  # assert files wrote correctly
+            self.assertTrue(filecmp.cmp(f"{TESTENV}/"+fileInfo[1]+"/update", file))  # assert files wrote correctly
         for fileInfo in badAuths:
             file = f"{DATAPATH}/"+fileInfo[0]
             self.assertCmdFalse(cmd+["-m", "host", "verify", "-p", f"{TESTENV}/", "-u", fileInfo[1], file], out)  # verify all bad auths are not signed correctly
@@ -271,11 +265,11 @@ class Test(SecvarctlTest):
             preUpdate = file  # get auth
             postUpdate = path+i[1]+"/update"  # ./testenv/<varname>/update
             self.assertCmdTrue(cmd+["-p", path, i[1], file], out)  # assert command runs
-            self.assertEqual(compareFiles(preUpdate, postUpdate), True)  # assert auths esl is equal to data written to update file
+            self.assertTrue(filecmp.cmp(preUpdate, postUpdate))  # assert auths esl is equal to data written to update file
         for i in brokenAuths:
             self.assertCmdFalse(cmd+["-p", path, "KEK", i], out)  # broken auths should fail
             self.assertCmdTrue(cmd+["-p", path, "-f", "KEK", i], out)  # if forced, they should work
-            self.assertEqual(compareFiles(i, path+"KEK/update"), True)
+            self.assertTrue(filecmp.cmp(i, path+"KEK/update"))
 
     def test_badenv(self):
         out = "badEnvLog.txt"
