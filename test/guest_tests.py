@@ -2,7 +2,6 @@
 # Copyright 2021 IBM Corp.
 import unittest
 import os
-import filecmp
 import sys
 import argparse
 from common import SecvarctlTest
@@ -101,13 +100,6 @@ def collect_test_data():
     for file in os.listdir(test_dir[4]):
         if file.endswith(".pkcs7"):
             pkcs7_files.append(test_dir[4] + file)
-
-
-def compare_two_files(a, b):
-    if filecmp.cmp(a, b):
-        return True
-    else:
-        return False
 
 
 def get_read_command(read_type, file_name):
