@@ -22,11 +22,19 @@ class SecvarctlTest(unittest.TestCase):
     def getCmdResult(self, args, out):
         return bool(self.command(args, out))
 
+    def assertCmd(self, args, out, expected: bool):
+        tmp_assert, msg = {
+            True: (self.assertTrue, f"Expected success, but failed: '{' '.join(args)}'"),
+            False: (self.assertFalse, f"Expected failure, received success: '{' '.join(args)}'"),
+        }[expected]
+
+        tmp_assert(self.command(args, out), msg=msg)
+
     def assertCmdTrue(self, args, out):
-        self.assertTrue(self.command(args, out), msg=f"Expected success, but command failed: '{' '.join(args)}'")
+        self.assertCmd(args, out, True)
 
     def assertCmdFalse(self, args, out):
-        self.assertFalse(self.command(args, out), msg=f"Expected command failure, received success: '{' '.join(args)}'")
+        self.assertCmd(args, out, False)
 
     def setupTestEnvironment(self):
         for var in ["out", "test_env_dir", "test_data_dir", "log_dir"]:
