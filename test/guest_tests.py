@@ -64,7 +64,6 @@ test_dir = [f"{DATAPATH}/eslfiles/", f"{DATAPATH}/authfiles/", f"{DATAPATH}/x509
             f"{DATAPATH}/goldenKeys/", f"{DATAPATH}/pkcs7files/"]
 
 test_env_path = "./testenv/guest/"
-log_dir = "./log/"
 gen_dir = "./generated-data/"
 SBAT_name = "sbat"
 
@@ -157,8 +156,6 @@ def generate_auth(variable_name, signer_key_file, signer_cert_file, cert_file, a
 
 
 class Test(SecvarctlTest):
-    out = "temp"
-    log_dir = "./log/"
     test_env_dir = f"{test_env_path}"
     test_data_dir = f"{DATAPATH}"
 
@@ -166,19 +163,17 @@ class Test(SecvarctlTest):
         self.setupTestEnvironment()
         self.command(["mkdir", "-p", gen_dir])
 
-    def test_ppcsecvar_path_read(self):
-        out = log_dir + "ppcsecvarspathreadlog.txt"
-        # if power sysfs exists read current keys
-        if os.path.isdir(SECVARPATH):
-            cmd = get_read_command("", "")
-            self.assertCmdTrue(cmd, out)
-        else:
-            with open(out, "w") as f:
-                f.write(f"POWER SECVAR LOCATION( {SECVARPATH} ) DOES NOT EXIST SO NO TESTS RAN\n")
-                f.close()
+    # def test_ppcsecvar_path_read(self):
+    #     # if power sysfs exists read current keys
+    #     if os.path.isdir(SECVARPATH):
+    #         cmd = get_read_command("", "")
+    #         self.assertCmdTrue(cmd)
+    #     else:
+    #         with open(out, "w") as f:
+    #             f.write(f"POWER SECVAR LOCATION( {SECVARPATH} ) DOES NOT EXIST SO NO TESTS RAN\n")
+    #             f.close()
 
     def test_generate_esl_files(self):
-        out = log_dir + "generatelog.txt"
         for var_name in variables:
             esl_file = gen_dir + var_name + ".esl"
 
@@ -191,10 +186,9 @@ class Test(SecvarctlTest):
                 cert_file = test_dir[2] + var_name + ".crt"
 
             cmd = generate_esl(var_name, format_type, cert_file, esl_file)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
 
     def test_generate_auth_files(self):
-        out = log_dir + "generatelog.txt"
         for var_by_PK in variable_by_PK:
             auth_file = gen_dir + var_by_PK[0] + ".auth"
             PK_key_file = test_dir[3] + var_by_PK[2] + "/" + var_by_PK[2] + ".key"
@@ -208,7 +202,7 @@ class Test(SecvarctlTest):
                 cert_file = test_dir[2] + var_by_PK[0] + ".crt"
 
             cmd = generate_auth(var_by_PK[1], PK_key_file, PK_cert_file, cert_file, auth_file, format_type, non_force)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
 
         for var_by_KEK in variable_by_KEK:
             auth_file = gen_dir + var_by_KEK[0] + ".auth"
@@ -223,10 +217,9 @@ class Test(SecvarctlTest):
                 cert_file = test_dir[2] + var_by_KEK[0] + ".crt"
 
             cmd = generate_auth(var_by_KEK[1], KEK_key_file, KEK_cert_file, cert_file, auth_file, format_type, non_force)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
 
     def test_generate_reset_auth_files(self):
-        out = log_dir + "generatelog.txt"
         format_type = auth_reset
         cert_file = "empty"
         for var_by_PK in variable_by_PK:
@@ -234,69 +227,64 @@ class Test(SecvarctlTest):
             PK_key_file = test_dir[3] + var_by_PK[2] + "/" + var_by_PK[2] + ".key"
             PK_cert_file = test_dir[3] + var_by_PK[2] + "/" + var_by_PK[2] + ".crt"
             cmd = generate_auth(var_by_PK[1], PK_key_file, PK_cert_file, cert_file, auth_file, format_type, non_force)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
 
         for var_by_KEK in variable_by_KEK:
             auth_file = gen_dir + auth_reset + "_" + var_by_KEK[0] + ".auth"
             KEK_key_file = test_dir[3] + var_by_KEK[2] + "/" + var_by_KEK[2] + ".key"
             KEK_cert_file = test_dir[3] + var_by_KEK[2] + "/" + var_by_KEK[2] + ".crt"
             cmd = generate_auth(var_by_KEK[1], KEK_key_file, KEK_cert_file, cert_file, auth_file, format_type, non_force)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
 
     def test_read(self):
-        out = log_dir + "readlog.txt"
         for cert_file in cert_files:
             cmd = get_read_command(cert_type, cert_file)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
         for esl_file in esl_files:
             cmd = get_read_command(esl_type, esl_file)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
         for auth_file in auth_files:
             cmd = get_read_command(auth_type, auth_file)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
 
         cmd = get_read_command(path_type, test_env_path)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
 
     def test_validate(self):
-        out = log_dir + "validatelog.txt"
         for cert_file in cert_files:
             cmd = get_validate_command(cert_type, cert_file)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
         for pkcs7_file in pkcs7_files:
             cmd = get_validate_command(pkcs7_type, pkcs7_file)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
         for esl_file in esl_files:
             cmd = get_validate_command(esl_type, esl_file)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
         for auth_file in auth_files:
             cmd = get_validate_command(auth_type, auth_file)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
 
     def test_write(self):
-        out = log_dir + "writelog.txt"
         for var_by_PK in variable_by_PK:
             auth_file = test_dir[1] + var_by_PK[0] + ".auth"
             cmd = get_write_command(var_by_PK[1], auth_file, test_env_path, non_force)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
         for var_by_KEK in variable_by_KEK:
             auth_file = test_dir[1] + var_by_KEK[0] + ".auth"
             cmd = get_write_command(var_by_KEK[1], auth_file, test_env_path, non_force)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
 
     def test_write_with_force(self):
-        out = log_dir + "writelog.txt"
         for var_by_PK in variable_by_PK:
             auth_file = test_dir[1] + var_by_PK[0] + ".auth"
             cmd = get_write_command(var_by_PK[1], auth_file, test_env_path, force)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
         for var_by_KEK in variable_by_KEK:
             auth_file = test_dir[1] + var_by_KEK[0] + ".auth"
             cmd = get_write_command(var_by_KEK[1], auth_file, test_env_path, force)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
 
     def test_verify(self):
-        out = log_dir + "verifylog.txt"
         update_variables = []
         current_variables = []
         current_variables_empty = []
@@ -306,15 +294,15 @@ class Test(SecvarctlTest):
             update_variables.append(var_by_PK[1])
             update_variables.append(auth_file)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             current_variables.append(var_by_PK[2])
             current_variables.append(current_var)
             cmd = get_verify_command(update_variables, current_variables, empty_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables, empty_path, write)
-            self.assertCmdFalse(cmd, out)
+            self.assertCmdFalse(cmd)
             update_variables.clear()
             current_variables.clear()
 
@@ -326,15 +314,15 @@ class Test(SecvarctlTest):
             update_variables.append(var_by_KEK[1])
             update_variables.append(auth_file)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             current_variables.append(var_by_KEK[2])
             current_variables.append(current_var)
             cmd = get_verify_command(update_variables, current_variables, empty_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables, empty_path, write)
-            self.assertCmdFalse(cmd, out)
+            self.assertCmdFalse(cmd)
             update_variables.clear()
             current_variables.clear()
 
@@ -346,23 +334,23 @@ class Test(SecvarctlTest):
             update_variables.append(var_by_PK[1])
             update_variables.append(auth_file)
             cmd = get_verify_command(update_variables, current_variables_empty, test_env_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables_empty, test_env_path, write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             current_variables.append(var_by_PK[1])
             current_variables.append(current_var)
             cmd = get_verify_command(update_variables, current_variables, empty_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables, empty_path, write)
-            self.assertCmdFalse(cmd, out)
+            self.assertCmdFalse(cmd)
         cmd = get_verify_command(update_variables, current_variables_empty, test_env_path, non_write)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
         cmd = get_verify_command(update_variables, current_variables_empty, test_env_path, write)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
         cmd = get_verify_command(update_variables, current_variables, empty_path, non_write)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
         cmd = get_verify_command(update_variables, current_variables, empty_path, write)
-        self.assertCmdFalse(cmd, out)
+        self.assertCmdFalse(cmd)
 
         update_variables.clear()
         current_variables.clear()
@@ -372,29 +360,28 @@ class Test(SecvarctlTest):
             update_variables.append(var_by_KEK[1])
             update_variables.append(auth_file)
             cmd = get_verify_command(update_variables, current_variables_empty, test_env_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables_empty, test_env_path, write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             if current_variables == []:
                 current_variables.append(var_by_KEK[2])
                 current_variables.append(test_dir[3] + var_by_KEK[2] + "/" + "data")
             current_variables.append(var_by_KEK[1])
             current_variables.append(current_var)
             cmd = get_verify_command(update_variables, current_variables, empty_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables, empty_path, write)
-            self.assertCmdFalse(cmd, out)
+            self.assertCmdFalse(cmd)
         cmd = get_verify_command(update_variables, current_variables_empty, test_env_path, non_write)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
         cmd = get_verify_command(update_variables, current_variables_empty, test_env_path, write)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
         cmd = get_verify_command(update_variables, current_variables, empty_path, non_write)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
         cmd = get_verify_command(update_variables, current_variables, empty_path, write)
-        self.assertCmdFalse(cmd, out)
+        self.assertCmdFalse(cmd)
 
     def test_verify_reset_auth(self):
-        out = log_dir + "verifylog.txt"
         update_variables = []
         current_variables = []
         for var_by_PK in reset_variable_by_PK:
@@ -402,9 +389,9 @@ class Test(SecvarctlTest):
             update_variables.append(var_by_PK[1])
             update_variables.append(auth_file)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             update_variables.clear()
 
         for var_by_KEK in reset_variable_by_KEK:
@@ -412,9 +399,9 @@ class Test(SecvarctlTest):
             update_variables.append(var_by_KEK[1])
             update_variables.append(auth_file)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             update_variables.clear()
 
         for var_by_PK in reset_variable_by_PK:
@@ -422,26 +409,26 @@ class Test(SecvarctlTest):
             update_variables.append(var_by_PK[1])
             update_variables.append(auth_file)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
         cmd = get_verify_command(update_variables, current_variables, test_env_path, non_write)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
         cmd = get_verify_command(update_variables, current_variables, test_env_path, write)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
 
         for var_by_KEK in reset_variable_by_KEK:
             auth_file = test_dir[1] + var_by_KEK[0] + ".auth"
             update_variables.append(var_by_KEK[1])
             update_variables.append(auth_file)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, non_write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
             cmd = get_verify_command(update_variables, current_variables, test_env_path, write)
-            self.assertCmdTrue(cmd, out)
+            self.assertCmdTrue(cmd)
         cmd = get_verify_command(update_variables, current_variables, test_env_path, non_write)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
         cmd = get_verify_command(update_variables, current_variables, test_env_path, write)
-        self.assertCmdTrue(cmd, out)
+        self.assertCmdTrue(cmd)
 
 
 if __name__ == '__main__':
