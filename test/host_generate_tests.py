@@ -3,14 +3,11 @@
 # These tests will use sectool's validate command to determine wether the file was correctly generated.
 # We can use the validate command because it was previously tested in runTests.py
 import os
-import sys
 import time
 import unittest
 import filecmp
-import argparse
-from common import SecvarctlTest
+from common import SecvarctlTest, SECTOOLS
 
-SECTOOLS = "../bin/secvarctl-dbg"
 GEN = [SECTOOLS, "-m", "host", "generate", "-v"]
 OUTDIR = "./generatedTestData/"
 OPENSSL = True
@@ -417,21 +414,4 @@ class Test(SecvarctlTest):
 
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser()
-    argParser.add_argument("-o", "--openssl", type=int, help="enable/disable OPENSSL")
-    argParser.add_argument("-g", "--gnutls", type=int, help="enable/disable GNUTLS")
-    argParser.add_argument("-s", "--secvarctl", help="set secvarctl tool")
-    args = argParser.parse_args()
-
-    if args.openssl is not None:
-        OPENSSL = args.openssl
-    if args.gnutls is not None:
-        GNUTLS = args.gnutls
-    if args.secvarctl is not None:
-        SECTOOLS = args.secvarctl
-        GEN[0] = args.secvarctl
-
-    del sys.argv[1:]
-    # createEnvironment()
-    # setupTestEnv()
     unittest.main()
