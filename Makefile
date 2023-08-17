@@ -3,7 +3,7 @@
 CC ?= gcc
 _CFLAGS = -MMD -std=gnu99 -Wall -Werror
 # TODO: just put all the linker flags for now, rework the LDFLAGS settings later
-LDFLAGS = -lcrypto -lmbedtls -lmbedx509 -lmbedcrypto
+LDFLAGS = -lcrypto
 MANDIR=usr/share/man
 BIN_DIR = $(PWD)/bin
 OBJ_DIR = $(PWD)/obj
@@ -36,6 +36,8 @@ endif
 # TODO: Split libstb-secvar Makefile into includeable and runnable probably
 LIBSTB_SECVAR = external/libstb-secvar/lib/libstb-secvar-openssl.a
 
+# Initialize here, so the mbedtls option can add the bonus pkcs7 if needed
+EXTERNAL_SRCS =
 
 ifeq ($(strip $(OPENSSL)), 1)
   _LDFLAGS += -lcrypto
@@ -56,6 +58,8 @@ ifeq ($(strip $(MBEDTLS)), 1)
   CRYPTO_LIB = mbedtls
   _LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
   _CFLAGS += -DSECVAR_CRYPTO_MBEDTLS
+  EXTERNAL_SRCS += external/extraMbedtls/pkcs7.c \
+                   external/extraMbedtls/pkcs7_write.c
 endif
 
 
@@ -73,8 +77,7 @@ _LDFLAGS += -L./lib
 
 
 # TODO: Consider splitting this also into its own Makefile.inc?
-EXTERNAL_SRCS = external/extraMbedtls/pkcs7.c                                \
-                external/extraMbedtls/pkcs7_write.c                          \
+EXTERNAL_SRCS += \
                 external/skiboot/libstb/secvar/secvar_util.c                 \
                 external/skiboot/libstb/secvar/crypto/crypto-mbedtls.c       \
                 external/skiboot/libstb/secvar/crypto/crypto-openssl.c       \

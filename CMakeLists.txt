@@ -22,8 +22,8 @@ set( INCLUDE_PATHS
 )
 
 target_sources( secvarctl PRIVATE
-  external/extraMbedtls/pkcs7.c
-  external/extraMbedtls/pkcs7_write.c
+  # external/extraMbedtls/pkcs7.c
+  # external/extraMbedtls/pkcs7_write.c
   external/skiboot/libstb/secvar/secvar_util.c
   # external/skiboot/libstb/secvar/crypto/crypto-mbedtls.c
   external/skiboot/libstb/secvar/crypto/crypto-openssl.c
@@ -48,10 +48,10 @@ find_package( OpenSSL REQUIRED )
 target_link_libraries( secvarctl OpenSSL::SSL )
 
 # mbedTLS
-find_library( MBEDX509 mbedx509 HINTS ENV PATH REQUIRED )
-find_library( MBEDCRYPTO mbedcrypto HINTS ENV PATH REQUIRED )
-find_library( MBEDTLS mbedtls HINTS ENV PATH REQUIRED )
-target_link_libraries( secvarctl ${MBEDTLS} ${MBEDX509} ${MBEDCRYPTO} ${PTHREAD} )
+# find_library( MBEDX509 mbedx509 HINTS ENV PATH REQUIRED )
+# find_library( MBEDCRYPTO mbedcrypto HINTS ENV PATH REQUIRED )
+# find_library( MBEDTLS mbedtls HINTS ENV PATH REQUIRED )
+# target_link_libraries( secvarctl ${MBEDTLS} ${MBEDX509} ${MBEDCRYPTO} ${PTHREAD} )
 
 add_subdirectory( external/libstb-secvar )
 target_link_libraries( secvarctl stb-secvar-openssl )
