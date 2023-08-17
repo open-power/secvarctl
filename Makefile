@@ -8,6 +8,17 @@ MANDIR=usr/share/man
 BIN_DIR = $(PWD)/bin
 OBJ_DIR = $(PWD)/obj
 
+# Backend selection, default to both host and guest
+HOST_BACKEND  ?= 1
+GUEST_BACKEND ?= 1
+
+# Crypto library selection, default to OpenSSL. Mutually exclusive.
+OPENSSL = 1
+GNUTLS = 0
+MBEDTLS = 0
+CRYPTO_LIB = openssl
+
+
 # TODO: seriously trim down the number of -I includes. use more relative pathing.
 INCLUDES = -I.                                       \
            -I./include                               \
@@ -22,37 +33,31 @@ ifeq ($(strip $(CRYPTO_READ_ONLY)), 0)
   _CFLAGS += -DSECVAR_CRYPTO_WRITE_FUNC
 endif
 
-#By default, Build with crypto library openssl
-OPENSSL = 1
-GNUTLS = 0
-MBEDTLS = 0
-CRYPTO_LIB = openssl
-
 # TODO: Split libstb-secvar Makefile into includeable and runnable probably
 LIBSTB_SECVAR = external/libstb-secvar/lib/libstb-secvar-openssl.a
+
+
+ifeq ($(strip $(OPENSSL)), 1)
+  _LDFLAGS += -lcrypto
+  _CFLAGS += -DSECVAR_CRYPTO_OPENSSL
+endif
 
 ifeq ($(strip $(GNUTLS)), 1)
   MBEDTLS = 0
   OPENSSL = 0
   CRYPTO_LIB = gnutls
+  _LDFLAGS += -lgnutls
+  _CFLAGS += -DSECVAR_CRYPTO_GNUTLS
 endif
 
 ifeq ($(strip $(MBEDTLS)), 1)
   GNUTLS = 0
   OPENSSL = 0
   CRYPTO_LIB = mbedtls
-endif
-
-ifeq ($(strip $(OPENSSL)), 1)
-  _LDFLAGS += -lcrypto
-  _CFLAGS += -DSECVAR_CRYPTO_OPENSSL
-else ifeq ($(strip $(GNUTLS)), 1)
-  _LDFLAGS += -lgnutls
-  _CFLAGS += -DSECVAR_CRYPTO_GNUTLS
-else ifeq ($(strip $(MBEDTLS)), 1)
   _LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
   _CFLAGS += -DSECVAR_CRYPTO_MBEDTLS
 endif
+
 
 #use STATIC=1 for static build
 STATIC = 0
@@ -63,27 +68,9 @@ else
 	STATICFLAG=
 endif
 
-HOST_BACKEND = 1
-GUEST_BACKEND = 1
-
-ifeq ($(strip $(HOST_BACKEND)), 1)
-  INCLUDES += -I./external/skiboot               \
-              -I./external/skiboot/libstb        \
-              -I./external/skiboot/include       \
-              -I./external/extraMbedtls/include/ \
-              -I./backends/host
-  _CFLAGS += -DSECVAR_HOST_BACKEND
-endif
-
-ifeq ($(strip $(GUEST_BACKEND)), 1)
-  INCLUDES += -I./backends/guest/include
-  CFLAGS += -DSECVAR_GUEST_BACKEND
-endif
 
 _LDFLAGS += -L./lib
 
-SVC_SRCS = generic.c \
-           secvarctl.c
 
 # TODO: Consider splitting this also into its own Makefile.inc?
 EXTERNAL_SRCS = external/extraMbedtls/pkcs7.c                                \
@@ -95,16 +82,19 @@ EXTERNAL_SRCS = external/extraMbedtls/pkcs7.c                                \
                 external/skiboot/libstb/secvar/backend/edk2-compat.c         \
                 external/skiboot/libstb/secvar/backend/edk2-compat-process.c
 
+MAIN_SRCS = generic.c \
+            secvarctl.c
+
+ifeq ($(strip $(HOST_BACKEND)), 1)
 include backends/host/Makefile.inc
+endif
+
+ifeq ($(strip $(GUEST_BACKEND)), 1)
 include backends/guest/Makefile.inc
+endif
 
-SRCS  = $(SVC_SRCS)
-SRCS += $(addprefix backends/host/,$(HOST_SRCS))
-SRCS += $(addprefix backends/guest/,$(GUEST_SRCS))
 
-# Copy for format-related targets, so they ignore the external files
-MAIN_SRCS := $(SRCS)
-
+SRCS := $(MAIN_SRCS)
 SRCS += $(EXTERNAL_SRCS)
 
 OBJS = $(addprefix $(OBJ_DIR)/,$(SRCS:.c=.o))
