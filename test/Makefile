@@ -4,7 +4,7 @@ py = python3
 #add location of efitools here. if in PATH, leave blank
 efitools = ../../efitools/
 host_data = host/testdata/PK_by_PK.auth
-SECVAR_TOOL ?= $(PWD)/../bin/secvarctl-dbg
+export SECVAR_TOOL ?= $(PWD)/../bin/secvarctl-dbg
 
 #By default host backend static library created
 DYNAMIC_LIB = 0
@@ -15,12 +15,12 @@ HOST_BACKEND = 1
 GUEST_BACKEND = 1
 
 define test_host
-	$(py) host_tests.py -s $(SECVAR_TOOL) && \
-	$(py) host_generate_tests.py -o $(OPENSSL) -g $(GNUTLS) -s $(SECVAR_TOOL)
+	@$(py) host_tests.py
+	@$(py) host_generate_tests.py
 endef
 
 define test_guest
-	$(py) guest_tests.py -s $(SECVAR_TOOL)
+	@$(py) guest_tests.py
 endef
 
 # TODO: skip tests if a backend isn't enabled

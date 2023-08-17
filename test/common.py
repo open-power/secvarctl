@@ -1,5 +1,9 @@
 import unittest
 import subprocess
+import os
+
+SECTOOLS = os.environ.get("SECVAR_TOOL", "../bin/secvarctl-dbg")
+SECVARPATH = "/sys/firmware/secvar/vars/"
 
 
 class CommandOutput:

@@ -2,11 +2,9 @@
 # Copyright 2021 IBM Corp.
 import unittest
 import os
-import sys
-import argparse
-from common import SecvarctlTest
+from common import SecvarctlTest, SECTOOLS
 
-SECTOOLS = ["../bin/secvarctl-dbg", "-m", "guest"]
+SECTOOLS = [SECTOOLS, "-m", "guest"]
 SECVARPATH = "/sys/firmware/secvar/vars/"
 DATAPATH = "./testdata/guest"
 
@@ -432,16 +430,5 @@ class Test(SecvarctlTest):
 
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser()
-    argParser.add_argument("-s", "--secvarctl", help="set secvarctl tool")
-    argParser.add_argument("-p", "--secvarpath", help="set secvar path")
-    args = argParser.parse_args()
-
-    if args.secvarctl is not None:
-        SECTOOLS[0] = args.secvarctl
-    if args.secvarpath is not None:
-        SECVARPATH = args.secvarpath
-
-    del sys.argv[1:]
     collect_test_data()
     unittest.main()

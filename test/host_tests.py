@@ -3,12 +3,8 @@
 import unittest
 import os
 import filecmp
-import sys
-import argparse
-from common import SecvarctlTest
+from common import SecvarctlTest, SECTOOLS
 
-SECTOOLS = "../bin/secvarctl-dbg"
-SECVARPATH = "/sys/firmware/secvar/vars/"
 DATAPATH = "./testdata/host"
 TESTENV = "./testenv/host"
 
@@ -271,16 +267,5 @@ class Test(SecvarctlTest):
 
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser()
-    argParser.add_argument("-s", "--secvarctl", help="set secvarctl tool")
-    argParser.add_argument("-p", "--secvarpath", help="set secvar path")
-    args = argParser.parse_args()
-
-    if args.secvarctl is not None:
-        SECTOOLS = args.secvarctl
-    if args.secvarpath is not None:
-        SECVARPATH = args.secvarpath
-
-    del sys.argv[1:]
     setupArrays()
     unittest.main()
