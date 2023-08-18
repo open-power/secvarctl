@@ -8,16 +8,8 @@ add_executable( secvarctl )
 
 target_sources( secvarctl PRIVATE secvarctl.c generic.c )
 
-target_sources( secvarctl PRIVATE
-  # external/extraMbedtls/pkcs7.c
-  # external/extraMbedtls/pkcs7_write.c
-  # external/skiboot/libstb/secvar/crypto/crypto-mbedtls.c
-  external/skiboot/libstb/secvar/crypto/crypto-openssl.c
-  # external/skiboot/libstb/secvar/crypto/crypto-gnutls.c
-)
-
-
 target_include_directories( secvarctl BEFORE PRIVATE
+  ./
   include/
   external/libstb-secvar/
   external/libstb-secvar/include/
@@ -26,6 +18,7 @@ target_include_directories( secvarctl BEFORE PRIVATE
 
 target_compile_definitions( secvarctl PRIVATE SECVAR_CRYPTO_WRITE_FUNC )
 
+# Backend selection
 option( HOST_BACKEND "Build with the host backend enabled" ON )
 option( GUEST_BACKEND "Build with the guest backend enabled" ON )
 
@@ -39,17 +32,37 @@ if( NOT ( HOST_BACKEND OR GUEST_BACKEND) )
   message( FATAL_ERROR "No backends are enabled, refusing to build." )
 endif()
 
+# Crypto library selection
+set( CRYPTO "openssl" CACHE STRING "Crypto library to use" )
+set_property( CACHE CRYPTO PROPERTY STRINGS openssl mbedtls gnutls )
+get_property( CRYPTO_STRINGS CACHE CRYPTO PROPERTY STRINGS )
+if (NOT CRYPTO IN_LIST CRYPTO_STRINGS)
+  message(FATAL_ERROR "CRYPTO must be set to one of: ${CRYPTO_STRINGS}")
+endif()
+message( STATUS "Using ${CRYPTO} for crypto")
 
-# OpenSSL
-target_compile_definitions( secvarctl PRIVATE SECVAR_CRYPTO_OPENSSL )
-find_package( OpenSSL REQUIRED )
-target_link_libraries( secvarctl OpenSSL::SSL )
-
-# mbedTLS
-# find_library( MBEDX509 mbedx509 HINTS ENV PATH REQUIRED )
-# find_library( MBEDCRYPTO mbedcrypto HINTS ENV PATH REQUIRED )
-# find_library( MBEDTLS mbedtls HINTS ENV PATH REQUIRED )
-# target_link_libraries( secvarctl ${MBEDTLS} ${MBEDX509} ${MBEDCRYPTO} ${PTHREAD} )
+if( CRYPTO STREQUAL openssl )
+  target_sources( secvarctl PRIVATE external/skiboot/libstb/secvar/crypto/crypto-openssl.c )
+  target_compile_definitions( secvarctl PRIVATE SECVAR_CRYPTO_OPENSSL )
+  find_package( OpenSSL REQUIRED )
+  target_link_libraries( secvarctl OpenSSL::SSL )
+endif()
+if( CRYPTO STREQUAL mbedtls )
+  target_include_directories( secvarctl AFTER PRIVATE external/extraMbedtls/include/ )
+  target_sources( secvarctl PRIVATE
+    external/extraMbedtls/pkcs7.c
+    external/extraMbedtls/pkcs7_write.c
+    external/skiboot/libstb/secvar/crypto/crypto-mbedtls.c
+  )
+  target_compile_definitions( secvarctl PRIVATE SECVAR_CRYPTO_MBEDTLS )
+  find_library( MBEDX509 mbedx509 HINTS ENV PATH REQUIRED )
+  find_library( MBEDCRYPTO mbedcrypto HINTS ENV PATH REQUIRED )
+  find_library( MBEDTLS mbedtls HINTS ENV PATH REQUIRED )
+  target_link_libraries( secvarctl ${MBEDTLS} ${MBEDX509} ${MBEDCRYPTO} ${PTHREAD} )
+endif()
+if( CRYPTO STREQUAL gnutls )
+  message( FATAL_ERROR "gnutls is not currently supported for cmake builds" )
+endif()
 
 add_subdirectory( external/libstb-secvar )
 target_link_libraries( secvarctl stb-secvar-openssl )
