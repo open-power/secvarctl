@@ -12,7 +12,12 @@ set ( BACKEND_GUEST_SRCS
   guest_svc_read.c
 )
 
+target_include_directories ( secvarctl BEFORE PRIVATE
+  backends/guest/include/
+)
+
 list ( TRANSFORM BACKEND_GUEST_SRCS PREPEND ${CMAKE_CURRENT_LIST_DIR}/ )
 
 target_sources ( secvarctl PRIVATE ${BACKEND_GUEST_SRCS} )
 
+target_compile_definitions( secvarctl PRIVATE SECVAR_GUEST_BACKEND )
