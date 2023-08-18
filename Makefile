@@ -33,11 +33,6 @@ ifeq ($(strip $(CRYPTO_READ_ONLY)), 0)
   _CFLAGS += -DSECVAR_CRYPTO_WRITE_FUNC
 endif
 
-# TODO: Split libstb-secvar Makefile into includeable and runnable probably
-LIBSTB_SECVAR = external/libstb-secvar/lib/libstb-secvar-openssl.a
-# currently required for libstb-secvar, should be dependent on crypto library choice
-LDFLAGS = -lcrypto
-
 # Initialize here, so the mbedtls option can add the bonus pkcs7 if needed
 EXTERNAL_SRCS =
 
@@ -61,6 +56,14 @@ ifeq ($(CRYPTO), mbedtls)
                    external/extraMbedtls/pkcs7_write.c \
                    external/skiboot/libstb/secvar/crypto/crypto-mbedtls.c
 endif
+
+
+LIBSTB_SECVAR_ROOT ?= external/libstb-secvar/
+# LIBSTB_SECVAR_ARCHIVE = libstb-secvar-$(CRYPTO).a # TODO: uncomment when libstb-secvar supports other libraries
+LIBSTB_SECVAR_ARCHIVE = libstb-secvar-openssl.a
+LIBSTB_SECVAR = $(LIBSTB_SECVAR_ROOT)/lib/$(LIBSTB_SECVAR_ARCHIVE)
+# NOTE: currently required for libstb-secvar, should be dependent on crypto library choice
+LDFLAGS = -lcrypto
 
 
 #use STATIC=1 for static build
@@ -134,7 +137,7 @@ $(BIN_DIR)/secvarctl-dbg: $(OBJDBG) $(LIBSTB_SECVAR)
 	$(CC) $(_CFLAGS) -g $^ $(STATICFLAG) $(SANITIZE_FLAGS) -fprofile-arcs -ftest-coverage -o $@ $(_LDFLAGS)
 
 $(LIBSTB_SECVAR):
-	$(MAKE) CFLAGS=-DSECVAR_CRYPTO_WRITE_FUNC -C external/libstb-secvar lib/libstb-secvar-openssl.a
+	$(MAKE) CFLAGS=-DSECVAR_CRYPTO_WRITE_FUNC -C $(LIBSTB_SECVAR_ROOT) lib/$(LIBSTB_SECVAR_ARCHIVE)
 
 
 secvarctl: $(BIN_DIR)/secvarctl
