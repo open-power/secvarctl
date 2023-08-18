@@ -8,39 +8,37 @@ add_executable( secvarctl )
 
 target_sources( secvarctl PRIVATE secvarctl.c generic.c )
 
-set( INCLUDE_PATHS
+target_sources( secvarctl PRIVATE
+  # external/extraMbedtls/pkcs7.c
+  # external/extraMbedtls/pkcs7_write.c
+  # external/skiboot/libstb/secvar/crypto/crypto-mbedtls.c
+  external/skiboot/libstb/secvar/crypto/crypto-openssl.c
+  # external/skiboot/libstb/secvar/crypto/crypto-gnutls.c
+)
+
+
+target_include_directories( secvarctl BEFORE PRIVATE
   include/
   external/libstb-secvar/
   external/libstb-secvar/include/
   external/libstb-secvar/include/secvar/
-  external/skiboot/
-  external/skiboot/libstb/
-  external/skiboot/include/
-  external/extraMbedtls/include/
-  backends/host/
-  backends/guest/include/
 )
 
-target_sources( secvarctl PRIVATE
-  # external/extraMbedtls/pkcs7.c
-  # external/extraMbedtls/pkcs7_write.c
-  external/skiboot/libstb/secvar/secvar_util.c
-  # external/skiboot/libstb/secvar/crypto/crypto-mbedtls.c
-  external/skiboot/libstb/secvar/crypto/crypto-openssl.c
-  # external/skiboot/libstb/secvar/crypto/crypto-gnutls.c
-  external/skiboot/libstb/secvar/backend/edk2-compat.c
-  external/skiboot/libstb/secvar/backend/edk2-compat-process.c
-)
+target_compile_definitions( secvarctl PRIVATE SECVAR_CRYPTO_WRITE_FUNC )
 
-include( backends/host/CMakeLists.txt )
-include( backends/guest/CMakeLists.txt )
+option( HOST_BACKEND "Build with the host backend enabled" ON )
+option( GUEST_BACKEND "Build with the guest backend enabled" ON )
 
-target_include_directories( secvarctl AFTER PRIVATE ${INCLUDE_PATHS} )
-target_compile_definitions( secvarctl PRIVATE
-  SECVAR_HOST_BACKEND
-  SECVAR_GUEST_BACKEND
-  SECVAR_CRYPTO_WRITE_FUNC
-)
+if( HOST_BACKEND )
+  include( backends/host/CMakeLists.txt )
+endif()
+if( GUEST_BACKEND )
+  include( backends/guest/CMakeLists.txt )
+endif()
+if( NOT ( HOST_BACKEND OR GUEST_BACKEND) )
+  message( FATAL_ERROR "No backends are enabled, refusing to build." )
+endif()
+
 
 # OpenSSL
 target_compile_definitions( secvarctl PRIVATE SECVAR_CRYPTO_OPENSSL )
