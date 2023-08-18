@@ -2,8 +2,6 @@
 # Copyright 2022-2023 IBM Corp.
 CC ?= gcc
 _CFLAGS = -MMD -std=gnu99 -Wall -Werror
-# TODO: just put all the linker flags for now, rework the LDFLAGS settings later
-LDFLAGS = -lcrypto
 MANDIR=usr/share/man
 BIN_DIR = $(PWD)/bin
 OBJ_DIR = $(PWD)/obj
@@ -12,11 +10,13 @@ OBJ_DIR = $(PWD)/obj
 HOST_BACKEND  ?= 1
 GUEST_BACKEND ?= 1
 
-# Crypto library selection, default to OpenSSL. Mutually exclusive.
-OPENSSL = 1
-GNUTLS = 0
-MBEDTLS = 0
-CRYPTO_LIB = openssl
+# Crypto library selection, default to OpenSSL.
+CRYPTO_OPTIONS = openssl mbedtls gnutls
+CRYPTO ?= openssl
+
+ifeq ($(filter $(CRYPTO),$(CRYPTO_OPTIONS)),)
+  $(error CRYPTO must be set to one of: $(CRYPTO_OPTIONS))
+endif
 
 
 # TODO: seriously trim down the number of -I includes. use more relative pathing.
@@ -35,29 +35,25 @@ endif
 
 # TODO: Split libstb-secvar Makefile into includeable and runnable probably
 LIBSTB_SECVAR = external/libstb-secvar/lib/libstb-secvar-openssl.a
+# currently required for libstb-secvar, should be dependent on crypto library choice
+LDFLAGS = -lcrypto
 
 # Initialize here, so the mbedtls option can add the bonus pkcs7 if needed
 EXTERNAL_SRCS =
 
-ifeq ($(strip $(OPENSSL)), 1)
+ifeq ($(CRYPTO), openssl)
   _LDFLAGS += -lcrypto
   _CFLAGS += -DSECVAR_CRYPTO_OPENSSL
   EXTERNAL_SRCS += external/skiboot/libstb/secvar/crypto/crypto-openssl.c
 endif
 
-ifeq ($(strip $(GNUTLS)), 1)
-  MBEDTLS = 0
-  OPENSSL = 0
-  CRYPTO_LIB = gnutls
+ifeq ($(CRYPTO), gnutls)
   _LDFLAGS += -lgnutls
   _CFLAGS += -DSECVAR_CRYPTO_GNUTLS
   EXTERNAL_SRCS += external/skiboot/libstb/secvar/crypto/crypto-gnutls.c
 endif
 
-ifeq ($(strip $(MBEDTLS)), 1)
-  GNUTLS = 0
-  OPENSSL = 0
-  CRYPTO_LIB = mbedtls
+ifeq ($(CRYPTO), mbedtls)
   _LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
   _CFLAGS += -DSECVAR_CRYPTO_MBEDTLS
   INCLUDES += -I./external/extraMbedtls/include/
@@ -148,10 +144,7 @@ debug: $(BIN_DIR)/secvarctl-dbg
 SECVAR_TOOL ?= $(BIN_DIR)/secvarctl-dbg
 
 check: $(SECVAR_TOOL)
-	@$(MAKE) -C test MEMCHECK=$(MEMCHECK) OPENSSL=$(OPENSSL) GNUTLS=$(GNUTLS) \
-	                 HOST_BACKEND=$(HOST_BACKEND) \
-	                 SECVAR_TOOL=$< \
-	                 check
+	@$(MAKE) -C test SECVAR_TOOL=$< check
 
 CPPCHECK_FLAGS =  --enable=all --force -q --error-exitcode=1
 CPPCHECK_FLAGS += --suppress=missingIncludeSystem
