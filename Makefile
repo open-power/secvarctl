@@ -42,6 +42,7 @@ EXTERNAL_SRCS =
 ifeq ($(strip $(OPENSSL)), 1)
   _LDFLAGS += -lcrypto
   _CFLAGS += -DSECVAR_CRYPTO_OPENSSL
+  EXTERNAL_SRCS += external/skiboot/libstb/secvar/crypto/crypto-openssl.c
 endif
 
 ifeq ($(strip $(GNUTLS)), 1)
@@ -50,6 +51,7 @@ ifeq ($(strip $(GNUTLS)), 1)
   CRYPTO_LIB = gnutls
   _LDFLAGS += -lgnutls
   _CFLAGS += -DSECVAR_CRYPTO_GNUTLS
+  EXTERNAL_SRCS += external/skiboot/libstb/secvar/crypto/crypto-gnutls.c
 endif
 
 ifeq ($(strip $(MBEDTLS)), 1)
@@ -58,8 +60,10 @@ ifeq ($(strip $(MBEDTLS)), 1)
   CRYPTO_LIB = mbedtls
   _LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
   _CFLAGS += -DSECVAR_CRYPTO_MBEDTLS
+  INCLUDES += -I./external/extraMbedtls/include/
   EXTERNAL_SRCS += external/extraMbedtls/pkcs7.c \
-                   external/extraMbedtls/pkcs7_write.c
+                   external/extraMbedtls/pkcs7_write.c \
+                   external/skiboot/libstb/secvar/crypto/crypto-mbedtls.c
 endif
 
 
@@ -74,16 +78,6 @@ endif
 
 
 _LDFLAGS += -L./lib
-
-
-# TODO: Consider splitting this also into its own Makefile.inc?
-EXTERNAL_SRCS += \
-                external/skiboot/libstb/secvar/secvar_util.c                 \
-                external/skiboot/libstb/secvar/crypto/crypto-mbedtls.c       \
-                external/skiboot/libstb/secvar/crypto/crypto-openssl.c       \
-                external/skiboot/libstb/secvar/crypto/crypto-gnutls.c        \
-                external/skiboot/libstb/secvar/backend/edk2-compat.c         \
-                external/skiboot/libstb/secvar/backend/edk2-compat-process.c
 
 MAIN_SRCS = generic.c \
             secvarctl.c
