@@ -64,12 +64,12 @@ int performWriteCommand(int argc, char *argv[]);
 int performValidation(int argc, char *argv[]);
 int performGenerateCommand(int argc, char *argv[]);
 
-int printCertInfo(crypto_x509 *x509);
+int printCertInfo(crypto_x509_t *x509);
 void printESLInfo(EFI_SIGNATURE_LIST *sigList);
 void printTimestamp(struct efi_time t);
 void printGuidSig(const void *sig);
 
-int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen);
+int parseX509(crypto_x509_t **x509, const unsigned char *certBuf, size_t buflen);
 const char *getSigType(const uuid_t);
 
 int getSecVar(struct secvar **var, const char *name, const char *fullPath);
