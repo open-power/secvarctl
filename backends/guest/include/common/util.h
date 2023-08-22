@@ -50,6 +50,9 @@ enum signature_type {
 struct signature_type_info {
 	const char *name;
 	const uuid_t *uuid;
+    /* the following are only used by ST_HASHES_START -> ST_HASHES_END */
+    int crypto_id;
+    size_t size;
 };
 
 extern const struct signature_type_info signature_type_list[];
