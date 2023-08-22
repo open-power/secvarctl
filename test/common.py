@@ -26,7 +26,7 @@ class SecvarctlTest(unittest.TestCase):
 
     def command(self, args):
         try:
-            out = subprocess.run(args, capture_output=True)
+            out = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except Exception as e:
             print(f"Error in command '{' '.join(args)}")
             raise e
