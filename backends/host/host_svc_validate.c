@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h> // for exit
 #include <argp.h>
-#include "secvar/crypto/crypto.h"
+#include "secvar/crypto.h"
 #include "host_svc_backend.h"
 
 struct Arguments {

@@ -9,7 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <argp.h>
-#include "secvar/crypto/crypto.h"
+#include "secvar/crypto.h"
 #include "secvar/secvar.h" // for secvar struct
 #include "host_svc_backend.h"
 

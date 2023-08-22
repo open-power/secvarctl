@@ -10,7 +10,7 @@
 #include "secvar/secvar.h" // for secvar struct
 #include "secvar/backend/edk2.h"
 #include "secvar/backend/edk2-compat-process.h"
-#include "secvar/crypto/crypto.h"
+#include "secvar/crypto.h"
 
 // all argp options must have a single character option
 // so we set --usage to have a single character option that is out of range
