@@ -8,7 +8,7 @@
 #include <time.h> // for timestamp
 #include <ctype.h> // for isspace
 #include <argp.h>
-#include "secvar/crypto/crypto.h"
+#include "secvar/crypto.h"
 #include <ccan/endian/endian.h>
 #include "host_svc_backend.h"
 #include "secvar/backend/edk2-compat-process.h" // work on factoring this out

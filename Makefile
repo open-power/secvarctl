@@ -39,18 +39,20 @@ EXTERNAL_SRCS =
 ifeq ($(CRYPTO), openssl)
   _LDFLAGS += -lcrypto
   _CFLAGS += -DSECVAR_CRYPTO_OPENSSL
-  EXTERNAL_SRCS += external/skiboot/libstb/secvar/crypto/crypto-openssl.c
+  EXTERNAL_SRCS += external/libstb-secvar/src/crypto_openssl.c
 endif
 
 ifeq ($(CRYPTO), gnutls)
   _LDFLAGS += -lgnutls
   _CFLAGS += -DSECVAR_CRYPTO_GNUTLS
+  # TODO port this to live and compile on libstb-secvar
   EXTERNAL_SRCS += external/skiboot/libstb/secvar/crypto/crypto-gnutls.c
 endif
 
 ifeq ($(CRYPTO), mbedtls)
   _LDFLAGS += -lmbedtls -lmbedx509 -lmbedcrypto
   _CFLAGS += -DSECVAR_CRYPTO_MBEDTLS
+  # TODO port this to live and compile on libstb-secvar
   INCLUDES += -I./external/extraMbedtls/include/
   EXTERNAL_SRCS += external/extraMbedtls/pkcs7.c \
                    external/extraMbedtls/pkcs7_write.c \
