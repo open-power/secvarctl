@@ -17,7 +17,7 @@ static bool validate_hash(uuid_t type, size_t size);
 static int parse_opt(int key, char *arg, struct argp_state *state);
 static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size_t eslvarsize,
 			       const char *varName);
-static int validateCertStruct(crypto_x509 *x509, const char *varName);
+static int validateCertStruct(crypto_x509_t *x509, const char *varName);
 
 enum fileTypes { AUTH_FILE = 'a', PKCS7_FILE = 'p', ESL_FILE = 'e', CERT_FILE = 'c' };
 
@@ -251,7 +251,7 @@ int validateAuth(const unsigned char *authBuf, size_t buflen, const char *key)
 int validatePKCS7(const unsigned char *cert_data, size_t len)
 {
 	void *pkcs7_cert = NULL;
-	crypto_pkcs7 *pkcs7 = NULL;
+	crypto_pkcs7_t *pkcs7 = NULL;
 	int rc = SUCCESS, cert_num = 0;
 
 	prlog(PR_INFO, "VALIDATING PKCS7:\n");
@@ -455,7 +455,7 @@ static bool validate_hash(uuid_t type, size_t size)
 int validateCert(const unsigned char *certBuf, size_t buflen, const char *varName)
 {
 	int rc;
-	crypto_x509 *x509 = NULL;
+	crypto_x509_t *x509 = NULL;
 
 	if (buflen == 0) {
 		prlog(PR_ERR, "ERROR: Length %zu is invalid\n", buflen);
@@ -482,7 +482,7 @@ out:
  *@param varName ,  variable name {"db","dbx","KEK", "PK"} b/c db allows for any RSA len, if NULL expect RSA-2048
  *@return SUCCESS or errno depending on if x509 is valid
  */
-static int validateCertStruct(crypto_x509 *x509, const char *varName)
+static int validateCertStruct(crypto_x509_t *x509, const char *varName)
 {
 	int rc, len, version;
 	// check raw cert data has data
@@ -566,11 +566,11 @@ static int validateCertStruct(crypto_x509 *x509, const char *varName)
  *It allows us to declare new variables at the start of the function rather than the middle
  *It is dependent on crypto_convert_pem_to_der which is dependent on SECVAR_CRYPTO_WRITE_FUNC
  */
-static crypto_x509 *parseX509_PEM(const unsigned char *data_pem, size_t data_len)
+static crypto_x509_t *parseX509_PEM(const unsigned char *data_pem, size_t data_len)
 {
 	unsigned char *generatedDER = NULL;
 	size_t generatedDERSize;
-	crypto_x509 *x509 = NULL;
+	crypto_x509_t *x509 = NULL;
 	if (crypto_convert_pem_to_der(data_pem, data_len, &generatedDER, &generatedDERSize)) {
 		prlog(PR_ERR, "ERROR: Failed to parse file from is DER to PEM\n");
 		return NULL;
@@ -593,7 +593,7 @@ static crypto_x509 *parseX509_PEM(const unsigned char *data_pem, size_t data_len
  *@return SUCCESS if certificate is valid
  *NOTE: Remember to unallocate the returned x509 struct!
  */
-int parseX509(crypto_x509 **x509, const unsigned char *certBuf, size_t buflen)
+int parseX509(crypto_x509_t **x509, const unsigned char *certBuf, size_t buflen)
 {
 	if ((ssize_t)buflen <= 0) {
 		prlog(PR_ERR, "ERROR: Certificate has invalid length %zu, cannot validate\n",

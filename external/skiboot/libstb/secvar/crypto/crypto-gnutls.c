@@ -48,7 +48,7 @@ static size_t get_hash_len(int hash_type)
  *@param pkcs7 , a pointer to either an openssl or mbedtls pkcs7 struct
  *@return SUCCESS if message digest is SHA256 else return errno
  */
-int crypto_pkcs7_md_is_sha256(crypto_pkcs7 *pkcs7)
+int crypto_pkcs7_md_is_sha256(crypto_pkcs7_t *pkcs7)
 {
     // could be helpful gnutls_pkcs7_print_signature_info
     int rc, index_to_get = 0;
@@ -72,7 +72,7 @@ int crypto_pkcs7_md_is_sha256(crypto_pkcs7 *pkcs7)
  *free's the memory allocated for a pkcs7 structure
  *@param pkcs7 , a pointer to either an openssl or mbedtls pkcs7 struct
  */
-void crypto_pkcs7_free(crypto_pkcs7 *pkcs7)
+void crypto_pkcs7_free(crypto_pkcs7_t *pkcs7)
 {
     struct mem_link_t *tmp_itr, *prev = NULL;
     gnutls_pkcs7_deinit(pkcs7->pkcs7);
@@ -87,11 +87,11 @@ void crypto_pkcs7_free(crypto_pkcs7 *pkcs7)
     gnutls_free(pkcs7);
 }
 
-crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf,
+crypto_pkcs7_t *crypto_pkcs7_parse_der(const unsigned char *buf,
                      const int buflen)
 {
     int rc;
-    crypto_pkcs7 *pkcs7 = NULL;
+    crypto_pkcs7_t *pkcs7 = NULL;
     const gnutls_datum_t data_struct = {.data = (unsigned char *)buf, .size = buflen};
     
     pkcs7 = gnutls_malloc(sizeof(*pkcs7));
@@ -117,11 +117,11 @@ crypto_pkcs7 *crypto_pkcs7_parse_der(const unsigned char *buf,
     return pkcs7;
 }
 
-crypto_x509 *crypto_pkcs7_get_signing_cert(crypto_pkcs7 *pkcs7, int cert_num)
+crypto_x509_t *crypto_pkcs7_get_signing_cert(crypto_pkcs7_t *pkcs7, int cert_num)
 {
     int rc;
     gnutls_datum_t raw_crt;
-    crypto_x509 *crt = NULL;
+    crypto_x509_t *crt = NULL;
     struct mem_link_t *new = NULL, *prev = NULL;
     /*
      *So this will actually return a copy of the internal certificate
@@ -167,7 +167,7 @@ crypto_x509 *crypto_pkcs7_get_signing_cert(crypto_pkcs7 *pkcs7, int cert_num)
 }
 
 
-int crypto_pkcs7_signed_hash_verify(crypto_pkcs7 *pkcs7, crypto_x509 *x509,
+int crypto_pkcs7_signed_hash_verify(crypto_pkcs7_t *pkcs7, crypto_x509_t *x509,
                     unsigned char *hash, int hash_len)
 {
     int rc, num_of_sigs;
@@ -416,7 +416,7 @@ int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
 #endif
 
 /**====================X509 Functions ====================**/
-int crypto_x509_get_der_len(crypto_x509 *x509)
+int crypto_x509_get_der_len(crypto_x509_t *x509)
 {
     int rc;
     gnutls_datum_t data_struct = {NULL, 0};
@@ -435,7 +435,7 @@ int crypto_x509_get_der_len(crypto_x509 *x509)
     return data_struct.size;
 }
 
-int crypto_x509_get_tbs_der_len(crypto_x509 *x509)
+int crypto_x509_get_tbs_der_len(crypto_x509_t *x509)
 {
     int rc;
     gnutls_datum_t data_struct = {NULL, 0};
@@ -453,12 +453,12 @@ int crypto_x509_get_tbs_der_len(crypto_x509 *x509)
     return data_struct.size;
 }
 
-int crypto_x509_get_version(crypto_x509 *x509)
+int crypto_x509_get_version(crypto_x509_t *x509)
 {
     return gnutls_x509_crt_get_version(*x509);
 }
 
-int crypto_x509_is_RSA(crypto_x509 *x509)
+int crypto_x509_is_RSA(crypto_x509_t *x509)
 {
     int algo;
     unsigned int bits;
@@ -471,7 +471,7 @@ int crypto_x509_is_RSA(crypto_x509 *x509)
     return GNUTLS_SUCCESS;
 }
 
-int crypto_x509_get_sig_len(crypto_x509 *x509)
+int crypto_x509_get_sig_len(crypto_x509_t *x509)
 {
     int bits, rc;
     size_t sig_size;
@@ -496,7 +496,7 @@ int crypto_x509_get_sig_len(crypto_x509 *x509)
     return sig_size;
 }
 
-int crypto_x509_md_is_sha256(crypto_x509 *x509)
+int crypto_x509_md_is_sha256(crypto_x509_t *x509)
 {
     gnutls_sign_algorithm_t alg = gnutls_x509_crt_get_signature_algorithm (*x509);
     if (alg == GNUTLS_SIGN_RSA_SHA256)
@@ -505,14 +505,14 @@ int crypto_x509_md_is_sha256(crypto_x509 *x509)
     return GNUTLS_E_UNKNOWN_HASH_ALGORITHM;
 }
 
-int crypto_x509_oid_is_pkcs1_sha256(crypto_x509 *x509)
+int crypto_x509_oid_is_pkcs1_sha256(crypto_x509_t *x509)
 {
     // is this lazy?
     return crypto_x509_md_is_sha256(x509);
 }
 
 
-int crypto_x509_get_pk_bit_len(crypto_x509 *x509)
+int crypto_x509_get_pk_bit_len(crypto_x509_t *x509)
 {
     int algo;
     unsigned int bits;
@@ -526,7 +526,7 @@ int crypto_x509_get_pk_bit_len(crypto_x509 *x509)
 }
 
 
-void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc,
+void crypto_x509_get_short_info(crypto_x509_t *x509, char *short_desc,
                 size_t max_len) 
 {
     unsigned int algo, bits;
@@ -542,7 +542,7 @@ void crypto_x509_get_short_info(crypto_x509 *x509, char *short_desc,
 }
 
 int crypto_x509_get_long_desc(char *x509_info, size_t max_len, const char *delim,
-                  crypto_x509 *x509)
+                  crypto_x509_t *x509)
 {
     int rc;
     gnutls_datum_t data_struct;
@@ -563,7 +563,7 @@ int crypto_x509_get_long_desc(char *x509_info, size_t max_len, const char *delim
 }
 
 
-crypto_x509 *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
+crypto_x509_t *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
 {
     int rc;
     gnutls_x509_crt_t *crt = NULL;
@@ -589,7 +589,7 @@ crypto_x509 *crypto_x509_parse_der(const unsigned char *data, size_t data_len)
 }
 
 
-void crypto_x509_free(crypto_x509 *x509)
+void crypto_x509_free(crypto_x509_t *x509)
 {
     gnutls_x509_crt_deinit(*x509);
     gnutls_free(x509);
@@ -604,16 +604,16 @@ void crypto_strerror(int rc, char *out_str, size_t out_max_len)
 
 /**====================Hashing Functions ====================**/
 
-int crypto_md_ctx_init(crypto_md_ctx **ctx, int md_id)
+int crypto_md_ctx_init(crypto_md_ctx_t **ctx, int md_id)
 {
-    // crypto_md_ctx new_ctx = {
+    // crypto_md_ctx_t new_ctx = {
     //     .tbh_buf = {
     //         .data = NULL, 
     //         .size = 0 
     //     },
     //     .hash_type = md_id
     // };
-    crypto_md_ctx *new_ctx = NULL;
+    crypto_md_ctx_t *new_ctx = NULL;
     new_ctx = gnutls_malloc(sizeof(*new_ctx));
     if (!new_ctx) {
         prlog(PR_ERR, "ERROR: Failed to allocate data\n");
@@ -627,7 +627,7 @@ int crypto_md_ctx_init(crypto_md_ctx **ctx, int md_id)
     return GNUTLS_SUCCESS;
 }
 
-int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data,
+int crypto_md_update(crypto_md_ctx_t *ctx, const unsigned char *data,
              size_t data_len)
 {
     if (!ctx->tbh_buf.data)
@@ -645,7 +645,7 @@ int crypto_md_update(crypto_md_ctx *ctx, const unsigned char *data,
 }
 
 
-int crypto_md_finish(crypto_md_ctx *ctx, unsigned char *hash)
+int crypto_md_finish(crypto_md_ctx_t *ctx, unsigned char *hash)
 {    
     size_t exp_hash_size, returned_hash_len;
     int rc;
@@ -667,7 +667,7 @@ int crypto_md_finish(crypto_md_ctx *ctx, unsigned char *hash)
 }
 
 
-void crypto_md_free(crypto_md_ctx *ctx)
+void crypto_md_free(crypto_md_ctx_t *ctx)
 {
     if (ctx->tbh_buf.data)
         gnutls_free(ctx->tbh_buf.data);
