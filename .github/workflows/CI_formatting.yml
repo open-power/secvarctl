@@ -1,9 +1,9 @@
-name: Test Source Code Formatting
+name: Format Check and Static Analysis
 
 on: ['push', 'pull_request']
 
 jobs:
-  build:
+  formatcheck:
 
     runs-on: ubuntu-latest
 
@@ -15,3 +15,18 @@ jobs:
 
     - name: test if formatting is appropriate
       run: make formatcheck
+
+  cppcheck:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+
+    - name: install cppcheck
+      run: sudo apt-get update && sudo apt-get install -y cppcheck
+
+    - name: run cppcheck
+      run: make cppcheck

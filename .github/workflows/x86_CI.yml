@@ -38,19 +38,3 @@ jobs:
 
     - name: run test cases
       run: make check SECVAR_TOOL=$(pwd)/build/secvarctl
-
-  cppcheck:
-  
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: 'recursive'
-
-    - name: install cppcheck
-      run: sudo apt-get update && sudo apt-get install -y cppcheck
-
-    - name: run cppcheck
-      run: make cppcheck
-
