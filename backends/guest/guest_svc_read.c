@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <argp.h>
+#include "crypto_util.h"
 #include "err.h"
 #include "prlog.h"
 #include "generic.h"
@@ -91,8 +92,8 @@ static int read_cert(const uint8_t *cert_data, const size_t cert_data_len, const
 		return rc;
 	}
 
-	rc = crypto.get_x509_certificate(cert_data, cert_data_len, &x509);
-	if (rc) {
+	x509 = crypto_x509_parse_der(cert_data, cert_data_len);
+	if (!x509) {
 		/*
        * if here, parsing cert in der failed
        * check if we have compiled with pkcs7_write functions
@@ -102,30 +103,30 @@ static int read_cert(const uint8_t *cert_data, const size_t cert_data_len, const
 		uint8_t *cert;
 		size_t cert_size;
 		prlog(PR_INFO, "failed to parse x509 as DER, trying PEM...\n");
-		rc = crypto.get_der_from_pem(cert_data, cert_data_len, &cert, &cert_size);
-		if (rc) {
+		rc = crypto_convert_pem_to_der(cert_data, cert_data_len, &cert, &cert_size);
+		if (rc != CRYPTO_SUCCESS) {
 			prlog(PR_ERR,
 			      "ERROR: failed to parse x509 (tried DER and PEM formats). \n");
 			return CERT_FAIL;
 		}
 
-		rc = crypto.get_x509_certificate(cert, cert_size, &x509);
+		x509 = crypto_x509_parse_der(cert, cert_size);
 		free(cert);
-		if (rc)
-			return rc;
+		if (!x509)
+			return SV_X509_PARSE_ERROR;
 #else
 		prlog(PR_INFO, "ERROR: failed to parse x509. Make sure file is in DER not PEM\n");
-		return rc;
+		return SV_X509_PARSE_ERROR;
 #endif
 	}
 
-	rc = crypto.validate_x509_certificate(x509);
+	rc = validate_x509_certificate(x509);
 	if (rc)
 		prlog(PR_ERR, "ERROR: x509 certificate is invalid (%d)\n", rc);
 	else
 		rc = print_cert_info(x509);
 
-	crypto.release_x509_certificate(x509);
+	crypto_x509_free(x509);
 
 	return rc;
 }
@@ -201,7 +202,7 @@ static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int i
 
 	printf("PKCS7:\n");
 
-	rc = crypto.get_pkcs7_certificate(auth->auth_cert.cert_data, pkcs7_size, &pkcs7);
+	rc = get_pkcs7_certificate(auth->auth_cert.cert_data, pkcs7_size, &pkcs7);
 	if (rc != SUCCESS) {
 		prlog(PR_ERR, "ERROR: parsing of pkcs7 certificate is failed (%d)\n", rc);
 		return rc;
@@ -209,8 +210,10 @@ static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int i
 
 	printf("\tDigest Alg: SHA256\n");
 
-	while (rc == SUCCESS &&
-	       crypto.get_signing_cert_from_pkcs7(pkcs7, cert_num, &x509) == SUCCESS) {
+	while (rc == SUCCESS) {
+		x509 = crypto_pkcs7_get_signing_cert(pkcs7, cert_num);
+		if (!x509)
+			break;
 		printf("SIGNING CERTIFICATE:\n");
 
 		rc = print_cert_info(x509);
@@ -218,7 +221,7 @@ static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int i
 		cert_num++;
 	}
 
-	crypto.release_pkcs7_certificate(pkcs7);
+	crypto_pkcs7_free(pkcs7);
 
 	printf("ESL INFO:\n");
 	if (auth_size == auth_data_len)
