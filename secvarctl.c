@@ -14,21 +14,44 @@
 #include "guest_svc_backend.h"
 #endif
 
-#define HOST_BACKEND ((char *)"ibm,edk2-compat-v1")
-#define GUEST_BACKEND ((char *)"ibm,plpks-sb-v1")
-
 int verbose = PR_WARNING;
 
-static struct backend backends[] = {
+enum backends {
 #ifdef SECVAR_HOST_BACKEND
-	{ .name = "ibm,edk2-compat-v1",
-	  .countCmds = sizeof(edk2_compat_command_table) / sizeof(struct command),
-	  .commands = edk2_compat_command_table },
+	BACKEND_HOST,
 #endif
 #ifdef SECVAR_GUEST_BACKEND
-	{ .name = "ibm,plpks-sb-v1",
-	  .countCmds = sizeof(guest_command_table) / sizeof(struct command),
-	  .commands = guest_command_table },
+	BACKEND_GUEST,
+#endif
+	BACKEND_UNKNOWN,
+};
+
+// Lookup table for string -> backend enum, allows for aliasing backend names to use format or shortname
+static struct {
+	char name[32];
+	enum backends backend;
+} backend_names[] = {
+#ifdef SECVAR_HOST_BACKEND
+	{ .name = "host", .backend = BACKEND_HOST },
+	{ .name = HOST_BACKEND_FORMAT, .backend = BACKEND_HOST },
+#endif
+#ifdef SECVAR_GUEST_BACKEND
+	{ .name = "guest", .backend = BACKEND_GUEST },
+	{ .name = GUEST_BACKEND_FORMAT, .backend = BACKEND_GUEST },
+#endif
+};
+
+// Backend command table
+static struct backend backends[] = {
+#ifdef SECVAR_HOST_BACKEND
+	[BACKEND_HOST] = { .format = HOST_BACKEND_FORMAT,
+			   .countCmds = sizeof(edk2_compat_command_table) / sizeof(struct command),
+			   .commands = edk2_compat_command_table },
+#endif
+#ifdef SECVAR_GUEST_BACKEND
+	[BACKEND_GUEST] = { .format = GUEST_BACKEND_FORMAT,
+			    .countCmds = sizeof(guest_command_table) / sizeof(struct command),
+			    .commands = guest_command_table },
 #endif
 };
 
@@ -88,14 +111,14 @@ int is_known_backend(const char *buff, struct backend **backend)
 
 	/* loop through all known backends */
 	for (i = 0; i < total_backend; i++) {
-		if (!strncmp(buff, backends[i].name, strlen(backends[i].name))) {
-			prlog(PR_NOTICE, "found backend %s\n", backends[i].name);
+		if (!strncmp(buff, backends[i].format, strlen(backends[i].format))) {
+			prlog(PR_NOTICE, "found backend %s\n", backends[i].format);
 			*backend = &backends[i];
-			return BACKEND_FOUND;
+			return i; // enum in the command table -> which backend
 		}
 	}
 
-	return UNKNOWN_BACKEND;
+	return BACKEND_UNKNOWN;
 }
 
 /*
@@ -116,10 +139,10 @@ static struct backend *get_backend()
 	}
 
 	/* get max size of backend name */
-	max_buff_size = strlen(backends[0].name);
+	max_buff_size = strlen(backends[0].format);
 	for (i = 0; i < sizeof(backends) / sizeof(struct backend); i++) {
-		if (strlen(backends[i].name) > max_buff_size)
-			max_buff_size = strlen(backends[i].name);
+		if (strlen(backends[i].format) > max_buff_size)
+			max_buff_size = strlen(backends[i].format);
 	}
 
 	buff = get_data_from_file(secvar_format_location, max_buff_size, &buffSize);
@@ -140,8 +163,8 @@ static struct backend *get_backend()
 
 int main(int argc, char *argv[])
 {
-	int rc, i, secvarctl_mode = -1;
-	char *subcommand = NULL, *backend_name = NULL;
+	int rc, i;
+	char *subcommand = NULL;
 	struct backend *backend = NULL;
 
 	if (argc < 2) {
@@ -162,20 +185,20 @@ int main(int argc, char *argv[])
 		} else if (!strcmp("-m", *argv) || !strcmp("--mode", *argv)) {
 			argv++;
 			argc--;
-			if (*argv != NULL && !strcmp("guest", *argv)) {
-				secvarctl_mode = 1;
-				backend_name = GUEST_BACKEND;
-			} else if (*argv != NULL && !strcmp("host", *argv)) {
-				secvarctl_mode = 0;
-				backend_name = HOST_BACKEND;
-			} else if (*argv != NULL) {
-				prlog(PR_WARNING, "\nERROR: %s is unkonwn mode\n", *argv);
-				usage();
-				return SUCCESS;
-			} else {
-				prlog(PR_WARNING, "\nERROR: mode name is needed\n");
-				usage();
-				return SUCCESS;
+			if (argv == NULL) {
+				prlog(PR_WARNING, "No mode name supplied\n");
+				return UNKNOWN_COMMAND;
+			}
+			for (i = 0; i < sizeof(backend_names) / sizeof(backend_names[0]); i++) {
+				if (!strcmp(*argv, backend_names[i].name)) {
+					backend = &backends[backend_names[i].backend];
+					break;
+				}
+			}
+
+			if (!backend) {
+				prlog(PR_WARNING, "Backend '%s' not supported or enabled\n", *argv);
+				return UNKNOWN_COMMAND;
 			}
 		} else if (!strcmp("-v", *argv) || !strcmp("--verbose", *argv))
 			verbose = PR_DEBUG;
@@ -191,24 +214,12 @@ int main(int argc, char *argv[])
 		return ARG_PARSE_FAIL;
 	}
 
-	if (secvarctl_mode == -1) {
-		usage();
-		return SUCCESS;
-	}
-
-	/* if backend is not edk2-compat print continuing despite some funtionality not working */
-	backend = get_backend();
+	if (!backend)
+		backend = get_backend();
 	if (!backend) {
-		if (is_known_backend(backend_name, &backend))
-			prlog(PR_WARNING,
-			      "WARNING: unsupported backend detected, assuming "
-			      "%s\nread/write may not work as expected\n",
-			      backend->name);
-		else {
-			prlog(PR_WARNING, "WARNING!! %s mode is not enabled.\n",
-			      (secvarctl_mode ? "guest" : "host"));
-			return SUCCESS;
-		}
+		prlog(PR_WARNING,
+		      "Backend cannot be determined by your system, use -m <backend> to specify.\n");
+		return UNKNOWN_COMMAND;
 	}
 
 	/* next command should be one of main subcommands */
