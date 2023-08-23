@@ -137,14 +137,14 @@ int is_x509certificate(const uint8_t *buffer, const size_t buffer_size, uint8_t 
  *
  * @param buffer, data to be added to ESL, it must be of the same type as specified by inform
  * @param buffer_size , length of buffer
- * @param hash_funct, array of hash function information to use for ESL GUID,
+ * @param hash_funct, index of hash function information to use for ESL GUID,
  *                   also helps in prevalation, if inform is '[c]ert' then this doesn't matter
  * @param hash_data, the generated hash data
  * @param hash_data_size, the length of hash data
  * @param esl_guid, signature type of ESL
  * @return SUCCESS or err number
  */
-int get_hash_data(const uint8_t *buffer, const size_t buffer_size, hash_func_t **hash_funct,
+int get_hash_data(const uint8_t *buffer, const size_t buffer_size, enum signature_type hash_funct,
 		  uint8_t *hash_data, size_t *hash_data_size);
 
 #endif

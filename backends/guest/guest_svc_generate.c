@@ -36,14 +36,14 @@ static bool is_sbat_variable(const char *variable_name)
  * @param buffer, data to be added to ESL, it must be of the same type as specified by inform
  * @param buffer_size , length of buff
  * @param args, struct of input info
- * @param hash_funct, array of hash function information to use for ESL GUID,
+ * @param hash_funct, index of hash function information to use for ESL GUID,
  *                   also helps in prevalation, if inform is '[c]ert' then this doesn't matter
  * @param out_buffer, the resulting ESL File, NOTE: REMEMBER TO UNALLOC THIS MEMORY
  * @param out_buffer_size, the length of out_buffer
  * @return SUCCESS or err number
  */
 static int generate_esl(const uint8_t *buffer, size_t buffer_size, struct generate_args *args,
-			const hash_func_t *hash_funct, uint8_t **out_buffer,
+			enum signature_type hash_funct, uint8_t **out_buffer,
 			size_t *out_buffer_size)
 {
 	int rc = SUCCESS;
@@ -70,7 +70,7 @@ static int generate_esl(const uint8_t *buffer, size_t buffer_size, struct genera
 			break;
 		}
 
-		rc = get_hash_data(buffer, buffer_size, (hash_func_t **)&hash_funct, hash_data,
+		rc = get_hash_data(buffer, buffer_size, hash_funct, hash_data,
 				   &hash_data_size);
 		if (rc != SUCCESS) {
 			prlog(PR_ERR, "ERROR: failed to generate hash from file\n");
@@ -89,7 +89,7 @@ static int generate_esl(const uint8_t *buffer, size_t buffer_size, struct genera
 			}
 		}
 
-		esl_guid = hash_funct->guid;
+		esl_guid = get_uuid(hash_funct);
 		break;
 	case 'c':
 		if (is_x509certificate(buffer, buffer_size, &cert_data, &cert_data_size) !=
@@ -151,13 +151,13 @@ out:
  * @param data, data to be hashed, it must be of the same type as specified by inform
  * @param data_size , length of buff
  * @param args, struct containing important command line info
- * @param hash_funct, array of hash function information to use as hash algorithm
+ * @param hash_funct, index of hash function information to use as hash algorithm
  * @param hash, the resulting hash, NOTE: REMEMBER TO UNALLOC THIS MEMORY
  * @param hash_size, the length of outHash
  * @return SUCCESS or err number
  */
 static int generate_sha256_hash(const uint8_t *data, size_t data_size, struct generate_args *args,
-				const hash_func_t *alg, uint8_t **hash, size_t *hash_size)
+				enum signature_type alg, uint8_t **hash, size_t *hash_size)
 {
 	int rc;
 
@@ -197,7 +197,7 @@ static int generate_sha256_hash(const uint8_t *data, size_t data_size, struct ge
 		}
 	}
 
-	rc = crypto.generate_md_hash(data, data_size, alg->crypto_md_funct, hash, hash_size);
+	rc = crypto.generate_md_hash(data, data_size, get_crypto_alg_id(alg), hash, hash_size);
 	if (rc != SUCCESS) {
 		prlog(PR_ERR, "failed to generate hash\n");
 		return rc;
@@ -214,13 +214,13 @@ static int generate_sha256_hash(const uint8_t *data, size_t data_size, struct ge
  * @param buffer, data to be added to auth or PKCS7, it must be of the same type as specified by inform
  * @param buffer_size , length of buff
  * @param args, struct containing command line info and lots of other important information
- * @param hash_funct, array of hash function information to use for signing (see above for format)
+ * @param hash_funct, index of hash function information to use for signing (see above for format)
  * @param out_buffer, the resulting auth or PKCS7 File, NOTE: REMEMBER TO UNALLOC THIS MEMORY
  * @param out_buffer_size, the length of out_buffer
  * @return SUCCESS or err number
  */
 static int generate_authorpkcs7(const uint8_t *buffer, size_t buffer_size,
-				struct generate_args *args, const hash_func_t *hash_funct,
+				struct generate_args *args, const enum signature_type hash_funct,
 				uint8_t **out_buffer, size_t *out_buffer_size)
 {
 	int rc = SUCCESS;
@@ -324,7 +324,7 @@ out:
  * @return SUCCESS or err number
  */
 static int generate_data(const uint8_t *buffer, size_t buffer_size, struct generate_args *args,
-			 const hash_func_t *hash_function, uint8_t **out_buffer,
+			 enum signature_type hash_function, uint8_t **out_buffer,
 			 size_t *out_buffer_size)
 {
 	int rc = SUCCESS;
@@ -543,7 +543,7 @@ int guest_generate_command(int argc, char *argv[])
 {
 	int rc = 0;
 	size_t out_buffer_size = 0, size = 0;
-	hash_func_t *hash_function;
+	enum signature_type hash_function;
 	unsigned char *buffer = NULL, *out_buffer = NULL;
 	struct generate_args args = { 0 };
 
