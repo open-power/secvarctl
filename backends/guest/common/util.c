@@ -84,60 +84,58 @@ bool validate_sbat(const uint8_t *sbat_data, size_t sbat_len)
 }
 
 /*
- * given a string, it will return the corresponding hash_funct info array
+ * given a string, it will return the corresponding sig_type info index
  *
  * @param name, the name of the hash function {"sha1", "sha246"...}
- * @param returnfunct, the corresponding hash_funct info array
+ * @param returnfunct, the corresponding sig_type info struct
  * @return success or err number if not a valid hash function name
  */
-int get_hash_function(const char *name, hash_func_t **returnfunct)
+int get_hash_function(const char *name, enum signature_type *returnfunct)
 {
-	int i = 0;
+	for (int i = ST_HASHES_START; i <= ST_HASHES_END; i++) {
+		if (strcmp(name, signature_type_list[i].name))
+			continue;
 
-	for (i = 0; i < sizeof(hash_functions) / sizeof(hash_func_t); i++) {
-		if (strcmp(hash_functions[i].name, name) == 0) {
-			*returnfunct = (hash_func_t *)&hash_functions[i];
-			return SUCCESS;
-		}
+		*returnfunct = i;
+		return SUCCESS;
 	}
 
 	prlog(PR_ERR, "error: invalid hash algorithm %s , hint: use -h { ", name);
 
-	for (i = 0; i < sizeof(hash_functions) / sizeof(hash_func_t); i++) {
-		if (i == sizeof(hash_functions) / sizeof(hash_func_t) - 1)
-			prlog(PR_ERR, "%s }\n", hash_functions[i].name);
+	for (int i = ST_HASHES_START; i <= ST_HASHES_END; i++) {
+		if (i == ST_HASHES_END )
+			prlog(PR_ERR, "%s }\n", signature_type_list[i].name);
 		else
-			prlog(PR_ERR, "%s, ", hash_functions[i].name);
+			prlog(PR_ERR, "%s, ", signature_type_list[i].name);
 	}
 
 	return ARG_PARSE_FAIL;
 }
 
 /*
- * given a string, it will return the corresponding x509 hash_funct info array
+ * given a string, it will return the corresponding x509 sig_type info index
  *
  * @param name, the name of the hash function {"sha1", "sha246"...}
- * @param returnfunct, the corresponding hash_funct info array
+ * @param returnfunct, the corresponding sig_type info index
  * @return success or err number if not a valid hash function name
  */
-int get_x509_hash_function(const char *name, hash_func_t **returnfunct)
+int get_x509_hash_function(const char *name, enum signature_type *returnfunct)
 {
-	int i = 0;
+	for (int i = ST_X509_HASHES_START; i <= ST_X509_HASHES_END; i++) {
+		if (strcmp(name, signature_type_list[i].name))
+			continue;
 
-	for (i = 0; i < sizeof(x509_hash_functions) / sizeof(hash_func_t); i++) {
-		if (strcmp(x509_hash_functions[i].name, name) == 0) {
-			*returnfunct = (hash_func_t *)&x509_hash_functions[i];
-			return SUCCESS;
-		}
+		*returnfunct = i;
+		return SUCCESS;
 	}
 
 	prlog(PR_ERR, "error: invalid hash algorithm %s , hint: use -h { ", name);
 
-	for (i = 0; i < sizeof(x509_hash_functions) / sizeof(hash_func_t); i++) {
-		if (i == sizeof(x509_hash_functions) / sizeof(hash_func_t) - 1)
-			prlog(PR_ERR, "%s }\n", x509_hash_functions[i].name);
+	for (int i = ST_X509_HASHES_START; i <= ST_X509_HASHES_END; i++) {
+		if (i == ST_X509_HASHES_END )
+			prlog(PR_ERR, "%s }\n", signature_type_list[i].name);
 		else
-			prlog(PR_ERR, "%s, ", x509_hash_functions[i].name);
+			prlog(PR_ERR, "%s, ", signature_type_list[i].name);
 	}
 
 	return ARG_PARSE_FAIL;
