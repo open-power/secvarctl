@@ -57,3 +57,8 @@ class SecvarctlTest(unittest.TestCase):
         self.command(
             ["cp", "-a", f"{self.test_data_dir}/goldenKeys/.", f"{self.test_env_dir}/"]
         )
+
+    def checkBackend(self, backend):
+        result = self.command([SECTOOLS, "-m", backend, "-h"])
+        if not bool(result):
+            raise unittest.SkipTest

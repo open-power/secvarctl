@@ -165,6 +165,7 @@ class Test(SecvarctlTest):
     test_data_dir = f"{DATAPATH}"
 
     def setUp(self):
+        self.checkBackend("host")
         self.setupTestEnvironment()
 
     def test_secvarctl_basic(self):

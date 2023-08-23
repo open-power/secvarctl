@@ -158,6 +158,7 @@ class Test(SecvarctlTest):
     test_data_dir = f"{DATAPATH}"
 
     def setUp(self):
+        self.checkBackend("guest")
         self.setupTestEnvironment()
         self.command(["mkdir", "-p", gen_dir])
 
