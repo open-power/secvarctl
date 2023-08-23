@@ -3,7 +3,7 @@ name: x86 Make CI
 on: ['push', 'pull_request']
 
 jobs:
-  build:
+  makefile:
 
     runs-on: ubuntu-latest
 
@@ -13,18 +13,44 @@ jobs:
         submodules: 'recursive'
 
     - name: install openssl and valgrind for running test script
-      run:  sudo apt-get update && sudo apt-get install -y openssl valgrind libssl-dev libmbedtls-dev cppcheck cmake
-
-    - name: run cppcheck
-      run: make cppcheck
+      run:  sudo apt-get update && sudo apt-get install -y openssl libssl-dev libmbedtls-dev
 
     - name: run test cases
       run: make check
 
-    - name: run and test cmake builds
-      run: |
-        cmake -Bbuild . -DUSE_ASAN=ON -DCMAKE_BUILD_TYPE=Debug
-        cmake --build build
-        make check SECVAR_TOOL=$(pwd)/build/secvarctl
-        
+  cmake:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+
+    - name: install openssl and valgrind for running test script
+      run:  sudo apt-get update && sudo apt-get install -y openssl libssl-dev libmbedtls-dev cmake
+
+    - name: generate cmake build
+      run: cmake -Bbuild . -DUSE_ASAN=ON -DCMAKE_BUILD_TYPE=Debug
+
+    - name: run cmake build
+      run: cmake --build build
+
+    - name: run test cases
+      run: make check SECVAR_TOOL=$(pwd)/build/secvarctl
+
+  cppcheck:
   
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+
+    - name: install cppcheck
+      run: sudo apt-get update && sudo apt-get install -y cppcheck
+
+    - name: run cppcheck
+      run: make cppcheck
+
