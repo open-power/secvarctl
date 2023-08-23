@@ -18,16 +18,16 @@
  * only real check we can do on a hash
  *
  * @param size , length of hash to be validated
- * @param hashFunct, array of hash function information
+ * @param hashFunct, index of hash function information
  * @return SUCCESS or err number
  */
-int validate_hash_alg(size_t size, const hash_func_t *alg)
+int validate_hash_alg(size_t size, enum signature_type alg)
 {
-	if (size != alg->size) {
+	if (size != get_crypto_alg_len(alg)) {
 		prlog(PR_ERR,
 		      "ERROR: length of hash data does not equal expected size of hash "
 		      "%s, expected %zu found %zu bytes\n",
-		      alg->name, alg->size, size);
+		      get_crypto_alg_name(alg), get_crypto_alg_len(alg), size);
 		return HASH_FAIL;
 	}
 
@@ -83,20 +83,13 @@ int validate_time(timestamp_t *time)
  */
 bool validate_hash(uuid_t type, size_t size)
 {
-	int i = 0;
 
-	for (i = 0; i < sizeof(hash_functions) / sizeof(hash_func_t); i++) {
-		if (uuid_equals(&type, hash_functions[i].guid) && (size == hash_functions[i].size))
-			return true;
-	}
+	int idx = get_signature_type(uuid);
+	if (idx < ST_HASHES_END || idx < ST_X509_HASHES_START
+		|| signature_type_list[idx].size != size)
+		return false;
 
-	for (i = 0; i < sizeof(x509_hash_functions) / sizeof(hash_func_t); i++) {
-		if (uuid_equals(&type, x509_hash_functions[i].guid) &&
-		    (size == x509_hash_functions[i].size))
-			return true;
-	}
-
-	return false;
+	return true;
 }
 
 /*

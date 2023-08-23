@@ -27,10 +27,10 @@ bool validate_hash(uuid_t type, size_t size);
  * only real check we can do on a hash
  *
  * @param size , length of hash to be validated
- * @param hashFunct, array of hash function information
+ * @param hashFunct, index of hash function information
  * @return SUCCESS or err number
  */
-int validate_hash_alg(size_t size, const hash_func_t *alg);
+int validate_hash_alg(size_t size, enum signature_type alg);
 
 /*
  * ensures that efi_time values are  in correct ranges

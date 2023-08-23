@@ -449,34 +449,34 @@ int is_x509certificate(const uint8_t *buffer, const size_t buffer_size, uint8_t 
  *
  * @param buffer, data to be added to ESL, it must be of the same type as specified by inform
  * @param buffer_size , length of buffer
- * @param hash_funct, array of hash function information to use for ESL GUID,
+ * @param hash_funct, index of hash function information to use for ESL GUID,
  *                   also helps in prevalation, if inform is '[c]ert' then this doesn't matter
  * @param hash_data, the generated hash data
  * @param hash_data_size, the length of hash data
  * @param esl_guid, signature type of ESL
  * @return SUCCESS or err number
  */
-int get_hash_data(const uint8_t *buffer, const size_t buffer_size, hash_func_t **hash_funct,
+int get_hash_data(const uint8_t *buffer, const size_t buffer_size, enum signature_type hash_funct,
 		  uint8_t *hash_data, size_t *hash_data_size)
 {
 	int rc = SUCCESS;
 	size_t data_size = 0;
 	uint8_t *data = NULL;
-	hash_func_t *x509_hash_func = NULL;
+	enum signature_type x509_hash_func;
 
 	rc = is_x509certificate(buffer, buffer_size, &data, &data_size);
 	if (rc == SUCCESS) {
-		rc = get_x509_hash_function((*hash_funct)->name, (hash_func_t **)&x509_hash_func);
+		rc = get_x509_hash_function((*hash_funct)->name, &x509_hash_func);
 		if (rc)
 			return rc;
 
-		*hash_funct = x509_hash_func;
+		hash_funct = *x509_hash_func;
 	} else {
 		data_size = buffer_size;
 		data = (uint8_t *)buffer;
 	}
 
-	rc = crypto.generate_md_hash(data, data_size, (*hash_funct)->crypto_md_funct, &hash_data,
+	rc = crypto.generate_md_hash(data, data_size, get_crypto_alg_id(x509_hash_func), &hash_data,
 				     hash_data_size);
 
 	return rc;
