@@ -4,6 +4,9 @@ on: ['push', 'pull_request']
 
 jobs:
   makefile:
+    strategy:
+      matrix:
+        backend: ["", "GUEST_BACKEND=0", "HOST_BACKEND=0"]
 
     runs-on: ubuntu-latest
 
@@ -16,9 +19,12 @@ jobs:
       run:  sudo apt-get update && sudo apt-get install -y openssl libssl-dev libmbedtls-dev
 
     - name: run test cases
-      run: make check
+      run: make ${{ matrix.backend }} check
 
   cmake:
+    strategy:
+      matrix:
+        backend: ["", "-DGUEST_BACKEND=0", "-DHOST_BACKEND=0"]
 
     runs-on: ubuntu-latest
 
@@ -31,7 +37,7 @@ jobs:
       run:  sudo apt-get update && sudo apt-get install -y openssl libssl-dev libmbedtls-dev cmake
 
     - name: generate cmake build
-      run: cmake -Bbuild . -DUSE_ASAN=ON -DCMAKE_BUILD_TYPE=Debug
+      run: cmake -Bbuild . -DUSE_ASAN=ON -DCMAKE_BUILD_TYPE=Debug ${{ matrix.backend }}
 
     - name: run cmake build
       run: cmake --build build
