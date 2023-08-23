@@ -274,20 +274,23 @@ int create_presigned_hash(const uint8_t *esl, const size_t esl_size,
 		return rc;
 	}
 
-	rc = crypto.generate_md_hash(prehash, prehash_size, CRYPTO_MD_SHA256, out_buffer,
+	rc = crypto_md_generate_hash(prehash, prehash_size, CRYPTO_MD_SHA256, out_buffer,
 				     out_buffer_size);
-	if (rc)
-		prlog(PR_ERR, "failed to generate hash\n");
-	else if (*out_buffer_size != 32) {
-		prlog(PR_ERR, "error: size of sha256 is not 32 bytes, found %zu bytes\n",
-		      *out_buffer_size);
-		rc = HASH_FAIL;
-	}
-
+	
 	if (prehash != NULL)
 		free(prehash);
 
-	return rc;
+	if (rc != CRYPTO_SUCCESS) {
+		prlog(PR_ERR, "failed to generate hash\n");
+	}
+	else if (*out_buffer_size != 32) {
+		prlog(PR_ERR, "error: size of sha256 is not 32 bytes, found %zu bytes\n",
+		      *out_buffer_size);
+	}
+	else
+		return SUCCESS;
+
+	return HASH_FAIL;
 }
 
 /*
@@ -319,27 +322,25 @@ int create_pkcs7(const uint8_t *new_data, const size_t new_data_size,
 	/* get pkcs7 and size, if we are already given ths signatures then call appropriate funcion */
 	if (args->pkcs7_gen_method) {
 		prlog(PR_INFO, "generating pkcs7 with already signed data\n");
-		rc = crypto.generate_pkcs7_from_signed_data(actual_data, total_size,
-							    (uint8_t **)args->sign_certs,
-							    (uint8_t **)args->sign_keys,
-							    args->sign_key_count, out_buffer,
-							    out_buffer_size);
+		rc = crypto_pkcs7_generate_w_already_signed_data(out_buffer, out_buffer_size,
+								actual_data, total_size,
+							    args->sign_certs, args->sign_keys,
+							    args->sign_key_count, CRYPTO_MD_SHA256);
 	} else
-		rc = crypto.generate_pkcs7_signature(actual_data, total_size,
-						     (uint8_t **)args->sign_certs,
-						     (uint8_t **)args->sign_keys,
-						     args->sign_key_count, out_buffer,
-						     out_buffer_size);
-
-	if (rc) {
-		prlog(PR_ERR, "ERROR: making pkcs7 failed\n");
-		rc = PKCS7_FAIL;
-	}
+		rc = crypto_pkcs7_generate_w_signature(out_buffer, out_buffer_size,
+							 actual_data, total_size,
+						     args->sign_certs, args->sign_keys,
+						     args->sign_key_count, CRYPTO_MD_SHA256);
 
 	if (actual_data)
 		free(actual_data);
 
-	return rc;
+	if (rc != CRYPTO_SUCCESS) {
+		prlog(PR_ERR, "ERROR: making pkcs7 failed\n");
+		return PKCS7_FAIL;
+	}
+
+	return SUCCESS;
 }
 
 /*
@@ -430,13 +431,13 @@ int is_x509certificate(const uint8_t *buffer, const size_t buffer_size, uint8_t 
 	/* two intermediate buffers needed, one for input -> DER and one for DER -> ESL, */
 	prlog(PR_INFO, "converting x509 from PEM to DER...\n");
 
-	rc = crypto.get_der_from_pem(buffer, buffer_size, &cert, &cert_size);
-	if (rc == SUCCESS)
-		rc = validate_cert(cert, cert_size);
-	else {
-		prlog(PR_WARNING, "WARNING: could not convert PEM to DER\n");
-		return rc;
+	rc = crypto_convert_pem_to_der(buffer, buffer_size, &cert, &cert_size);
+	if (rc != CRYPTO_SUCCESS) {
+		prlog(PR_WARNING, "WARNING: could not convert PEM to DER, %d\n", rc);
+		return CERT_FAIL;
 	}
+	
+	rc = validate_cert(cert, cert_size);
 
 	*cert_data = cert;
 	*cert_data_size = cert_size;
@@ -466,18 +467,21 @@ int get_hash_data(const uint8_t *buffer, const size_t buffer_size, enum signatur
 
 	rc = is_x509certificate(buffer, buffer_size, &data, &data_size);
 	if (rc == SUCCESS) {
-		rc = get_x509_hash_function((*hash_funct)->name, &x509_hash_func);
+		rc = get_x509_hash_function(get_crypto_alg_name(hash_funct), &x509_hash_func);
 		if (rc)
 			return rc;
 
-		hash_funct = *x509_hash_func;
+		hash_funct = x509_hash_func;
 	} else {
 		data_size = buffer_size;
 		data = (uint8_t *)buffer;
 	}
 
-	rc = crypto.generate_md_hash(data, data_size, get_crypto_alg_id(x509_hash_func), &hash_data,
+	rc = crypto_md_generate_hash(data, data_size, get_crypto_alg_id(x509_hash_func), &hash_data,
 				     hash_data_size);
 
-	return rc;
+	if (rc != CRYPTO_SUCCESS)
+		return HASH_FAIL;
+
+	return SUCCESS;
 }

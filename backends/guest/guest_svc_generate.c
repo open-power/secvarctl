@@ -197,10 +197,10 @@ static int generate_sha256_hash(const uint8_t *data, size_t data_size, struct ge
 		}
 	}
 
-	rc = crypto.generate_md_hash(data, data_size, get_crypto_alg_id(alg), hash, hash_size);
-	if (rc != SUCCESS) {
-		prlog(PR_ERR, "failed to generate hash\n");
-		return rc;
+	rc = crypto_md_generate_hash(data, data_size, get_crypto_alg_id(alg), hash, hash_size);
+	if (rc != CRYPTO_SUCCESS) {
+		prlog(PR_ERR, "failed to generate hash, rc %d\n", rc);
+		return HASH_FAIL;
 	}
 
 	return validate_hash_alg(*hash_size, alg);
