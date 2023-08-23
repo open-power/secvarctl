@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include "generic.h"
 
+#define GUEST_BACKEND_FORMAT "ibm,plpks-sb-v1"
+
 /*
  * called from main()
  * handles argument parsing for validate command

@@ -21,6 +21,8 @@
 #define SECVARPATH "/sys/firmware/secvar/vars/"
 #endif
 
+#define HOST_BACKEND_FORMAT "ibm,edk2-compat-v1"
+
 #define variables                                                                                  \
 	(char *[])                                                                                 \
 	{                                                                                          \
