@@ -90,7 +90,7 @@ void print_esl_info(sv_esl_t *sig_list)
 int print_cert_info(crypto_x509_t *x509)
 {
 	char *x509_info = NULL;
-	int failures;
+	int bytes_out;
 
 	x509_info = calloc(1, CERT_BUFFER_SIZE);
 	if (!x509_info) {
@@ -98,11 +98,11 @@ int print_cert_info(crypto_x509_t *x509)
 		return CERT_FAIL;
 	}
 
-	failures = crypto.read_x509_certificate_info("\t\t", x509, CERT_BUFFER_SIZE, &x509_info);
-	if (failures != 0) {
+	bytes_out = crypto_x509_get_long_desc(x509_info, CERT_BUFFER_SIZE, "\t\t", x509);
+	if (bytes_out <= 0) {
 		prlog(PR_ERR,
-		      "\tERROR: failed to get cert info, wrote %d bytes when getting info\n",
-		      failures);
+		      "\tERROR: failed to get cert info,rc = %d\n",
+		      bytes_out);
 		return CERT_FAIL;
 	}
 
@@ -175,15 +175,15 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const char *var_n
 				printf("\tData-%zu: ", count);
 				print_hex(cert, cert_size);
 			case ST_X509:
-				rc = crypto.get_x509_certificate(cert, cert_size, &x509);
-				if (rc)
+				x509 = crypto_x509_parse_der(cert, cert_size);
+				if (!x509)
 					break;
 				printf("\tCertificate-%zu: ", count);
 				rc = print_cert_info(x509);
 				if (rc)
 					break;
 
-				crypto.release_x509_certificate(x509);
+				crypto_x509_free(x509);
 				x509 = NULL;
 				break;
 			case ST_SBAT:
@@ -211,7 +211,7 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const char *var_n
 	printf("\tFound %zu ESL's\n\n", count);
 
 	if (x509)
-		crypto.release_x509_certificate(x509);
+		crypto_x509_free(x509);
 
 	return SUCCESS;
 }
