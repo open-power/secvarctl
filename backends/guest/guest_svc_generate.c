@@ -70,8 +70,7 @@ static int generate_esl(const uint8_t *buffer, size_t buffer_size, struct genera
 			break;
 		}
 
-		rc = get_hash_data(buffer, buffer_size, hash_funct, hash_data,
-				   &hash_data_size);
+		rc = get_hash_data(buffer, buffer_size, hash_funct, hash_data, &hash_data_size);
 		if (rc != SUCCESS) {
 			prlog(PR_ERR, "ERROR: failed to generate hash from file\n");
 			break;
