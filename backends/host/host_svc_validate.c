@@ -484,7 +484,7 @@ out:
  */
 static int validateCertStruct(crypto_x509_t *x509, const char *varName)
 {
-	int rc, len, version;
+	int len, version;
 	// check raw cert data has data
 	len = crypto_x509_get_der_len(x509);
 	if (len < 0) {
@@ -547,8 +547,7 @@ static int validateCertStruct(crypto_x509_t *x509, const char *varName)
 
 	// This part is to print out certificate info
 	if (verbose >= PR_INFO) {
-		rc = printCertInfo(x509);
-		if (rc) {
+		if (printCertInfo(x509)) {
 			return CERT_FAIL;
 		}
 	}
