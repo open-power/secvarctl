@@ -84,10 +84,9 @@ int validate_time(timestamp_t *time)
  */
 bool validate_hash(uuid_t type, size_t size)
 {
-
 	int idx = get_signature_type(type);
-	if (idx < ST_HASHES_END || idx < ST_X509_HASHES_START
-		|| signature_type_list[idx].size != size)
+	if (idx < ST_HASHES_END || idx < ST_X509_HASHES_START ||
+	    signature_type_list[idx].size != size)
 		return false;
 
 	return true;

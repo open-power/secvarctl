@@ -50,9 +50,9 @@ enum signature_type {
 struct signature_type_info {
 	const char *name;
 	const uuid_t *uuid;
-    /* the following are only used by ST_HASHES_START -> ST_HASHES_END */
-    int crypto_id;
-    size_t size;
+	/* the following are only used by ST_HASHES_START -> ST_HASHES_END */
+	int crypto_id;
+	size_t size;
 };
 
 extern const struct signature_type_info signature_type_list[];
@@ -179,36 +179,36 @@ static inline const char *get_signature_type_string(const uuid_t uuid)
 /* Get crypto lib defined ID for MD alg idx of signature_type_list */
 static inline int get_crypto_alg_id(enum signature_type idx)
 {
-    if (idx > ST_HASHES_END || idx < ST_X509_HASHES_START) {
-        prlog(PR_ERR, "error: invalid crypto alg key %d\n", idx);
-        idx = ST_HASH_SHA256;
-    }
-    return signature_type_list[idx].crypto_id;
+	if (idx > ST_HASHES_END || idx < ST_X509_HASHES_START) {
+		prlog(PR_ERR, "error: invalid crypto alg key %d\n", idx);
+		idx = ST_HASH_SHA256;
+	}
+	return signature_type_list[idx].crypto_id;
 }
 
 /* Get crypto lib defined ID for MD alg idx of signature_type_list */
 static inline size_t get_crypto_alg_len(enum signature_type idx)
 {
-    if (idx > ST_HASHES_END || idx < ST_X509_HASHES_START) {
-        prlog(PR_ERR, "error: invalid crypto alg key %d\n", idx);
-        idx = ST_HASH_SHA256;
-    }
-    return signature_type_list[idx].size;
+	if (idx > ST_HASHES_END || idx < ST_X509_HASHES_START) {
+		prlog(PR_ERR, "error: invalid crypto alg key %d\n", idx);
+		idx = ST_HASH_SHA256;
+	}
+	return signature_type_list[idx].size;
 }
 
 /* Get crypto lib defined ID for MD alg idx of signature_type_list */
-static inline const char * get_crypto_alg_name(enum signature_type idx)
+static inline const char *get_crypto_alg_name(enum signature_type idx)
 {
-    if (idx > ST_HASHES_END || idx < ST_X509_HASHES_START) {
-        prlog(PR_ERR, "error: invalid crypto alg key %d\n", idx);
-        idx = ST_HASH_SHA256;
-    }
-    return signature_type_list[idx].name;
+	if (idx > ST_HASHES_END || idx < ST_X509_HASHES_START) {
+		prlog(PR_ERR, "error: invalid crypto alg key %d\n", idx);
+		idx = ST_HASH_SHA256;
+	}
+	return signature_type_list[idx].name;
 }
 
 /* Get guid from idx of signature_type_list */
 static inline const uuid_t *get_uuid(enum signature_type idx)
 {
-    return signature_type_list[idx].uuid;
+	return signature_type_list[idx].uuid;
 }
 #endif
