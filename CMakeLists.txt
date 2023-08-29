@@ -42,7 +42,6 @@ endif()
 message( STATUS "Using ${CRYPTO} for crypto")
 
 if( CRYPTO STREQUAL openssl )
-  target_sources( secvarctl PRIVATE external/skiboot/libstb/secvar/crypto/crypto-openssl.c )
   target_compile_definitions( secvarctl PRIVATE SECVAR_CRYPTO_OPENSSL )
   find_package( OpenSSL REQUIRED )
   target_link_libraries( secvarctl OpenSSL::SSL )
