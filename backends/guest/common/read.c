@@ -100,9 +100,7 @@ int print_cert_info(crypto_x509_t *x509)
 
 	bytes_out = crypto_x509_get_long_desc(x509_info, CERT_BUFFER_SIZE, "\t\t", x509);
 	if (bytes_out <= 0) {
-		prlog(PR_ERR,
-		      "\tERROR: failed to get cert info,rc = %d\n",
-		      bytes_out);
+		prlog(PR_ERR, "\tERROR: failed to get cert info,rc = %d\n", bytes_out);
 		return CERT_FAIL;
 	}
 

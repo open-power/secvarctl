@@ -103,7 +103,7 @@ int get_hash_function(const char *name, enum signature_type *returnfunct)
 	prlog(PR_ERR, "error: invalid hash algorithm %s , hint: use -h { ", name);
 
 	for (int i = ST_HASHES_START; i <= ST_HASHES_END; i++) {
-		if (i == ST_HASHES_END )
+		if (i == ST_HASHES_END)
 			prlog(PR_ERR, "%s }\n", signature_type_list[i].name);
 		else
 			prlog(PR_ERR, "%s, ", signature_type_list[i].name);
@@ -132,7 +132,7 @@ int get_x509_hash_function(const char *name, enum signature_type *returnfunct)
 	prlog(PR_ERR, "error: invalid hash algorithm %s , hint: use -h { ", name);
 
 	for (int i = ST_X509_HASHES_START; i <= ST_X509_HASHES_END; i++) {
-		if (i == ST_X509_HASHES_END )
+		if (i == ST_X509_HASHES_END)
 			prlog(PR_ERR, "%s }\n", signature_type_list[i].name);
 		else
 			prlog(PR_ERR, "%s, ", signature_type_list[i].name);

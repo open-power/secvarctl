@@ -514,8 +514,7 @@ static int validateCertStruct(crypto_x509_t *x509, const char *varName)
 	}
 	// if public key type is not RSA, then quit (example failures: DSA, ECDSA, RSA_PCC)
 	if (!crypto_x509_is_RSA(x509)) {
-		prlog(PR_ERR,
-		      "ERROR: public key type not supported, expected RSA\n");
+		prlog(PR_ERR, "ERROR: public key type not supported, expected RSA\n");
 		return CERT_FAIL;
 	}
 
