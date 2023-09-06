@@ -24,7 +24,8 @@ INCLUDES = -I.                                       \
            -I./include                               \
            -I./external/libstb-secvar/               \
            -I./external/libstb-secvar/include        \
-           -I./external/libstb-secvar/include/secvar
+           -I./external/libstb-secvar/include/secvar \
+           -I./external/libstb-secvar/external
 
 #use CRYPTO_READ_ONLY for smaller executable but limited functionality
 #removes all write functions (secvarctl generate, pem_to_der etc.)

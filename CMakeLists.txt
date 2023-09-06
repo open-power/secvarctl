@@ -14,6 +14,7 @@ target_include_directories( secvarctl BEFORE PRIVATE
   external/libstb-secvar/
   external/libstb-secvar/include/
   external/libstb-secvar/include/secvar/
+  external/libstb-secvar/external/
 )
 
 target_compile_definitions( secvarctl PRIVATE SECVAR_CRYPTO_WRITE_FUNC )
