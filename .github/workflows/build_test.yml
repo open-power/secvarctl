@@ -1,6 +1,6 @@
 name: x86 Make CI
 
-on: ['push', 'pull_request']
+on: "workflow_call"
 
 jobs:
   makefile:
