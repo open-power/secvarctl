@@ -1,0 +1,2 @@
+FROM alpine:latest
+RUN apk add gcc make libc-dev openssl-dev openssl-libs-static argp-standalone bash

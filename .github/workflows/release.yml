@@ -1,0 +1,99 @@
+name: Generate Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  tests:
+    uses: ./.github/workflows/build_test.yml
+
+  static:
+    uses: ./.github/workflows/format_static.yml
+
+  rpmbuild:
+    runs-on: ubuntu-latest
+    needs: ["tests", "static"]
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ["x86_64", "ppc64le"]
+        image:
+          - "almalinux:8"
+          - "almalinux:9"
+          - "fedora:37"
+          - "fedora:38"
+          - "fedora:rawhide"
+          - "opensuse/leap:15"
+          - "opensuse/tumbleweed:latest"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+
+      - name: prepare qemu
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: "${{ matrix.arch }}"
+
+      - run: echo IMAGE_NAME=$(echo ${{ matrix.image }} | sed "s/:/_/g")-${{ matrix.arch }} >> $GITHUB_ENV
+
+      - name: build docker image
+        run: docker build -t ${IMAGE_NAME} --platform linux/${{ matrix.arch }} --build-arg="BUILD_IMAGE=${{ matrix.image }}" -f ci/Dockerfile .
+
+      - name: run docker build
+        run: docker run -t --platform linux/${{ matrix.arch }} -v $(pwd):/build ${IMAGE_NAME} bash -c "cd build && ci/build-rpm.sh"
+
+      - name: upload rpms
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.arch }}
+          path: rpms/*
+
+  staticbuild:
+    runs-on: ubuntu-latest
+    needs: ["tests", "static"]
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: ["x86_64", "ppc64le"]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+
+      - uses: docker/setup-qemu-action@v2
+        with:
+          platforms: "${{ matrix.arch }}"
+
+      - name: build docker image
+        run: docker build -t alpine-${{ matrix.arch }} --platform linux/${{ matrix.arch }} -f ci/Dockerfile.alpine .
+
+      - name: run docker build
+        run: docker run -t --platform linux/${{ matrix.arch }} -v $(pwd):/build -e ARCH=${{ matrix.arch }} alpine-${{ matrix.arch }} bash -c "cd build && ci/build-static.sh"
+
+      - name: upload rpms
+        uses: actions/upload-artifact@v3
+        with:
+          name: static
+          path: secvarctl.${{ matrix.arch }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: ["rpmbuild", "staticbuild"]
+    steps:
+      - name: download rpms
+        uses: actions/download-artifact@v3
+
+      - name: generate release
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            */*.rpm
+            static/*
