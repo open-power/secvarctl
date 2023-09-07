@@ -55,6 +55,14 @@ static struct backend backends[] = {
 #endif
 };
 
+void enabled_backends()
+{
+	printf("Enabled backends:\n");
+	for (enum backends back = 0; back < BACKEND_UNKNOWN; back++) {
+		printf(" - %s\n", backends[back].format);
+	}
+}
+
 void usage()
 {
 	printf("\nUSAGE: \n\t$ secvarctl [MODE] [COMMAND]\n"
@@ -79,7 +87,8 @@ void usage()
 	       "management,\n\t\t\t"
 	       "use 'secvarctl [MODE] generate --usage/help' for more information\n"
 #endif
-	);
+	       "\n");
+	enabled_backends();
 }
 
 void help()
@@ -185,9 +194,9 @@ int main(int argc, char *argv[])
 		} else if (!strcmp("-m", *argv) || !strcmp("--mode", *argv)) {
 			argv++;
 			argc--;
-			if (argv == NULL) {
-				prlog(PR_WARNING, "No mode name supplied\n");
-				return UNKNOWN_COMMAND;
+			if (*argv == NULL) {
+				enabled_backends();
+				return SUCCESS;
 			}
 			for (i = 0; i < sizeof(backend_names) / sizeof(backend_names[0]); i++) {
 				if (!strcmp(*argv, backend_names[i].name)) {
