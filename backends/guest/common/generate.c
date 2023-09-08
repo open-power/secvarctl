@@ -474,7 +474,7 @@ int get_hash_data(const uint8_t *buffer, const size_t buffer_size, enum signatur
 		data = (uint8_t *)buffer;
 	}
 
-	rc = crypto_md_generate_hash(data, data_size, get_crypto_alg_id(x509_hash_func), &hash_data,
+	rc = crypto_md_generate_hash(data, data_size, get_crypto_alg_id(hash_funct), &hash_data,
 				     hash_data_size);
 
 	if (rc != CRYPTO_SUCCESS)
