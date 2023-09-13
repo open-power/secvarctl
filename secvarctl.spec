@@ -23,9 +23,9 @@ variables.
 
 %prep
 %setup -q
-%cmake
 
 %build
+%cmake -DCMAKE_BUILD_TYPE=Release
 %cmake_build
 
 %install
