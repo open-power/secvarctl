@@ -17,7 +17,19 @@ target_include_directories( secvarctl BEFORE PRIVATE
   external/libstb-secvar/external/
 )
 
-target_compile_definitions( secvarctl PRIVATE SECVAR_CRYPTO_WRITE_FUNC )
+# Extract version string from VERSION
+file( STRINGS VERSION VERSION_DATA REGEX "=[0-9\-]*$")
+list( TRANSFORM VERSION_DATA STRIP )
+list( TRANSFORM VERSION_DATA REPLACE "([^=]+)=(.*)" "set(\\1 \"\\2\")\n" )
+cmake_language(EVAL CODE ${VERSION_DATA})
+set( SECVARCTL_VERSION "${SECVARCTL_VERSION_MAJOR}.${SECVARCTL_VERSION_MINOR}.${SECVARCTL_VERSION_PATCH}${SECVARCTL_VERSION_EXTRA}")
+
+message( STATUS "Detected version string as ${SECVARCTL_VERSION}" )
+
+target_compile_definitions( secvarctl PRIVATE
+  SECVAR_CRYPTO_WRITE_FUNC
+  SECVARCTL_VERSION=\"${SECVARCTL_VERSION}\"
+)
 
 # Backend selection
 option( HOST_BACKEND "Build with the host backend enabled" ON )

@@ -17,4 +17,8 @@ struct backend {
 
 extern int verbose;
 
+#ifndef SECVARCTL_VERSION
+#define SECVARCTL_VERSION "UNKNOWN"
+#endif
+
 #endif

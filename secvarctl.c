@@ -63,8 +63,14 @@ void enabled_backends()
 	}
 }
 
+void version()
+{
+	printf("secvarctl v" SECVARCTL_VERSION "\n");
+}
+
 void usage()
 {
+	version();
 	printf("\nUSAGE: \n\t$ secvarctl [MODE] [COMMAND]\n"
 	       "MODEs:\n"
 	       "-m, --mode\tsupports both the Guest and Host secure boot variables "
@@ -190,6 +196,9 @@ int main(int argc, char *argv[])
 			return SUCCESS;
 		} else if (!strcmp("--help", *argv) || !strcmp("-h", *argv)) {
 			help();
+			return SUCCESS;
+		} else if (!strcmp("--version", *argv)) {
+			version();
 			return SUCCESS;
 		} else if (!strcmp("-m", *argv) || !strcmp("--mode", *argv)) {
 			argv++;

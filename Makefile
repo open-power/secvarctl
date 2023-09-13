@@ -34,6 +34,10 @@ ifeq ($(strip $(CRYPTO_READ_ONLY)), 0)
   _CFLAGS += -DSECVAR_CRYPTO_WRITE_FUNC
 endif
 
+# Set build version string
+include VERSION
+_CFLAGS += -DSECVARCTL_VERSION=\"$(SECVARCTL_VERSION)\"
+
 # Initialize here, so the mbedtls option can add the bonus pkcs7 if needed
 EXTERNAL_SRCS =
 
