@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2023 IBM Corp.
 Name:		secvarctl
-Version:        1.0
+Version:        1.0.0
 Release:        1%{?dist}
 Summary:        PowerPC secure variable control
 BuildArch:      ppc64le ppcl64 x86_64
