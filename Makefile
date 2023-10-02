@@ -167,11 +167,9 @@ generate:
 
 install: all
 	@mkdir -p $(DESTDIR)/usr/bin
-	@install -m 0755 secvarctl $(DESTDIR)/usr/bin/secvarctl
+	@install -m 0755 bin/secvarctl $(DESTDIR)/usr/bin/secvarctl
 	@mkdir -p $(DESTDIR)/$(MANDIR)/man1
 	@install -m 0644 secvarctl.1 $(DESTDIR)/$(MANDIR)/man1
-	@mkdir -p $(DESTDIR)/usr/lib/secvarctl
-	@install -m 0755 ./lib/* $(DESTDIR)/usr/lib/secvarctl
 	@echo "secvarctl installed successfully!"
 
 uninstall:
