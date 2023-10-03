@@ -52,22 +52,25 @@ static int variable_from_path(const char *path, uint8_t **esl_data, size_t *esl_
 static int get_variable_path(const char *path, const char *variable_name, char **variable_path)
 {
 	int len = 0;
-	char *esl_data = "/data";
+	char esl_data[] = "/data";
+	char sep[2] = { 0 };
 
-	len = strlen(path) + strlen(variable_name) + strlen(esl_data);
-	*variable_path = malloc(len + 1);
+	len = strlen(path);
+
+	// Determine if we need to append a / to path
+	if (path[len - 1] != '/') {
+		len += 1;
+		sep[0] = '/';
+	}
+
+	len += strlen(variable_name) + strlen(esl_data) + 1;
+	*variable_path = calloc(1, len);
 	if (*variable_path == NULL) {
 		prlog(PR_ERR, "ERROR: failed to allocate memory\n");
 		return ALLOC_FAIL;
 	}
 
-	memset(*variable_path, 0x00, len + 1);
-	len = 0;
-	memcpy(*variable_path + len, path, strlen(path));
-	len += strlen(path);
-	memcpy(*variable_path + len, variable_name, strlen(variable_name));
-	len += strlen(variable_name);
-	memcpy(*variable_path + len, esl_data, strlen(esl_data));
+	snprintf(*variable_path, len, "%s%s%s%s", path, sep, variable_name, esl_data);
 
 	return SUCCESS;
 }

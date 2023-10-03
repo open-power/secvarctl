@@ -236,6 +236,14 @@ class Test(SecvarctlTest):
             self.assertCmdTrue(cmd)
 
     def test_read(self):
+        # Test path without appended /
+        cmd = SECTOOLS + ["read", "-p", "testdata/guest/goldenKeys", "-n", "PK"]
+        self.assertCmdTrue(cmd)
+
+        # Test with appended /
+        cmd = SECTOOLS + ["read", "-p", "testdata/guest/goldenKeys/", "-n", "PK"]
+        self.assertCmdTrue(cmd)
+
         for cert_file in cert_files:
             cmd = get_read_command(cert_type, cert_file)
             self.assertCmdTrue(cmd)
