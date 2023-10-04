@@ -477,12 +477,7 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 		}
 		break;
 	case 'a':
-		args->append_flag = strtol(arg, NULL, 0);
-		if (args->append_flag < 0 || args->append_flag > 1) {
-			prlog(PR_ERR, "ERROR: append flag accept 0 or 1 only but it is %d\n",
-			      args->append_flag);
-			rc = ARG_PARSE_FAIL;
-		}
+		args->append_flag = 1;
 		break;
 	case ARGP_KEY_ARG:
 		/* check if reset key is desired */
@@ -586,8 +581,7 @@ int guest_generate_command(int argc, char *argv[])
 		  "info/ranges" },
 		{ "force", 'f', 0, 0,
 		  "does not do prevalidation on the input file, assumes format is correct" },
-		{ "append flag", 'a', "APPEND_FLAG", 0,
-		  "set append flag, used when generating auth file" },
+		{ "append", 'a', 0, 0, "set append flag, used when generating auth file" },
 		{ 0, 'i', "FILE", OPTION_HIDDEN, "input file" },
 		{ 0, 'o', "FILE", OPTION_HIDDEN, "output file" },
 		{ "help", '?', 0, 0, "Give this help list", 1 },

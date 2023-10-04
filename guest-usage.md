@@ -172,7 +172,7 @@ auth file data format is:
 		--usage
 		--help
 		-v , verbose, gives process info
-		-a <append flag>, used when generating an auth file and By default, append flag is set to 0. it accept only 0 or 1. 0 for replace update and 1 for append update
+		-a , use when generating and auth file to set the append flag
 		-n <varName> , name of secure boot variable, used when generating an auth file, PKCS7, or hash file
 		-f force generation, skips validation of input file, assumes format to be correct
 		-t <time> , where <time> is of the format described below. creates a custom timestamp used when generating an auth or PKCS7 file, if not given then current time is used, all times are in UTC
