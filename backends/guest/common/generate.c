@@ -436,6 +436,11 @@ int is_x509certificate(const uint8_t *buffer, const size_t buffer_size, uint8_t 
 
 	rc = validate_cert(cert, cert_size);
 
+	if (rc) {
+		free(cert);
+		return rc;
+	}
+
 	*cert_data = cert;
 	*cert_data_size = cert_size;
 
