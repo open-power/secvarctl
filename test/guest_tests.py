@@ -262,6 +262,10 @@ class Test(SecvarctlTest):
         cmd = get_read_command(path_type, test_env_path)
         self.assertCmdTrue(cmd)
 
+        # Should not segfault
+        cmd = SECTOOLS + ["read", "-e", "testdata/guest/errorfiles/PK_invalid_cert_size.esl"]
+        self.assertCmdFalse(cmd)
+
     def test_validate(self):
         for cert_file in cert_files:
             cmd = get_validate_command(cert_type, cert_file)
