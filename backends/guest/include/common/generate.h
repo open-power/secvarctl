@@ -139,7 +139,7 @@ int is_x509certificate(const uint8_t *buffer, const size_t buffer_size, uint8_t 
  * @param buffer_size , length of buffer
  * @param hash_funct, index of hash function information to use for ESL GUID,
  *                   also helps in prevalation, if inform is '[c]ert' then this doesn't matter
- * @param hash_data, the generated hash data
+ * @param hash_data, the generated hash data, should already be allocated to hold hash
  * @param hash_data_size, the length of hash data
  * @param esl_guid, signature type of ESL
  * @return SUCCESS or err number
