@@ -31,9 +31,6 @@ const struct signature_type_info signature_type_list[] = {
 	[ST_HASH_SHA256]      = { .name = "SHA256",     .uuid = &PKS_CERT_SHA256_GUID,	.crypto_id = CRYPTO_MD_SHA256,	.size = 32 },
 	[ST_HASH_SHA384]      = { .name = "SHA384",     .uuid = &PKS_CERT_SHA384_GUID,	.crypto_id = CRYPTO_MD_SHA384,	.size = 48 },
 	[ST_HASH_SHA512]      = { .name = "SHA512",     .uuid = &PKS_CERT_SHA512_GUID,	.crypto_id = CRYPTO_MD_SHA512,	.size = 64 },
-	[ST_X509_HASH_SHA256] = { .name = "SHA256",     .uuid = &PKS_CERT_X509_SHA256_GUID },
-	[ST_X509_HASH_SHA384] = { .name = "SHA384",     .uuid = &PKS_CERT_X509_SHA384_GUID },
-	[ST_X509_HASH_SHA512] = { .name = "SHA512",     .uuid = &PKS_CERT_X509_SHA512_GUID },
 	[ST_UNKNOWN]          = { .name = "UNKNOWN",    .uuid = NULL},
 };
 // clang-format on
@@ -104,35 +101,6 @@ int get_hash_function(const char *name, enum signature_type *returnfunct)
 
 	for (int i = ST_HASHES_START; i <= ST_HASHES_END; i++) {
 		if (i == ST_HASHES_END)
-			prlog(PR_ERR, "%s }\n", signature_type_list[i].name);
-		else
-			prlog(PR_ERR, "%s, ", signature_type_list[i].name);
-	}
-
-	return ARG_PARSE_FAIL;
-}
-
-/*
- * given a string, it will return the corresponding x509 sig_type info index
- *
- * @param name, the name of the hash function {"sha1", "sha246"...}
- * @param returnfunct, the corresponding sig_type info index
- * @return success or err number if not a valid hash function name
- */
-int get_x509_hash_function(const char *name, enum signature_type *returnfunct)
-{
-	for (int i = ST_X509_HASHES_START; i <= ST_X509_HASHES_END; i++) {
-		if (strcmp(name, signature_type_list[i].name))
-			continue;
-
-		*returnfunct = i;
-		return SUCCESS;
-	}
-
-	prlog(PR_ERR, "error: invalid hash algorithm %s , hint: use -h { ", name);
-
-	for (int i = ST_X509_HASHES_START; i <= ST_X509_HASHES_END; i++) {
-		if (i == ST_X509_HASHES_END)
 			prlog(PR_ERR, "%s }\n", signature_type_list[i].name);
 		else
 			prlog(PR_ERR, "%s, ", signature_type_list[i].name);

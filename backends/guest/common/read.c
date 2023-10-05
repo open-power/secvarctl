@@ -169,7 +169,7 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const char *var_n
 			cert_size = data_size;
 
 			switch (sig_type) {
-			case ST_HASHES_START ... ST_X509_HASHES_END:
+			case ST_HASHES_START ... ST_HASHES_END:
 				printf("\tData-%zu: ", count);
 				print_hex(cert, cert_size);
 			case ST_X509:
