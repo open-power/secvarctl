@@ -449,7 +449,7 @@ int is_x509certificate(const uint8_t *buffer, const size_t buffer_size, uint8_t 
  * @param buffer_size , length of buffer
  * @param hash_funct, index of hash function information to use for ESL GUID,
  *                   also helps in prevalation, if inform is '[c]ert' then this doesn't matter
- * @param hash_data, the generated hash data
+ * @param hash_data, the generated hash data, buffer should be allocated before calling
  * @param hash_data_size, the length of hash data
  * @param esl_guid, signature type of ESL
  * @return SUCCESS or err number
@@ -458,27 +458,23 @@ int get_hash_data(const uint8_t *buffer, const size_t buffer_size, enum signatur
 		  uint8_t *hash_data, size_t *hash_data_size)
 {
 	int rc = SUCCESS;
-	size_t data_size = 0;
-	uint8_t *data = NULL;
-	enum signature_type x509_hash_func;
+	size_t crt_size = 0;
+	uint8_t *crt_der = NULL, *out_data = NULL;
 
-	rc = is_x509certificate(buffer, buffer_size, &data, &data_size);
+	rc = is_x509certificate(buffer, buffer_size, &crt_der, &crt_size);
 	if (rc == SUCCESS) {
-		rc = get_x509_hash_function(get_crypto_alg_name(hash_funct), &x509_hash_func);
-		if (rc)
-			return rc;
-
-		hash_funct = x509_hash_func;
-	} else {
-		data_size = buffer_size;
-		data = (uint8_t *)buffer;
-	}
-
-	rc = crypto_md_generate_hash(data, data_size, get_crypto_alg_id(hash_funct), &hash_data,
-				     hash_data_size);
+		rc = crypto_md_generate_hash(crt_der, crt_size, get_crypto_alg_id(hash_funct),
+					     &out_data, hash_data_size);
+		free(crt_der);
+	} else
+		rc = crypto_md_generate_hash(buffer, buffer_size, get_crypto_alg_id(hash_funct),
+					     &out_data, hash_data_size);
 
 	if (rc != CRYPTO_SUCCESS)
 		return HASH_FAIL;
+
+	memcpy(hash_data, out_data, *hash_data_size);
+	free(out_data);
 
 	return SUCCESS;
 }
