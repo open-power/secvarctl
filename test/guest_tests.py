@@ -187,6 +187,11 @@ class Test(SecvarctlTest):
             cmd = generate_esl(var_name, format_type, cert_file, esl_file)
             self.assertCmdTrue(cmd)
 
+            # dbx ESl can be generated with a hash OR a cert, validate both
+            if var_name == "dbx":
+                cmd = generate_esl(var_name, file_to_esl, cert_file, esl_file)
+                self.assertCmdTrue(cmd)
+
     def test_generate_auth_files(self):
         for var_by_PK in variable_by_PK:
             auth_file = gen_dir + var_by_PK[0] + ".auth"
