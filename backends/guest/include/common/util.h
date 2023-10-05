@@ -38,11 +38,6 @@ enum signature_type {
 	ST_HASH_SHA384,
 	ST_HASH_SHA512,
 #define ST_HASHES_END ST_HASH_SHA512
-#define ST_X509_HASHES_START ST_X509_HASH_SHA256
-	ST_X509_HASH_SHA256,
-	ST_X509_HASH_SHA384,
-	ST_X509_HASH_SHA512,
-#define ST_X509_HASHES_END ST_X509_HASH_SHA512
 	ST_UNKNOWN,
 #define ST_LIST_END ST_UNKNOWN
 };
@@ -98,20 +93,11 @@ bool validate_sbat(const uint8_t *sbat_data, size_t sbat_len);
 int get_hash_function(const char *name, enum signature_type *returnfunct);
 
 /*
- * given a string, it will return the corresponding x509 sig_type info index
- *
- * @param name, the name of the hash function {"sha1", "sha246"...}
- * @param returnfunct, the corresponding sig_type info index
- * @return success or err number if not a valid hash function name
- */
-int get_x509_hash_function(const char *name, enum signature_type *returnfunct);
-
-/*
  * check it whether given signature type is hash or not
  */
 static inline bool is_hash(enum signature_type st)
 {
-	return (ST_HASHES_START <= st) && (st <= ST_X509_HASHES_END);
+	return (ST_HASHES_START <= st) && (st <= ST_HASHES_END);
 }
 
 /*
@@ -179,7 +165,7 @@ static inline const char *get_signature_type_string(const uuid_t uuid)
 /* Get crypto lib defined ID for MD alg idx of signature_type_list */
 static inline int get_crypto_alg_id(enum signature_type idx)
 {
-	if (idx > ST_HASHES_END || idx < ST_X509_HASHES_START) {
+	if (idx > ST_HASHES_END || idx < ST_HASHES_START) {
 		prlog(PR_ERR, "error: invalid crypto alg key %d\n", idx);
 		idx = ST_HASH_SHA256;
 	}
@@ -189,7 +175,7 @@ static inline int get_crypto_alg_id(enum signature_type idx)
 /* Get crypto lib defined ID for MD alg idx of signature_type_list */
 static inline size_t get_crypto_alg_len(enum signature_type idx)
 {
-	if (idx > ST_HASHES_END || idx < ST_X509_HASHES_START) {
+	if (idx > ST_HASHES_END || idx < ST_HASHES_START) {
 		prlog(PR_ERR, "error: invalid crypto alg key %d\n", idx);
 		idx = ST_HASH_SHA256;
 	}
@@ -199,7 +185,7 @@ static inline size_t get_crypto_alg_len(enum signature_type idx)
 /* Get crypto lib defined ID for MD alg idx of signature_type_list */
 static inline const char *get_crypto_alg_name(enum signature_type idx)
 {
-	if (idx > ST_HASHES_END || idx < ST_X509_HASHES_START) {
+	if (idx > ST_HASHES_END || idx < ST_HASHES_START) {
 		prlog(PR_ERR, "error: invalid crypto alg key %d\n", idx);
 		idx = ST_HASH_SHA256;
 	}
