@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <esl.h> // libstb-secvar
 #include "err.h"
 #include "prlog.h"
 #include "generic.h"
@@ -121,95 +122,95 @@ int print_cert_info(crypto_x509_t *x509)
 int print_variables(const uint8_t *buffer, size_t buffer_size, const char *var_name)
 {
 	int rc;
-	ssize_t esl_data_size = buffer_size, cert_size;
-	size_t count = 0, offset = 0;
-	uint8_t *cert = NULL, *esl_data = (uint8_t *)buffer;
-	enum signature_type sig_type;
-	sv_esl_t *sig_list;
-	sv_esd_t *esd = NULL;
+	size_t esl_data_size = 0;
+	size_t esl_count = 0;
 	crypto_x509_t *x509 = NULL;
 
-	while (esl_data_size > 0) {
-		// TODO: consider breaking this down into functions, to avoid these scope reductions
-		size_t esl_size, next_esl_size, sig_offset;
-		size_t signature_size;
+	union {
+		const uint8_t *raw;
+		sv_esl_t *esl;
+	} curr_esl;
+	curr_esl.raw = NULL;
 
-		if (esl_data_size < sizeof(sv_esl_t)) {
-			prlog(PR_ERR,
-			      "ERROR: ESL has %zd bytes and is smaller than an ESL (%zu bytes),"
-			      " remaining data not parsed\n",
-			      esl_data_size, sizeof(sv_esl_t));
-			break;
+	rc = next_esl_from_buffer(buffer, buffer_size, &curr_esl.raw, &esl_data_size);
+	if (rc) {
+		prlog(PR_ERR, "Error reading from esl buffer: %d\n", rc);
+		return rc;
+	}
+
+	while (curr_esl.esl != NULL) {
+		size_t esd_count = 0;
+		esl_count++;
+		printf("ESL %zu:\n", esl_count);
+		print_esl_info(curr_esl.esl);
+
+		union {
+			const uint8_t *raw;
+			sv_esd_t *esd;
+		} curr_esd;
+		curr_esd.raw = NULL;
+
+		size_t esd_data_size;
+		uuid_t esd_owner;
+		enum signature_type sig_type = get_signature_type(curr_esl.esl->signature_type);
+
+		rc = next_esd_from_esl(curr_esl.raw, &curr_esd.raw, &esd_data_size, &esd_owner);
+		if (rc) {
+			prlog(PR_ERR, "Error reading esd from esl %zu, rc = %d\n", esl_count, rc);
+			return rc;
 		}
 
-		/* Get sig list */
-		sig_list = extract_esl_signature_list(buffer + offset, esl_data_size);
-		esl_size = sig_list->signature_list_size;
-		signature_size = cpu_to_le32(sig_list->signature_size);
-		sig_type = get_signature_type(sig_list->signature_type);
-
-		if (esl_size < sizeof(sv_esl_t) || esl_size > esl_data_size) {
-			prlog(PR_ERR, "ERROR: invalid ESL size (%zu)\n", esl_size);
-			break;
-		}
-
-		print_esl_info(sig_list);
-		next_esl_size = esl_size;
-		offset = sizeof(sv_esl_t) + cpu_to_le32(sig_list->signature_header_size);
-		esl_size = esl_size - offset;
-		sig_offset = 0;
-
-		/* reads the esd from esl */
-		while (esl_size > 0) {
-			size_t data_size;
-
-			esd = (sv_esd_t *)(esl_data + (offset + sig_offset));
-			data_size = signature_size - sizeof(sv_esd_t);
-			cert = esd->signature_data;
-			cert_size = data_size;
-
+		while (curr_esd.esd != NULL) {
+			esd_count++;
 			switch (sig_type) {
 			case ST_HASHES_START ... ST_HASHES_END:
-				printf("\tData-%zu: ", count);
-				print_hex(cert, cert_size);
+				printf("\tData-%zu: ", esd_count);
+				print_hex(curr_esd.raw, esd_data_size);
 			case ST_X509:
-				x509 = crypto_x509_parse_der(cert, cert_size);
+				x509 = crypto_x509_parse_der(curr_esd.raw, esd_data_size);
 				if (!x509)
 					break;
-				printf("\tCertificate-%zu: ", count);
+				printf("\tCertificate-%zu: ", esd_count);
 				rc = print_cert_info(x509);
-				if (rc)
-					break;
 
+				// we're done with the x509, free it immediately
 				crypto_x509_free(x509);
 				x509 = NULL;
+
+				// ...then bail if there was an error printing the cert
+				if (rc)
+					return rc;
+
 				break;
 			case ST_SBAT:
 				printf("\tData: ");
-				print_raw((char *)cert, cert_size);
+				print_raw((char *)curr_esd.raw, esd_data_size);
+				break;
 			case ST_DELETE:
 				printf("\tDELETE-MSG: ");
-				print_raw((char *)cert, cert_size);
+				print_raw((char *)curr_esd.raw, esd_data_size);
+				break;
 			default:
-				prlog(PR_ERR, "ERROR: invalid signature type\n");
-				goto outside;
+				prlog(PR_ERR, "ERROR: invalid signature type = %d\n", sig_type);
+				break;
 			}
 
-			count++;
-			esl_size -= signature_size;
-			sig_offset += signature_size;
+			rc = next_esd_from_esl(curr_esl.raw, &curr_esd.raw, &esd_data_size,
+					       &esd_owner);
+			if (rc) {
+				prlog(PR_ERR, "Error reading next esd (%zu), rc = %d\n", esd_count,
+				      rc);
+			}
 		}
-	outside:
-
-		/* we read all esl_size bytes so iterate to next esl */
-		esl_data += next_esl_size;
-		esl_data_size -= next_esl_size;
+		rc = next_esl_from_buffer(buffer, buffer_size, &curr_esl.raw, &esl_data_size);
+		if (rc) {
+			prlog(PR_ERR, "Error reading next esl (%zu) from buffer: %d\n", esl_count,
+			      rc);
+			return rc;
+		}
 	}
 
-	printf("\tFound %zu ESL's\n\n", count);
-
-	if (x509)
-		crypto_x509_free(x509);
+	printf("\tFound %zu ESL's\n\n", esl_count);
 
 	return SUCCESS;
 }
