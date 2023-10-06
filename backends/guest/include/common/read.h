@@ -61,6 +61,6 @@ void print_timestamp(timestamp_t t);
  * @param key, variable name {"db","dbx","KEK", "PK"} b/c dbx is a different format
  * @return SUCCESS or error number if failure
  */
-int print_variables(const uint8_t *buffer, size_t buffer_size, const char *var_name);
+int print_esl_buffer(const uint8_t *buffer, size_t buffer_size, const char *var_name);
 
 #endif
