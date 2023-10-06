@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "pseries.h"
+#include "prlog.h"
 
 #define CERT_BUFFER_SIZE 2048
 #define zalloc(...) calloc(1, __VA_ARGS__)
