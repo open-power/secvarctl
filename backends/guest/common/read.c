@@ -169,13 +169,14 @@ static int print_esd_from_esl_buffer(const uint8_t *esl, size_t esl_size,
 			print_raw((char *)curr_esd.raw, esd_data_size);
 			break;
 		default:
-			prlog(PR_ERR, "ERROR: invalid signature type = %d\n", sig_type);
+			prlog(PR_ERR, "ERROR: unknown signature type = %d\n", sig_type);
 			break;
 		}
 
 		rc = next_esd_from_esl(esl, &curr_esd.raw, &esd_data_size, &esd_owner);
 		if (rc) {
 			prlog(PR_ERR, "Error reading next esd (%zu), rc = %d\n", esd_count, rc);
+			return rc;
 		}
 	}
 
