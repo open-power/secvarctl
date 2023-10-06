@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <argp.h>
+#include "common/read.h"
 #include "err.h"
 #include "prlog.h"
 #include "generic.h"
@@ -70,8 +71,8 @@ static int update_variable(const char *variable_name, const uint8_t *auth_data,
 		prlog(PR_INFO, "\tappend update: %s\n\n", (append_update ? "True" : "False"));
 
 		if (*new_esl_data != NULL) {
-			rc = print_variables((*new_esl_data + TIMESTAMP_LEN),
-					     (*new_esl_data_size - TIMESTAMP_LEN), variable_name);
+			rc = print_esl_buffer((*new_esl_data + TIMESTAMP_LEN),
+					      (*new_esl_data_size - TIMESTAMP_LEN), variable_name);
 			if (rc != SUCCESS)
 				return rc;
 		}

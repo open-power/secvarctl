@@ -153,7 +153,7 @@ static int read_esl(const uint8_t *esl_data, const size_t esl_data_len, const in
 		return rc;
 	}
 
-	rc = print_variables(esl_data, esl_data_len, variable_name);
+	rc = print_esl_buffer(esl_data, esl_data_len, variable_name);
 
 	return rc;
 }
@@ -230,8 +230,8 @@ static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int i
 	if (auth_size == auth_data_len)
 		printf("ESL is empty, it is reset file.\n");
 	else
-		rc = print_variables(auth_data + APPEND_HEADER_LEN + auth_size,
-				     auth_data_len - auth_size, variable_name);
+		rc = print_esl_buffer(auth_data + APPEND_HEADER_LEN + auth_size,
+				      auth_data_len - auth_size, variable_name);
 
 	return rc;
 }
@@ -262,8 +262,8 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 			if (is_print_raw || esl_data_size == DEFAULT_PK_LEN)
 				print_raw((char *)esl_data, esl_data_size);
 			else if (esl_data_size >= TIMESTAMP_LEN)
-				rc = print_variables(esl_data + TIMESTAMP_LEN,
-						     esl_data_size - TIMESTAMP_LEN, variable_name);
+				rc = print_esl_buffer(esl_data + TIMESTAMP_LEN,
+						      esl_data_size - TIMESTAMP_LEN, variable_name);
 			else
 				prlog(PR_WARNING, "WARNING: The %s database is empty.\n",
 				      variable_name);
@@ -290,9 +290,9 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 				     strcmp(defined_sb_variables[i], PK_VARIABLE) == 0))
 					print_raw((char *)esl_data, esl_data_size);
 				else if (esl_data_size >= TIMESTAMP_LEN)
-					rc = print_variables(esl_data + TIMESTAMP_LEN,
-							     esl_data_size - TIMESTAMP_LEN,
-							     defined_sb_variables[i]);
+					rc = print_esl_buffer(esl_data + TIMESTAMP_LEN,
+							      esl_data_size - TIMESTAMP_LEN,
+							      defined_sb_variables[i]);
 				else
 					prlog(PR_WARNING, "WARNING: The %s database is empty.\n",
 					      defined_sb_variables[i]);
