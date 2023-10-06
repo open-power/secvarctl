@@ -5,6 +5,8 @@
 #ifndef GENERIC_H
 #define GENERIC_H
 
+#include <stdint.h>
+
 #define ARGP_OPT_USAGE_KEY 0x100
 
 struct command {
@@ -17,7 +19,7 @@ int write_data_to_file(const char *file, const char *buff, size_t size);
 int create_file(const char *file, const char *buff, size_t size);
 void print_raw(const char *c, size_t size);
 int is_file(const char *path);
-void print_hex(unsigned char *data, size_t length);
+void print_hex(const uint8_t *data, size_t length);
 int realloc_array(void **arr, size_t new_length, size_t size_each);
 
 #endif
