@@ -112,6 +112,77 @@ int print_cert_info(crypto_x509_t *x509)
 }
 
 /*
+ * prints ESDs inside an ESL buffer in human readable form
+ *
+ * @param esl, pointer to the beginning of valid esl data. NOTE: caller is responsible for validation
+ * @param esl_size, size of the esl data buffer
+ * @param sig_type, signature type enum as extracted from e.g. get_signature_type
+ * @return SUCCESS or propogates error code
+ */
+static int print_esd_from_esl_buffer(const uint8_t *esl, size_t esl_size,
+				     enum signature_type sig_type)
+{
+	crypto_x509_t *x509 = NULL;
+	int rc;
+	size_t esd_data_size, esd_count = 0;
+	uuid_t esd_owner;
+	union {
+		const uint8_t *raw;
+		sv_esd_t *esd;
+	} curr_esd;
+	curr_esd.raw = NULL;
+
+	rc = next_esd_from_esl(esl, &curr_esd.raw, &esd_data_size, &esd_owner);
+	if (rc) {
+		prlog(PR_ERR, "Error reading esd from esl, rc = %d\n", rc);
+		return rc;
+	}
+
+	while (curr_esd.esd != NULL) {
+		esd_count++;
+		switch (sig_type) {
+		case ST_HASHES_START ... ST_HASHES_END:
+			printf("\tData-%zu: ", esd_count);
+			print_hex(curr_esd.raw, esd_data_size);
+		case ST_X509:
+			x509 = crypto_x509_parse_der(curr_esd.raw, esd_data_size);
+			if (!x509)
+				break;
+			printf("\tCertificate-%zu: ", esd_count);
+			rc = print_cert_info(x509);
+
+			// we're done with the x509, free it immediately
+			crypto_x509_free(x509);
+			x509 = NULL;
+
+			// ...then bail if there was an error printing the cert
+			if (rc)
+				return rc;
+
+			break;
+		case ST_SBAT:
+			printf("\tData: ");
+			print_raw((char *)curr_esd.raw, esd_data_size);
+			break;
+		case ST_DELETE:
+			printf("\tDELETE-MSG: ");
+			print_raw((char *)curr_esd.raw, esd_data_size);
+			break;
+		default:
+			prlog(PR_ERR, "ERROR: invalid signature type = %d\n", sig_type);
+			break;
+		}
+
+		rc = next_esd_from_esl(esl, &curr_esd.raw, &esd_data_size, &esd_owner);
+		if (rc) {
+			prlog(PR_ERR, "Error reading next esd (%zu), rc = %d\n", esd_count, rc);
+		}
+	}
+
+	return SUCCESS;
+}
+
+/*
  * prints human readable data in of ESL buffer
  *
  * @param vuffer , buffer containing ESL data
@@ -119,12 +190,12 @@ int print_cert_info(crypto_x509_t *x509)
  * @param var_name, secure boot variable name
  * @return SUCCESS or error number if failure
  */
-int print_variables(const uint8_t *buffer, size_t buffer_size, const char *var_name)
+int print_esl_buffer(const uint8_t *buffer, size_t buffer_size, const char *var_name)
 {
 	int rc;
 	size_t esl_data_size = 0;
 	size_t esl_count = 0;
-	crypto_x509_t *x509 = NULL;
+	enum signature_type sig_type;
 
 	union {
 		const uint8_t *raw;
@@ -139,69 +210,15 @@ int print_variables(const uint8_t *buffer, size_t buffer_size, const char *var_n
 	}
 
 	while (curr_esl.esl != NULL) {
-		size_t esd_count = 0;
 		esl_count++;
 		printf("ESL %zu:\n", esl_count);
 		print_esl_info(curr_esl.esl);
 
-		union {
-			const uint8_t *raw;
-			sv_esd_t *esd;
-		} curr_esd;
-		curr_esd.raw = NULL;
-
-		size_t esd_data_size;
-		uuid_t esd_owner;
-		enum signature_type sig_type = get_signature_type(curr_esl.esl->signature_type);
-
-		rc = next_esd_from_esl(curr_esl.raw, &curr_esd.raw, &esd_data_size, &esd_owner);
-		if (rc) {
-			prlog(PR_ERR, "Error reading esd from esl %zu, rc = %d\n", esl_count, rc);
+		sig_type = get_signature_type(curr_esl.esl->signature_type);
+		rc = print_esd_from_esl_buffer(curr_esl.raw, esl_data_size, sig_type);
+		if (rc)
 			return rc;
-		}
 
-		while (curr_esd.esd != NULL) {
-			esd_count++;
-			switch (sig_type) {
-			case ST_HASHES_START ... ST_HASHES_END:
-				printf("\tData-%zu: ", esd_count);
-				print_hex(curr_esd.raw, esd_data_size);
-			case ST_X509:
-				x509 = crypto_x509_parse_der(curr_esd.raw, esd_data_size);
-				if (!x509)
-					break;
-				printf("\tCertificate-%zu: ", esd_count);
-				rc = print_cert_info(x509);
-
-				// we're done with the x509, free it immediately
-				crypto_x509_free(x509);
-				x509 = NULL;
-
-				// ...then bail if there was an error printing the cert
-				if (rc)
-					return rc;
-
-				break;
-			case ST_SBAT:
-				printf("\tData: ");
-				print_raw((char *)curr_esd.raw, esd_data_size);
-				break;
-			case ST_DELETE:
-				printf("\tDELETE-MSG: ");
-				print_raw((char *)curr_esd.raw, esd_data_size);
-				break;
-			default:
-				prlog(PR_ERR, "ERROR: invalid signature type = %d\n", sig_type);
-				break;
-			}
-
-			rc = next_esd_from_esl(curr_esl.raw, &curr_esd.raw, &esd_data_size,
-					       &esd_owner);
-			if (rc) {
-				prlog(PR_ERR, "Error reading next esd (%zu), rc = %d\n", esd_count,
-				      rc);
-			}
-		}
 		rc = next_esl_from_buffer(buffer, buffer_size, &curr_esl.raw, &esl_data_size);
 		if (rc) {
 			prlog(PR_ERR, "Error reading next esl (%zu) from buffer: %d\n", esl_count,
