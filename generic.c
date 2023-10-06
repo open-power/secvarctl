@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include "err.h"
 #include "prlog.h"
+#include "generic.h"
 
 /*
  * determines if given file currently exists
@@ -31,7 +32,7 @@ int is_file(const char *path)
 	return SUCCESS;
 }
 
-void print_hex(unsigned char *data, size_t length)
+void print_hex(const uint8_t *data, size_t length)
 {
 	int i;
 
