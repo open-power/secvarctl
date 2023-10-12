@@ -510,8 +510,6 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 			      "option\n");
 		else if (args->output_file == NULL)
 			prlog(PR_ERR, "ERROR: no output file given, see usage below...\n");
-		else if (args->append_flag > 0 && strcmp(PK_VARIABLE, args->variable_name) == 0)
-			prlog(PR_ERR, "ERROR: append flag should be 0 for PK\n");
 		else
 			break;
 		argp_usage(state);
@@ -521,6 +519,12 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 
 	if (rc)
 		prlog(PR_ERR, "failed during argument parsing\n");
+
+	// Special case, filter out appends on PK
+	if (args->append_flag > 0 && strcmp(PK_VARIABLE, args->variable_name) == 0) {
+		prlog(PR_ERR, "ERROR: PK does not support the append flag\n");
+		rc = ARG_PARSE_FAIL;
+	}
 
 	return rc;
 }
