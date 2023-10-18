@@ -26,8 +26,7 @@ struct write_args {
  * @param force, 1 for no validation of auth, 0 for validate
  * @return error if variable given is unknown, or issue validating or writing
  */
-int write_variable(const uint8_t *variable_name, const uint8_t *auth_file, const uint8_t *path,
-		   int force);
+int write_variable(const char *variable_name, const char *auth_file, const char *path, int force);
 
 /*
  * updates a secure variable by writing data in buffer to the
