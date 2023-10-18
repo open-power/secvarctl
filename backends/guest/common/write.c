@@ -60,18 +60,17 @@ int write_to_variable(const char *path, const char *variable_name, const uint8_t
  * @param force, 1 for no validation of auth, 0 for validate
  * @return error if variable given is unknown, or issue validating or writing
  */
-int write_variable(const uint8_t *variable_name, const uint8_t *auth_file, const uint8_t *path,
-		   int force)
+int write_variable(const char *variable_name, const char *auth_file, const char *path, int force)
 {
 	int rc;
 	uint8_t *buffer = NULL;
 	size_t buffer_size;
 
 	if (!path) {
-		path = (uint8_t *)SECVARPATH;
+		path = SECVARPATH;
 	}
 
-	buffer = (uint8_t *)get_data_from_file((char *)auth_file, SIZE_MAX, &buffer_size);
+	buffer = (uint8_t *)get_data_from_file(auth_file, SIZE_MAX, &buffer_size);
 	if (buffer == NULL)
 		return INVALID_FILE;
 
@@ -84,7 +83,7 @@ int write_variable(const uint8_t *variable_name, const uint8_t *auth_file, const
 		}
 	}
 
-	rc = write_to_variable((char *)path, (char *)variable_name, buffer, buffer_size);
+	rc = write_to_variable(path, variable_name, buffer, buffer_size);
 	if (rc != SUCCESS)
 		prlog(PR_ERR, "ERROR: issue writing to file: %s\n", strerror(errno));
 
