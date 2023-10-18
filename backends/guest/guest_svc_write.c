@@ -111,8 +111,7 @@ int guest_write_command(int argc, char *argv[])
 	if (rc || args.help_flag)
 		goto out;
 
-	rc = write_variable((uint8_t *)args.variable_name, (uint8_t *)args.input_file,
-			    (uint8_t *)args.path, args.input_valid);
+	rc = write_variable(args.variable_name, args.input_file, args.path, args.input_valid);
 
 out:
 	if (!args.help_flag)
