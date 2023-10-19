@@ -65,10 +65,10 @@ int get_auth_descriptor2(const void *buf, const size_t buflen,
 int validate_esl_list(const char *key, const uint8_t *esl, const size_t size);
 
 /* Update the TS variable with the new timestamp */
-int update_timestamp(const char *key, const struct efi_time *timestamp, char *last_timestamp);
+int update_timestamp(const char *key, const struct efi_time *timestamp, struct efi_time last_timestamp[]);
 
 /* Check the new timestamp against the timestamp last update was done */
-int check_timestamp(const char *key, const struct efi_time *timestamp, char *last_timestamp);
+int check_timestamp(const char *key, const struct efi_time *timestamp, struct efi_time last_timestamp[]);
 
 /* Check the GUID of the data type */
 bool is_pkcs7_sig_format(const void *data);
@@ -76,7 +76,7 @@ bool is_pkcs7_sig_format(const void *data);
 /* Process the update */
 int process_update(const struct secvar *update, uint8_t **newesl,
 		   int *neweslsize, struct efi_time *timestamp,
-		   struct list_head *bank, char *last_timestamp);
+		   struct list_head *bank, struct efi_time last_timestamp[]);
 
 
 /* Functions used by external secvarctl */

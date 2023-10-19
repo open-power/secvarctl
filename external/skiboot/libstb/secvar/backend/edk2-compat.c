@@ -167,8 +167,7 @@ static int edk2_compat_process(struct list_head *variable_bank,
 		rc = process_update(var, &newesl,
 				    &neweslsize, &timestamp,
 				    &staging_bank,
-					// TODO
-				    (char *)tsvar->data);
+				    (struct efi_time *) tsvar->data); // TS contains a fixed-array of struct efi_time
 		if (rc) {
 			prlog(PR_ERR, "Update processing failed with rc %04x\n", rc);
 			break;
@@ -192,7 +191,7 @@ static int edk2_compat_process(struct list_head *variable_bank,
 		/* Update the TS variable with the new timestamp */
 		rc = update_timestamp(var->key,
 				      &timestamp,
-				      (char *)tsvar->data);
+				      (struct efi_time *) tsvar->data); // TS contains a fixed-array of struct efi_time
 		if (rc) {
 			prlog (PR_ERR, "Variable updated, but timestamp updated failed %04x\n", rc);
 			break;
