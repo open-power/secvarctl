@@ -196,7 +196,6 @@ int print_esl_buffer(const uint8_t *buffer, size_t buffer_size, const char *var_
 	int rc;
 	size_t esl_data_size = 0;
 	size_t esl_count = 0;
-	enum signature_type sig_type;
 
 	union {
 		const uint8_t *raw;
@@ -211,6 +210,7 @@ int print_esl_buffer(const uint8_t *buffer, size_t buffer_size, const char *var_
 	}
 
 	while (curr_esl.esl != NULL) {
+		enum signature_type sig_type;
 		esl_count++;
 		printf("ESL %zu:\n", esl_count);
 		print_esl_info(curr_esl.esl);
