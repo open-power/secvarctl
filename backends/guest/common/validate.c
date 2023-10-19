@@ -185,12 +185,12 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 
 		if (verbose >= PR_INFO) {
 			prlog(PR_INFO, "\tSBAT: ");
-			print_raw((char *)cert, cert_size);
+			print_raw(cert, cert_size);
 		}
 	} else if (is_delete(sig_type)) {
 		if (verbose >= PR_INFO) {
 			prlog(PR_INFO, "\tDELETE-MSG: ");
-			print_raw((char *)cert, cert_size);
+			print_raw(cert, cert_size);
 		}
 		rc = SUCCESS;
 	} else {

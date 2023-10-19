@@ -30,7 +30,7 @@
 
 bool setup_mode;
 
-int update_variable_in_bank(struct secvar *update_var, const char *data,
+int update_variable_in_bank(struct secvar *update_var, const uint8_t *data,
 			    const uint64_t dsize, struct list_head *bank)
 {
 	struct secvar *var;
@@ -95,7 +95,7 @@ static void get_key_authority(const char *ret[3], const char *key)
 	ret[i] = NULL;
 }
 
-EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen)
+EFI_SIGNATURE_LIST* get_esl_signature_list(const uint8_t *buf, size_t buflen)
 {
 	EFI_SIGNATURE_LIST *list = NULL;
 
@@ -110,7 +110,7 @@ EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen)
 }
 
 /* Returns the size of the complete ESL. */
-static int32_t get_esl_signature_list_size(const char *buf, const size_t buflen)
+static int32_t get_esl_signature_list_size(const uint8_t *buf, const size_t buflen)
 {
 	EFI_SIGNATURE_LIST *list = get_esl_signature_list(buf, buflen);
 
@@ -127,7 +127,7 @@ static int32_t get_esl_signature_list_size(const char *buf, const size_t buflen)
  * Copies the certificate from the ESL into cert buffer and returns the size
  * of the certificate
  */
-int get_esl_cert(const char *buf, const size_t buflen, char **cert)
+int get_esl_cert(const uint8_t *buf, const size_t buflen, uint8_t **cert)
 {
 	size_t sig_data_offset;
 	size_t size;
@@ -216,7 +216,7 @@ int get_auth_descriptor2(const void *buf, const size_t buflen, void **auth_buffe
 	return auth_buffer_size;
 }
 
-static bool validate_cert(char *signing_cert, int signing_cert_size)
+static bool validate_cert(uint8_t *signing_cert, int signing_cert_size)
 {
 	//NICK CHILD removed direct mbedtls call, use general crypto
 	// mbedtls_x509_crt x509;
@@ -230,7 +230,7 @@ static bool validate_cert(char *signing_cert, int signing_cert_size)
 	/* If failure in parsing the certificate, exit */
 	// if(rc) {
 	// 	prlog(PR_ERR, "X509 certificate parsing failed %04x\n", rc);
-	x509 = crypto_x509_parse_der((unsigned char *)signing_cert, signing_cert_size);
+	x509 = crypto_x509_parse_der(signing_cert, signing_cert_size);
 	if (!x509) {
 		prlog(PR_ERR, "X509 certificate parsing failed\n");
 
@@ -276,11 +276,11 @@ static bool validate_hash(uuid_t type, int size)
         return false;
 }
 
-int validate_esl_list(const char *key, const char *esl, const size_t size)
+int validate_esl_list(const char *key, const uint8_t *esl, const size_t size)
 {
 	int count = 0;
 	int dsize;
-	char *data = NULL;
+	uint8_t *data = NULL;
 	int eslvarsize = size;
 	int eslsize;
 	int rc = OPAL_SUCCESS;
@@ -497,7 +497,7 @@ out:
 
 /* Verify the PKCS7 signature on the signed data. */
 static int verify_signature(const struct efi_variable_authentication_2 *auth,
-			    const char *newcert, const size_t new_data_size,
+			    const uint8_t *newcert, const size_t new_data_size,
 			    const struct secvar *avar)
 {
 	//NICK CHILD removed direct mbedtls call, use general crypto
@@ -506,8 +506,8 @@ static int verify_signature(const struct efi_variable_authentication_2 *auth,
 	crypto_pkcs7_t *pkcs7 = NULL;
 	crypto_x509_t *x509 = NULL;
 
-	char *signing_cert = NULL;
-	char *x509_buf = NULL;
+	uint8_t *signing_cert = NULL;
+	char *x509_info = NULL;
 	int signing_cert_size;
 	int rc = 0;
 	char *errbuf;
@@ -558,7 +558,7 @@ static int verify_signature(const struct efi_variable_authentication_2 *auth,
 		// /* This should not happen, unless something corrupted in PNOR */
 		// if(rc) {
 		// 	prlog(PR_ERR, "X509 certificate parsing failed %04x\n", rc);
-		x509 = crypto_x509_parse_der((unsigned char *)signing_cert, signing_cert_size);
+		x509 = crypto_x509_parse_der(signing_cert, signing_cert_size);
 		if (!x509) {
 			prlog(PR_ERR, "X509 certificate parsing failed\n");
 
@@ -566,25 +566,26 @@ static int verify_signature(const struct efi_variable_authentication_2 *auth,
 			break;
 		}
 
-		x509_buf = zalloc(CERT_BUFFER_SIZE);
+		x509_info = zalloc(CERT_BUFFER_SIZE);
 		// NICK CHILD removed direct mbedtls call, use general crypto
 		// rc = mbedtls_x509_crt_info(x509_buf,
 		// 			   CERT_BUFFER_SIZE,
 		// 			   "\tCRT:",
 		// 			   &x509);	//NICK ADDED \t
-		rc = crypto_x509_get_long_desc(x509_buf, CERT_BUFFER_SIZE, "\tCRT:", x509);
+		rc = crypto_x509_get_long_desc(x509_info, CERT_BUFFER_SIZE, "\tCRT:", x509);
 		/* This should not happen, unless something corrupted in PNOR */
 		if (rc < 0) {
-			free(x509_buf);
+			free(x509_info);
 			rc = OPAL_INTERNAL_ERROR;
 			break;
 		}
 
-		prlog(PR_INFO, "%s \n", x509_buf);
-		free(x509_buf);
-		x509_buf = NULL;
+		prlog(PR_INFO, "%s \n", x509_info);
+		free(x509_info);
+		x509_info = NULL;
 		//NICK CHILD removed direct mbedtls call, use general crypto
 		// rc = mbedtls_pkcs7_signed_hash_verify(pkcs7, &x509, (unsigned char *)newcert, new_data_size);
+		// TODO: remove const-discarding cast
 		rc = crypto_pkcs7_signed_hash_verify(pkcs7, x509, (unsigned char *)newcert, new_data_size);
 		/* If you find a signing certificate, you are done */
 		if (rc == CRYPTO_SUCCESS) {
@@ -636,7 +637,7 @@ static int verify_signature(const struct efi_variable_authentication_2 *auth,
  * which is submitted as signed by the user.
  * Returns the sha256 hash, else negative error code.
  */
-static char *get_hash_to_verify(const char *key, const char *new_data,
+static uint8_t *get_hash_to_verify(const char *key, const uint8_t *new_data,
 				const size_t new_data_size,
 				const struct efi_time *timestamp)
 {
@@ -734,7 +735,7 @@ out:
 	//mbedtls_md_free(&ctx);
 	crypto_md_free(ctx);
 
-	return (char *)hash;
+	return hash;
 }
 
 bool is_pkcs7_sig_format(const void *data)
@@ -745,7 +746,7 @@ bool is_pkcs7_sig_format(const void *data)
 	return !memcmp(&auth->auth_info.cert_type, &pkcs7_guid, 16);
 }
 
-int process_update(const struct secvar *update, char **newesl,
+int process_update(const struct secvar *update, uint8_t **newesl,
 		   int *new_data_size, struct efi_time *timestamp,
 		   struct list_head *bank, char *last_timestamp)
 {
@@ -753,7 +754,7 @@ int process_update(const struct secvar *update, char **newesl,
 	void *auth_buffer = NULL;
 	int auth_buffer_size = 0;
 	const char *key_authority[3];
-	char *tbhbuffer = NULL;
+	uint8_t *tbhbuffer = NULL;
 	size_t tbhbuffersize = 0;
 	struct secvar *avar = NULL;
 	int rc = 0;

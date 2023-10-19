@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright 2022-2023 IBM Corp.
  */
+#include <bits/stdint-uintn.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -47,7 +48,7 @@ void print_hex(const uint8_t *data, size_t length)
  * @param c pointer to buffer
  * @param size length of buffer
  */
-void print_raw(const char *c, size_t size)
+void print_raw(const uint8_t *c, size_t size)
 {
 	for (int i = 0; i < size; i++)
 		printf("%c", *(c + i));
@@ -63,10 +64,10 @@ void print_raw(const char *c, size_t size)
  * @return char* to allocted data of file
  * NOTE:REMEMBER TO UNALLOCATE RETURNED DATA
  */
-char *get_data_from_file(const char *fullPath, size_t max_bytes, size_t *size)
+uint8_t *get_data_from_file(const char *fullPath, size_t max_bytes, size_t *size)
 {
 	int fptr;
-	char *buffer = NULL;
+	uint8_t *buffer = NULL;
 	struct stat fileInfo;
 	ssize_t read_size;
 
@@ -149,7 +150,7 @@ int write_data_to_file(const char *file, const char *buff, size_t size)
  * @return negative int, error if opening/writing to .../update file
  * @return 0 for success or error number
  */
-int create_file(const char *file, const char *buff, size_t size)
+int create_file(const char *file, const uint8_t *buff, size_t size)
 {
 	int rc, fptr;
 

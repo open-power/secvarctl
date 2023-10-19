@@ -11,11 +11,11 @@
 #define DEFAULT_PK_LEN 31
 #define APPEND_HEADER_LEN 8
 #define TIMESTAMP_LEN 8
-#define PK_VARIABLE (char *)"PK"
+#define PK_VARIABLE "PK"
 #define PK_LEN 2
-#define KEK_VARIABLE (char *)"KEK"
+#define KEK_VARIABLE "KEK"
 #define KEK_LEN 3
-#define SBAT_VARIABLE (char *)"sbat"
+#define SBAT_VARIABLE "sbat"
 
 static const uuid_t PKS_CERT_DELETE_GUID = { { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 					       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } };
