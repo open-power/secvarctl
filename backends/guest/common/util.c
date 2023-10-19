@@ -12,26 +12,19 @@
 #include "pseries.h"
 #include "common/util.h"
 
-#define X509_TYPE (uint8_t *)"X509"
-#define RSA2048_TYPE (uint8_t *)"RSA2048"
-#define PKCS7_TYPE (uint8_t *)"PKCS7"
-#define SBAT_TYPE (uint8_t *)"SBAT"
-#define DELETE_TYPE (uint8_t *)"DELETE-ALL"
-#define UNKNOWN_TYPE (uint8_t *)"UNKNOWN"
-
 // clang-format off
 const struct signature_type_info signature_type_list[] = {
-	[ST_X509]             = { .name = "X509",       .uuid = &PKS_CERT_X509_GUID },
-	[ST_RSA2048]          = { .name = "RSA2048",    .uuid = &PKS_CERT_RSA2048_GUID },
-	[ST_PKCS7]            = { .name = "PKCS7",      .uuid = &AUTH_CERT_TYPE_PKCS7_GUID },
-	[ST_SBAT]             = { .name = "SBAT",       .uuid = &PKS_CERT_SBAT_GUID },
-	[ST_DELETE]           = { .name = "DELETE-ALL", .uuid = &PKS_CERT_DELETE_GUID },
-	[ST_HASH_SHA1]        = { .name = "SHA1",       .uuid = &PKS_CERT_SHA1_GUID,	.crypto_id = CRYPTO_MD_SHA1,	.size = 20},
-	[ST_HASH_SHA224]      = { .name = "SHA224",     .uuid = &PKS_CERT_SHA224_GUID,	.crypto_id = CRYPTO_MD_SHA224,	.size = 28 },
-	[ST_HASH_SHA256]      = { .name = "SHA256",     .uuid = &PKS_CERT_SHA256_GUID,	.crypto_id = CRYPTO_MD_SHA256,	.size = 32 },
-	[ST_HASH_SHA384]      = { .name = "SHA384",     .uuid = &PKS_CERT_SHA384_GUID,	.crypto_id = CRYPTO_MD_SHA384,	.size = 48 },
-	[ST_HASH_SHA512]      = { .name = "SHA512",     .uuid = &PKS_CERT_SHA512_GUID,	.crypto_id = CRYPTO_MD_SHA512,	.size = 64 },
-	[ST_UNKNOWN]          = { .name = "UNKNOWN",    .uuid = NULL},
+	[ST_X509]        = { .name = "X509",       .uuid = &PKS_CERT_X509_GUID        },
+	[ST_RSA2048]     = { .name = "RSA2048",    .uuid = &PKS_CERT_RSA2048_GUID     },
+	[ST_PKCS7]       = { .name = "PKCS7",      .uuid = &AUTH_CERT_TYPE_PKCS7_GUID },
+	[ST_SBAT]        = { .name = "SBAT",       .uuid = &PKS_CERT_SBAT_GUID        },
+	[ST_DELETE]      = { .name = "DELETE-ALL", .uuid = &PKS_CERT_DELETE_GUID      },
+	[ST_HASH_SHA1]   = { .name = "SHA1",       .uuid = &PKS_CERT_SHA1_GUID,   .crypto_id = CRYPTO_MD_SHA1,   .size = 20 },
+	[ST_HASH_SHA224] = { .name = "SHA224",     .uuid = &PKS_CERT_SHA224_GUID, .crypto_id = CRYPTO_MD_SHA224, .size = 28 },
+	[ST_HASH_SHA256] = { .name = "SHA256",     .uuid = &PKS_CERT_SHA256_GUID, .crypto_id = CRYPTO_MD_SHA256, .size = 32 },
+	[ST_HASH_SHA384] = { .name = "SHA384",     .uuid = &PKS_CERT_SHA384_GUID, .crypto_id = CRYPTO_MD_SHA384, .size = 48 },
+	[ST_HASH_SHA512] = { .name = "SHA512",     .uuid = &PKS_CERT_SHA512_GUID, .crypto_id = CRYPTO_MD_SHA512, .size = 64 },
+	[ST_UNKNOWN]     = { .name = "UNKNOWN",    .uuid = NULL},
 };
 // clang-format on
 
