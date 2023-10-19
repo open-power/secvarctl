@@ -359,11 +359,9 @@ int validate_esl_list(const char *key, const uint8_t *esl, const size_t size)
 }
 
 /* Get the timestamp for the last update of the give key */
-static struct efi_time *get_last_timestamp(const char *key, char *last_timestamp)
+static struct efi_time *get_last_timestamp(const char *key, struct efi_time *timestamp)
 {
-	struct efi_time *timestamp = (struct efi_time*)last_timestamp;
-
-	if (!last_timestamp)
+	if (!timestamp)
 		return NULL;
 
 	if (key_equals(key, "PK"))
@@ -378,7 +376,7 @@ static struct efi_time *get_last_timestamp(const char *key, char *last_timestamp
 		return NULL;
 }
 
-int update_timestamp(const char *key, const struct efi_time *timestamp, char *last_timestamp)
+int update_timestamp(const char *key, const struct efi_time *timestamp, struct efi_time last_timestamp[])
 {
 	struct efi_time *prev;
 
@@ -413,7 +411,7 @@ static uint64_t unpack_timestamp(const struct efi_time *timestamp)
 }
 
 int check_timestamp(const char *key, const struct efi_time *timestamp,
-		    char *last_timestamp)
+		    struct efi_time last_timestamp[])
 {
 	struct efi_time *prev;
 	uint64_t new;
@@ -748,7 +746,7 @@ bool is_pkcs7_sig_format(const void *data)
 
 int process_update(const struct secvar *update, uint8_t **newesl,
 		   int *new_data_size, struct efi_time *timestamp,
-		   struct list_head *bank, char *last_timestamp)
+		   struct list_head *bank, struct efi_time last_timestamp[])
 {
 	struct efi_variable_authentication_2 *auth = NULL;
 	void *auth_buffer = NULL;
