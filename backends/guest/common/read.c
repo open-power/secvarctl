@@ -41,7 +41,7 @@ int extract_esl_cert(const uint8_t *buf, const size_t buflen, uint8_t **cert)
 {
 	size_t sig_data_offset;
 	size_t size;
-	sv_esl_t *list = extract_esl_signature_list(buf, buflen);
+	const sv_esl_t *list = extract_esl_signature_list(buf, buflen);
 
 	if (!list || cert == NULL)
 		return -1;
