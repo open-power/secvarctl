@@ -155,8 +155,9 @@ check: $(SECVAR_TOOL)
 
 CPPCHECK_FLAGS =  --enable=all --force -q --error-exitcode=1
 CPPCHECK_FLAGS += --suppress=missingIncludeSystem
-CPPCHECK_FLAGS += --suppress=unusedFunction       # false positive on validateTS
-CPPCHECK_FLAGS += --suppress=internalAstError     # false positive on ccan/list_for_each
+CPPCHECK_FLAGS += --suppress=unusedFunction             # false positive on validateTS
+CPPCHECK_FLAGS += --suppress=internalAstError           # false positive on ccan/list_for_each
+CPPCHECK_FLAGS += --suppress=*:external/skiboot/ccan/*  # skip checking headers in external code
 cppcheck:
 	cppcheck $(CPPCHECK_FLAGS) $(INCLUDES) $(MAIN_SRCS)
 
