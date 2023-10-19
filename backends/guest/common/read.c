@@ -162,11 +162,11 @@ static int print_esd_from_esl_buffer(const uint8_t *esl, size_t esl_size,
 			break;
 		case ST_SBAT:
 			printf("\tData: ");
-			print_raw((char *)curr_esd.raw, esd_data_size);
+			print_raw(curr_esd.raw, esd_data_size);
 			break;
 		case ST_DELETE:
 			printf("\tDELETE-MSG: ");
-			print_raw((char *)curr_esd.raw, esd_data_size);
+			print_raw(curr_esd.raw, esd_data_size);
 			break;
 		default:
 			prlog(PR_ERR, "ERROR: unknown signature type = %d\n", sig_type);

@@ -78,7 +78,7 @@ static int parse_options(int key, char *arg, struct argp_state *state)
  */
 int guest_validation_command(int argc, char *argv[])
 {
-	unsigned char *buff = NULL;
+	uint8_t *buff = NULL;
 	size_t size;
 	int rc;
 	struct validate_args args = {
@@ -115,7 +115,7 @@ int guest_validation_command(int argc, char *argv[])
 	if (rc || args.help_flag)
 		return rc;
 
-	buff = (unsigned char *)get_data_from_file(args.input_file, SIZE_MAX, &size);
+	buff = get_data_from_file(args.input_file, SIZE_MAX, &size);
 	if (!buff) {
 		prlog(PR_ERR, "ERROR: failed to get data from %s\n", args.input_file);
 		return INVALID_FILE;

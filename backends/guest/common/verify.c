@@ -38,7 +38,7 @@ static int update_variable(const char *variable_name, const uint8_t *auth_data,
 	if (strcmp(variable_name, PK_VARIABLE) == 0)
 		allow_unauthenticated_pk_update = true;
 
-	label = get_wide_character(variable_name, strlen((char *)variable_name));
+	label = get_wide_character(variable_name, strlen(variable_name));
 	label_size = strlen(variable_name) * 2;
 
 	rc = update_var_from_auth(label, label_size, auth_data, auth_data_size, current_esl_data,
@@ -84,20 +84,20 @@ static int update_variable(const char *variable_name, const uint8_t *auth_data,
 /*
  * extract the ESL data and its size from ESL file
  */
-static int get_current_esl_data(const uint8_t *esl_file, uint8_t **current_esl_data,
+static int get_current_esl_data(const char *esl_file, uint8_t **current_esl_data,
 				size_t *current_esl_data_size)
 {
 	int rc = SUCCESS;
 	size_t buffer_size = 0;
 	uint8_t *buffer = NULL;
 
-	if (is_file((char *)esl_file) != SUCCESS)
+	if (is_file(esl_file) != SUCCESS)
 		return INVALID_FILE;
 
-	buffer = (uint8_t *)get_data_from_file((char *)esl_file, SIZE_MAX, &buffer_size);
+	buffer = get_data_from_file(esl_file, SIZE_MAX, &buffer_size);
 	if (buffer != NULL) {
 		if (buffer_size == DEFAULT_PK_LEN) {
-			print_raw((char *)buffer, buffer_size);
+			print_raw(buffer, buffer_size);
 			free(buffer);
 			buffer = NULL;
 			buffer_size = 0;
@@ -127,10 +127,10 @@ static int get_auth_data(const char *auth_file, uint8_t **auth_data, size_t *aut
 	size_t buffer_size = 0;
 	uint8_t *buffer = NULL;
 
-	if (is_file((char *)auth_file) != SUCCESS)
+	if (is_file(auth_file) != SUCCESS)
 		return INVALID_FILE;
 
-	buffer = (uint8_t *)get_data_from_file((char *)auth_file, SIZE_MAX, &buffer_size);
+	buffer = (uint8_t *)get_data_from_file(auth_file, SIZE_MAX, &buffer_size);
 	if (buffer != NULL) {
 		rc = validate_auth(buffer, buffer_size);
 		if (rc != SUCCESS) {
@@ -165,8 +165,8 @@ static int get_current_esl(const struct verify_args *args, const char *update_va
 	for (i = 0; i < args->current_variable_size; i += 2) {
 		if (strcmp(args->current_variable[i], update_variable) == 0) {
 			// Target variable found in current variable arg list
-			rc = get_current_esl_data((uint8_t *)args->current_variable[i + 1],
-						  &current_esl, &current_esl_size);
+			rc = get_current_esl_data(args->current_variable[i + 1], &current_esl,
+						  &current_esl_size);
 			if (rc != SUCCESS)
 				goto fail;
 			goto out;
@@ -177,7 +177,7 @@ static int get_current_esl(const struct verify_args *args, const char *update_va
 
 	if (args->variable_path == NULL)
 		goto fail;
-	len = strlen(args->variable_path) + strlen((char *)update_variable) + strlen(esl_data);
+	len = strlen(args->variable_path) + strlen(update_variable) + strlen(esl_data);
 	esl_data_path = calloc(1, len + 1);
 	if (esl_data_path == NULL) {
 		rc = ALLOC_FAIL;
@@ -187,13 +187,12 @@ static int get_current_esl(const struct verify_args *args, const char *update_va
 	len = 0;
 	memcpy(esl_data_path + len, args->variable_path, strlen(args->variable_path));
 	len += strlen(args->variable_path);
-	memcpy(esl_data_path + len, update_variable, strlen((char *)update_variable));
-	len += strlen((char *)update_variable);
+	memcpy(esl_data_path + len, update_variable, strlen(update_variable));
+	len += strlen(update_variable);
 	memcpy(esl_data_path + len, esl_data, strlen(esl_data));
 
 	if (is_file(esl_data_path) == SUCCESS)
-		rc = get_current_esl_data((uint8_t *)esl_data_path, &current_esl,
-					  &current_esl_size);
+		rc = get_current_esl_data(esl_data_path, &current_esl, &current_esl_size);
 	free(esl_data_path);
 
 	if (rc != SUCCESS)
@@ -301,7 +300,7 @@ static int get_pk_and_kek_from_path_var(const struct verify_args *args, uint8_t 
 	memcpy(esl_data_path + len, esl_data, strlen(esl_data));
 
 	if (is_file(esl_data_path) == SUCCESS)
-		rc = get_current_esl_data((uint8_t *)esl_data_path, pk_esl_data, pk_esl_data_size);
+		rc = get_current_esl_data(esl_data_path, pk_esl_data, pk_esl_data_size);
 
 	free(esl_data_path);
 	len = strlen(args->variable_path) + KEK_LEN + strlen(esl_data);
@@ -318,8 +317,7 @@ static int get_pk_and_kek_from_path_var(const struct verify_args *args, uint8_t 
 	memcpy(esl_data_path + len, esl_data, strlen(esl_data));
 
 	if (is_file(esl_data_path) == SUCCESS)
-		rc = get_current_esl_data((uint8_t *)esl_data_path, kek_esl_data,
-					  kek_esl_data_size);
+		rc = get_current_esl_data(esl_data_path, kek_esl_data, kek_esl_data_size);
 
 	free(esl_data_path);
 
@@ -394,10 +392,10 @@ int verify_variables(struct verify_args *args)
 	else if (args->current_variable_size > 0) {
 		for (int i = 0; i < args->current_variable_size; i += 2) {
 			if (strcmp(args->current_variable[i], PK_VARIABLE) == 0)
-				rc = get_current_esl_data((uint8_t *)args->current_variable[i + 1],
+				rc = get_current_esl_data(args->current_variable[i + 1],
 							  &pk_esl_data, &pk_esl_data_size);
 			else if (strcmp(args->current_variable[i], KEK_VARIABLE) == 0)
-				rc = get_current_esl_data((uint8_t *)args->current_variable[i + 1],
+				rc = get_current_esl_data(args->current_variable[i + 1],
 							  &kek_esl_data, &kek_esl_data_size);
 			if (pk_esl_data != NULL && kek_esl_data != NULL)
 				break;

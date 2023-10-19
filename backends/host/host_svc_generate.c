@@ -32,30 +32,29 @@ struct Arguments {
 };
 
 static int parse_opt(int key, char *arg, struct argp_state *state);
-static int generateHash(const unsigned char *data, size_t size, struct Arguments *args,
+static int generateHash(const uint8_t *data, size_t size, struct Arguments *args,
 			const struct hash_funct *alg, unsigned char **outHash, size_t *outHashSize);
 static int validateHashAndAlg(size_t size, const struct hash_funct *alg);
-static int toESL(const unsigned char *data, size_t size, const uuid_t guid, unsigned char **outESL,
+static int toESL(const unsigned char *data, size_t size, const uuid_t guid, uint8_t **outESL,
 		 size_t *outESLSize);
 static int getHashFunction(const char *name, struct hash_funct **returnFunct);
-static int toPKCS7ForSecVar(const unsigned char *newData, size_t dataSize, struct Arguments *args,
-			    int hashFunct, unsigned char **outBuff, size_t *outBuffSize);
-static int toAuth(const unsigned char *newESL, size_t eslSize, struct Arguments *args,
-		  int hashFunct, unsigned char **outBuff, size_t *outBuffSize);
-static int generateESL(const unsigned char *buff, size_t size, struct Arguments *args,
-		       const struct hash_funct *hashFunct, unsigned char **outBuff,
-		       size_t *outBuffSize);
-static int generateAuthOrPKCS7(const unsigned char *buff, size_t size, struct Arguments *args,
-			       const struct hash_funct *hashFunct, unsigned char **outBuff,
+static int toPKCS7ForSecVar(const uint8_t *newData, size_t dataSize, struct Arguments *args,
+			    int hashFunct, uint8_t **outBuff, size_t *outBuffSize);
+static int toAuth(const uint8_t *newESL, size_t eslSize, struct Arguments *args, int hashFunct,
+		  uint8_t **outBuff, size_t *outBuffSize);
+static int generateESL(const uint8_t *buff, size_t size, struct Arguments *args,
+		       const struct hash_funct *hashFunct, uint8_t **outBuff, size_t *outBuffSize);
+static int generateAuthOrPKCS7(const uint8_t *buff, size_t size, struct Arguments *args,
+			       const struct hash_funct *hashFunct, uint8_t **outBuff,
 			       size_t *outBuffSize);
 static int getTimestamp(struct efi_time *ts);
-static int getOutputData(const unsigned char *buff, size_t size, struct Arguments *args,
-			 const struct hash_funct *hashFunction, unsigned char **outBuff,
+static int getOutputData(const uint8_t *buff, size_t size, struct Arguments *args,
+			 const struct hash_funct *hashFunction, uint8_t **outBuff,
 			 size_t *outBuffSize);
-static int authToESL(const unsigned char *in, size_t inSize, unsigned char **out, size_t *outSize);
-static int toHashForSecVarSigning(const unsigned char *ESL, size_t ESL_size, struct Arguments *args,
-				  unsigned char **outBuff, size_t *outBuffSize);
-static int getPreHashForSecVar(unsigned char **outData, size_t *outSize, const unsigned char *ESL,
+static int authToESL(const uint8_t *in, size_t inSize, uint8_t **out, size_t *outSize);
+static int toHashForSecVarSigning(const uint8_t *ESL, size_t ESL_size, struct Arguments *args,
+				  uint8_t **outBuff, size_t *outBuffSize);
+static int getPreHashForSecVar(uint8_t **outData, size_t *outSize, const uint8_t *ESL,
 			       size_t ESL_size, struct Arguments *args);
 static int parseCustomTimestamp(struct efi_time *strct, const char *str);
 static void convert_tm_to_efi_time(struct efi_time *efi_t, struct tm *tm_t);
@@ -71,7 +70,7 @@ int performGenerateCommand(int argc, char *argv[])
 	int rc;
 	size_t outBuffSize, size;
 	struct hash_funct *hashFunction;
-	unsigned char *buff = NULL, *outBuff = NULL;
+	uint8_t *buff = NULL, *outBuff = NULL;
 	struct Arguments args = { .helpFlag = 0,
 				  .inpValid = 0,
 				  .signKeyCount = 0,
@@ -193,7 +192,7 @@ int performGenerateCommand(int argc, char *argv[])
 		size = 0;
 	else {
 		// get data from input file
-		buff = (unsigned char *)get_data_from_file(args.inFile, SIZE_MAX, &size);
+		buff = get_data_from_file(args.inFile, SIZE_MAX, &size);
 		if (buff == NULL) {
 			prlog(PR_ERR, "ERROR: Could not find data in file %s\n", args.inFile);
 			rc = INVALID_FILE;
@@ -216,7 +215,7 @@ int performGenerateCommand(int argc, char *argv[])
 
 	prlog(PR_INFO, "Writing %zu bytes to %s\n", outBuffSize, args.outFile);
 	// write data to new file
-	rc = create_file(args.outFile, (char *)outBuff, outBuffSize);
+	rc = create_file(args.outFile, outBuff, outBuffSize);
 	if (rc) {
 		prlog(PR_ERR, "ERROR: Could not write new data to output file %s\n", args.outFile);
 	}
@@ -409,8 +408,8 @@ static int parseCustomTimestamp(struct efi_time *strct, const char *str)
  *@param outBuffSize, the length of outBuff
  *@return SUCCESS or err number 
  */
-static int getOutputData(const unsigned char *buff, size_t size, struct Arguments *args,
-			 const struct hash_funct *hashFunction, unsigned char **outBuff,
+static int getOutputData(const uint8_t *buff, size_t size, struct Arguments *args,
+			 const struct hash_funct *hashFunction, uint8_t **outBuff,
 			 size_t *outBuffSize)
 {
 	int rc;

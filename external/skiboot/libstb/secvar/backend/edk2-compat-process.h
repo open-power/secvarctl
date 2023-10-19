@@ -51,7 +51,7 @@ extern bool setup_mode;
 extern struct list_head staging_bank;
 
 /* Update the variable in the variable bank with the new value. */
-int update_variable_in_bank(struct secvar *update_var, const char *data,
+int update_variable_in_bank(struct secvar *update_var, const uint8_t *data,
 			    uint64_t dsize, struct list_head *bank);
 
 /* This function outputs the Authentication 2 Descriptor in the
@@ -62,7 +62,7 @@ int get_auth_descriptor2(const void *buf, const size_t buflen,
 			 void **auth_buffer);
 
 /* Check the format of the ESL */
-int validate_esl_list(const char *key, const char *esl, const size_t size);
+int validate_esl_list(const char *key, const uint8_t *esl, const size_t size);
 
 /* Update the TS variable with the new timestamp */
 int update_timestamp(const char *key, const struct efi_time *timestamp, char *last_timestamp);
@@ -74,7 +74,7 @@ int check_timestamp(const char *key, const struct efi_time *timestamp, char *las
 bool is_pkcs7_sig_format(const void *data);
 
 /* Process the update */
-int process_update(const struct secvar *update, char **newesl,
+int process_update(const struct secvar *update, uint8_t **newesl,
 		   int *neweslsize, struct efi_time *timestamp,
 		   struct list_head *bank, char *last_timestamp);
 
@@ -88,7 +88,7 @@ int process_update(const struct secvar *update, char **newesl,
  * @return NULL if buflen is smaller than size of sig list struct or if buf is NULL
  * @return EFI_SIGNATURE_LIST struct
  */
-EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen);
+EFI_SIGNATURE_LIST* get_esl_signature_list(const uint8_t *buf, size_t buflen);
 
 /**
  * Copies the certificate from the ESL into cert buffer and returns the size
@@ -98,7 +98,7 @@ EFI_SIGNATURE_LIST* get_esl_signature_list(const char *buf, size_t buflen);
  * @param cert pointer to destination. Memory will be allocated for the certificate
  * @return size of memory allocated to cert or negative number if allocation fails
  */
-int get_esl_cert(const char *buf, const size_t buflen, char **cert);
+int get_esl_cert(const uint8_t *buf, const size_t buflen, uint8_t **cert);
 
 /*
  * Extracts size of the PKCS7 signed data embedded in the
