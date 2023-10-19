@@ -156,7 +156,7 @@ int isVariable(const char *var)
 static int updateSecVar(const char *varName, const char *authFile, const char *path, int force)
 {
 	int rc;
-	unsigned char *buff = NULL;
+	uint8_t *buff = NULL;
 	size_t size;
 
 	if (!path) {
@@ -164,7 +164,7 @@ static int updateSecVar(const char *varName, const char *authFile, const char *p
 	}
 
 	// get data to write, if force flag then validate the data is an auth file
-	buff = (unsigned char *)get_data_from_file(authFile, SIZE_MAX, &size);
+	buff = get_data_from_file(authFile, SIZE_MAX, &size);
 	// if we are validating and validating fails, quit
 	if (!force) {
 		rc = validateAuth(buff, size, varName);

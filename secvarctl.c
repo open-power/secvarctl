@@ -160,7 +160,8 @@ static struct backend *get_backend()
 			max_buff_size = strlen(backends[i].format);
 	}
 
-	buff = get_data_from_file(secvar_format_location, max_buff_size, &buffSize);
+	// Contents of format file should be a string
+	buff = (char *)get_data_from_file(secvar_format_location, max_buff_size, &buffSize);
 	if (buff == NULL) {
 		prlog(PR_WARNING,
 		      "WARNING!! could not extract data from %s , "

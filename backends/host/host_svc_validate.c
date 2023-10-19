@@ -30,7 +30,7 @@ enum fileTypes { AUTH_FILE = 'a', PKCS7_FILE = 'p', ESL_FILE = 'e', CERT_FILE = 
  */
 int performValidation(int argc, char *argv[])
 {
-	unsigned char *buff = NULL;
+	uint8_t *buff = NULL;
 	size_t size;
 	int rc;
 	struct Arguments args = {
@@ -67,7 +67,7 @@ int performValidation(int argc, char *argv[])
 	if (rc || args.helpFlag)
 		goto out;
 
-	buff = (unsigned char *)get_data_from_file(args.inFile, SIZE_MAX, &size);
+	buff = get_data_from_file(args.inFile, SIZE_MAX, &size);
 	if (!buff) {
 		prlog(PR_ERR, "ERROR: failed to get data from %s\n", args.inFile);
 		rc = INVALID_FILE;
@@ -361,7 +361,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 		return ESL_FAIL;
 	}
 	// Get sig list
-	sigList = get_esl_signature_list((const char *)esl, eslvarsize);
+	sigList = get_esl_signature_list(esl, eslvarsize);
 	// check size info is logical
 	if (sigList->SignatureListSize > 0) {
 		if ((sigList->SignatureSize == 0 && sigList->SignatureHeaderSize == 0) ||
@@ -403,8 +403,7 @@ static int validateSingularESL(size_t *bytesRead, const unsigned char *esl, size
 		return ESL_FAIL;
 	}
 	// get certificate
-	cert_size = get_esl_cert((const char *)esl, eslvarsize,
-				 (char **)&cert); // puts sig data in cert
+	cert_size = get_esl_cert(esl, eslvarsize, &cert); // puts sig data in cert
 	if (cert_size <= 0) {
 		prlog(PR_ERR, "\tERROR: Signature Size was too small, no data \n");
 		return ESL_FAIL;
@@ -626,7 +625,7 @@ int parseX509(crypto_x509_t **x509, const unsigned char *certBuf, size_t buflen)
 	return SUCCESS;
 }
 
-static bool timestamp_is_empty(const char *ts_ptr)
+static bool timestamp_is_empty(const uint8_t *ts_ptr)
 {
 	for (size_t i = 0; i < sizeof(struct efi_time); i++) {
 		if (ts_ptr[i] != 0x00)
@@ -642,10 +641,10 @@ static bool timestamp_is_empty(const char *ts_ptr)
  *@param size, size of timestamp data, should be 16*4
  *@return SUCCESS or error depending if ts data is understandable
  */
-int validateTS(const unsigned char *data, size_t size)
+int validateTS(const uint8_t *data, size_t size)
 {
 	int rc;
-	char *pointer;
+	uint8_t *pointer;
 	struct efi_time *tmpStamp;
 	// data length must have a timestamp for every variable besides the TS variable
 	if (size != sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1)) {
@@ -654,7 +653,7 @@ int validateTS(const unsigned char *data, size_t size)
 		      sizeof(struct efi_time) * (ARRAY_SIZE(variables) - 1), size);
 		return INVALID_TIMESTAMP;
 	}
-	for (pointer = (char *)data; size > 0;
+	for (pointer = (uint8_t *)data; size > 0; // Cast to discard const TODO: rewrite this loop
 	     pointer += sizeof(struct efi_time), size -= sizeof(struct efi_time)) {
 		tmpStamp = (struct efi_time *)pointer;
 		// an empty TS is valid, means uninitialized

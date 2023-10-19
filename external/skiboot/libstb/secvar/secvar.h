@@ -25,7 +25,7 @@ struct secvar {
 	uint64_t data_size;
 	uint64_t flags;
 	char *key;
-	char *data;
+	uint8_t *data;
 };
 
 extern struct list_head variable_bank;
@@ -40,7 +40,7 @@ void clear_bank_list(struct list_head *bank);
 int copy_bank_list(struct list_head *dst, struct list_head *src);
 struct secvar *alloc_secvar(uint64_t key_len, uint64_t data_size);
 struct secvar *new_secvar(const char *key, uint64_t key_len,
-			       const char *data, uint64_t data_size,
+			       const uint8_t *data, uint64_t data_size,
 			       uint64_t flags);
 int realloc_secvar(struct secvar *node, uint64_t size);
 void dealloc_secvar(struct secvar *node);

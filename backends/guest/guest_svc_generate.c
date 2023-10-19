@@ -542,7 +542,7 @@ int guest_generate_command(int argc, char *argv[])
 	int rc = 0;
 	size_t out_buffer_size = 0, size = 0;
 	enum signature_type hash_function;
-	unsigned char *buffer = NULL, *out_buffer = NULL;
+	uint8_t *buffer = NULL, *out_buffer = NULL;
 	struct generate_args args = { 0 };
 
 	memset(&args, 0x00, sizeof(struct generate_args));
@@ -673,7 +673,7 @@ int guest_generate_command(int argc, char *argv[])
 		size = 0;
 	else {
 		/* get data from input file */
-		buffer = (unsigned char *)get_data_from_file(args.input_file, SIZE_MAX, &size);
+		buffer = get_data_from_file(args.input_file, SIZE_MAX, &size);
 		if (buffer == NULL) {
 			prlog(PR_ERR, "ERROR: could not find data in file %s\n", args.input_file);
 			rc = INVALID_FILE;
@@ -699,7 +699,7 @@ int guest_generate_command(int argc, char *argv[])
 
 	prlog(PR_INFO, "writing %zu bytes to %s\n", out_buffer_size, args.output_file);
 	/* write data to new file */
-	rc = create_file(args.output_file, (char *)out_buffer, out_buffer_size);
+	rc = create_file(args.output_file, out_buffer, out_buffer_size);
 	if (rc) {
 		prlog(PR_ERR, "ERROR: could not write new data to output file %s\n",
 		      args.output_file);

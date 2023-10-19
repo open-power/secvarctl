@@ -70,7 +70,7 @@ struct secvar *alloc_secvar(uint64_t key_len, uint64_t data_size)
 }
 
 struct secvar *new_secvar(const char *key, uint64_t key_len,
-			       const char *data, uint64_t data_size,
+			       const uint8_t *data, uint64_t data_size,
 			       uint64_t flags)
 {
 	struct secvar *ret;

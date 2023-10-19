@@ -14,11 +14,11 @@
 #include "host_svc_backend.h"
 
 static int readFiles(const char *var, const char *file, int hrFlag, const char *path);
-static int printReadable(const char *c, size_t size, const char *key);
+static int printReadable(const uint8_t *c, size_t size, const char *key);
 static int readFileFromSecVar(const char *path, const char *variable, int hrFlag);
 static int readFileFromPath(const char *path, int hrFlag);
 static int getSizeFromSizeFile(size_t *returnSize, const char *path);
-static int readTS(const char *data, size_t size);
+static int readTS(const uint8_t *data, size_t size);
 
 struct Arguments {
 	int helpFlag, printRaw;
@@ -234,7 +234,7 @@ static int readFileFromPath(const char *file, int hrFlag)
 {
 	int rc;
 	size_t size = 0;
-	char *c = NULL;
+	uint8_t *c = NULL;
 	c = get_data_from_file(file, SIZE_MAX, &size);
 	if (!c) {
 		return INVALID_FILE;
@@ -265,7 +265,8 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
 {
 	int rc;
 	size_t size, out_size;
-	char *sizePath = NULL, *c = NULL;
+	char *sizePath = NULL;
+	uint8_t *c = NULL;
 	rc = is_file(fullPath);
 	if (rc) {
 		return rc;
@@ -330,7 +331,7 @@ int getSecVar(struct secvar **var, const char *name, const char *fullPath)
  *@param key, variable name {"db","dbx","KEK", "PK"} b/c dbx is a different format
  *@return SUCCESS or error number if failure
  */
-static int printReadable(const char *c, size_t size, const char *key)
+static int printReadable(const uint8_t *c, size_t size, const char *key)
 {
 	ssize_t eslvarsize = size;
 	int count = 0, offset = 0, rc;
@@ -372,7 +373,7 @@ static int printReadable(const char *c, size_t size, const char *key)
 		eslsize = sigList->SignatureListSize;
 		printESLInfo(sigList);
 		// puts sig data in cert
-		cert_size = get_esl_cert(c + offset, eslvarsize, (char **)&cert);
+		cert_size = get_esl_cert(c + offset, eslvarsize, &cert);
 		if (cert_size <= 0) {
 			prlog(PR_ERR, "\tERROR: Signature Size was too small, no data \n");
 			break;
@@ -451,7 +452,7 @@ int printCertInfo(crypto_x509_t *x509)
  *@param size, size of timestamp data, should be 16*4
  *@return SUCCESS or error depending if ts data is understandable
  */
-static int readTS(const char *data, size_t size)
+static int readTS(const uint8_t *data, size_t size)
 {
 	struct efi_time *tmpStamp;
 	// data length must have a timestamp for every variable besides the TS variable

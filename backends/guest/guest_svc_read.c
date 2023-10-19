@@ -91,7 +91,7 @@ static int read_cert(const uint8_t *cert_data, const size_t cert_data_len, const
 	crypto_x509_t *x509;
 
 	if (is_print_raw) {
-		print_raw((char *)cert_data, cert_data_len);
+		print_raw(cert_data, cert_data_len);
 		return rc;
 	}
 
@@ -149,7 +149,7 @@ static int read_esl(const uint8_t *esl_data, const size_t esl_data_len, const in
 	int rc = SUCCESS;
 
 	if (is_print_raw) {
-		print_raw((char *)esl_data, esl_data_len);
+		print_raw(esl_data, esl_data_len);
 		return rc;
 	}
 
@@ -182,7 +182,7 @@ static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int i
 	}
 
 	if (is_print_raw) {
-		print_raw((char *)auth_data, auth_data_len);
+		print_raw(auth_data, auth_data_len);
 		return rc;
 	}
 
@@ -260,7 +260,7 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 		rc = variable_from_path(variable_path, &esl_data, &esl_data_size);
 		if (rc == SUCCESS) {
 			if (is_print_raw || esl_data_size == DEFAULT_PK_LEN)
-				print_raw((char *)esl_data, esl_data_size);
+				print_raw(esl_data, esl_data_size);
 			else if (esl_data_size >= TIMESTAMP_LEN)
 				rc = print_esl_buffer(esl_data + TIMESTAMP_LEN,
 						      esl_data_size - TIMESTAMP_LEN, variable_name);
@@ -277,8 +277,7 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 			free(variable_path);
 	} else {
 		for (int i = 0; i < defined_sb_variable_len; i++) {
-			rc = get_variable_path(path, (char *)defined_sb_variables[i],
-					       &variable_path);
+			rc = get_variable_path(path, defined_sb_variables[i], &variable_path);
 			if (rc != SUCCESS)
 				return rc;
 
@@ -288,7 +287,7 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 				if (is_print_raw ||
 				    (esl_data_size == DEFAULT_PK_LEN &&
 				     strcmp(defined_sb_variables[i], PK_VARIABLE) == 0))
-					print_raw((char *)esl_data, esl_data_size);
+					print_raw(esl_data, esl_data_size);
 				else if (esl_data_size >= TIMESTAMP_LEN)
 					rc = print_esl_buffer(esl_data + TIMESTAMP_LEN,
 							      esl_data_size - TIMESTAMP_LEN,
