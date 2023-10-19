@@ -21,7 +21,7 @@
  * @param timestamp , a pointer to an allocated timestamp_t to be filled with data
  * @param current_time , the current timestamp
  */
-static void convert_timestamp(timestamp_t *timestamp, struct tm *current_time)
+static void convert_timestamp(timestamp_t *timestamp, const struct tm *current_time)
 {
 	timestamp->year = 1900 + current_time->tm_year;
 	timestamp->month = current_time->tm_mon + 1;

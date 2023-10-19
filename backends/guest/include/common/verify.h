@@ -20,7 +20,7 @@ struct verify_args {
 	const char **current_variable;
 };
 
-int verify_variables(struct verify_args *args);
+int verify_variables(const struct verify_args *args);
 
 int parse_variable_arguments(struct argp_state *state, const char ***variables, int *variable_size);
 

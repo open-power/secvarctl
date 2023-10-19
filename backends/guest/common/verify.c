@@ -156,7 +156,7 @@ static int get_current_esl(const struct verify_args *args, const char *update_va
 {
 	int i = 0, rc = SUCCESS;
 	size_t len = 0;
-	char *esl_data = "/data";
+	const char *esl_data = "/data";
 	char *esl_data_path = NULL;
 	uint8_t *current_esl = *current_esl_data;
 	size_t current_esl_size = 0;
@@ -332,7 +332,8 @@ static int get_pk_and_kek_from_update_var(const struct verify_args *args, uint8_
 					  size_t *kek_esl_data_size)
 {
 	int i = 0, rc = SUCCESS;
-	uint8_t *current_esl_data = NULL, *auth_data = NULL;
+	const uint8_t *current_esl_data = NULL;
+	uint8_t *auth_data = NULL;
 	size_t current_esl_data_size = 0, auth_data_size = 0;
 	bool append_update;
 
@@ -379,7 +380,7 @@ static int get_pk_and_kek_from_update_var(const struct verify_args *args, uint8_
  * extract the PK and KEK from update or current or path variables and
  * verify the all variables using PK or KEK
  */
-int verify_variables(struct verify_args *args)
+int verify_variables(const struct verify_args *args)
 {
 	int rc = SUCCESS;
 	uint8_t *pk_esl_data = NULL, *kek_esl_data = NULL;
