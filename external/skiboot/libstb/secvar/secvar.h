@@ -28,8 +28,10 @@ struct secvar {
 	uint8_t *data;
 };
 
-extern struct list_head variable_bank;
-extern struct list_head update_bank;
+// NOTE: Commented out as these globals are not used in secvarctl, and causes
+//  variable shadowing warnings in cppcheck.
+// extern struct list_head variable_bank;
+// extern struct list_head update_bank;
 extern int secvar_enabled;
 extern int secvar_ready;
 extern struct secvar_storage_driver secvar_storage;
