@@ -261,10 +261,11 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 		if (rc == SUCCESS) {
 			if (is_print_raw || esl_data_size == DEFAULT_PK_LEN)
 				print_raw(esl_data, esl_data_size);
-			else if (esl_data_size >= TIMESTAMP_LEN)
+			else if (esl_data_size >= TIMESTAMP_LEN) {
+				read_timestamp(esl_data);
 				rc = print_esl_buffer(esl_data + TIMESTAMP_LEN,
 						      esl_data_size - TIMESTAMP_LEN, variable_name);
-			else
+			} else
 				prlog(PR_WARNING, "WARNING: The %s database is empty.\n",
 				      variable_name);
 
@@ -288,11 +289,12 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 				    (esl_data_size == DEFAULT_PK_LEN &&
 				     strcmp(defined_sb_variables[i], PK_VARIABLE) == 0))
 					print_raw(esl_data, esl_data_size);
-				else if (esl_data_size >= TIMESTAMP_LEN)
+				else if (esl_data_size >= TIMESTAMP_LEN) {
+					read_timestamp(esl_data);
 					rc = print_esl_buffer(esl_data + TIMESTAMP_LEN,
 							      esl_data_size - TIMESTAMP_LEN,
 							      defined_sb_variables[i]);
-				else
+				} else
 					prlog(PR_WARNING, "WARNING: The %s database is empty.\n",
 					      defined_sb_variables[i]);
 
