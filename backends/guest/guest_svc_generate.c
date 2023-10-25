@@ -521,7 +521,8 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 		prlog(PR_ERR, "failed during argument parsing\n");
 
 	// Special case, filter out appends on PK
-	if (args->append_flag > 0 && strcmp(PK_VARIABLE, args->variable_name) == 0) {
+	if (args->append_flag > 0 && args->variable_name != NULL &&
+	    strcmp(PK_VARIABLE, args->variable_name) == 0) {
 		prlog(PR_ERR, "ERROR: PK does not support the append flag\n");
 		rc = ARG_PARSE_FAIL;
 	}
