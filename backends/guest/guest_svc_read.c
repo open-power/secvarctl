@@ -236,6 +236,15 @@ static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int i
 	return rc;
 }
 
+static void read_timestamp(const uint8_t *esl_data)
+{
+	timestamp_t timestamp;
+
+	memcpy(&timestamp, esl_data + 1, TIMESTAMP_LEN - 1);
+	printf("\tTimestamp: ");
+	print_timestamp(timestamp);
+}
+
 /*
  * Does the appropriate read command depending on is_readable on the file <path>/<var>/data
  *
@@ -261,12 +270,11 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 		if (rc == SUCCESS) {
 			if (is_print_raw || esl_data_size == DEFAULT_PK_LEN)
 				print_raw((char *)esl_data, esl_data_size);
-			else if (esl_data_size >= TIMESTAMP_LEN)
+			else if (esl_data_size != -1 && esl_data_size != 0) {
+				read_timestamp(esl_data);
 				rc = print_esl_buffer(esl_data + TIMESTAMP_LEN,
 						      esl_data_size - TIMESTAMP_LEN, variable_name);
-			else
-				prlog(PR_WARNING, "WARNING: The %s database is empty.\n",
-				      variable_name);
+			}
 
 			if (esl_data != NULL)
 				free(esl_data);
@@ -289,13 +297,12 @@ static int read_path(const char *path, const int is_print_raw, const char *varia
 				    (esl_data_size == DEFAULT_PK_LEN &&
 				     strcmp(defined_sb_variables[i], PK_VARIABLE) == 0))
 					print_raw((char *)esl_data, esl_data_size);
-				else if (esl_data_size >= TIMESTAMP_LEN)
+				else if (esl_data_size != -1 && esl_data_size != 0) {
+					read_timestamp(esl_data);
 					rc = print_esl_buffer(esl_data + TIMESTAMP_LEN,
 							      esl_data_size - TIMESTAMP_LEN,
 							      defined_sb_variables[i]);
-				else
-					prlog(PR_WARNING, "WARNING: The %s database is empty.\n",
-					      defined_sb_variables[i]);
+				}
 
 				if (esl_data != NULL)
 					free(esl_data);
