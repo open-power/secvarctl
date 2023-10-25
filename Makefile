@@ -158,6 +158,7 @@ CPPCHECK_FLAGS += --suppress=missingIncludeSystem
 CPPCHECK_FLAGS += --suppress=unusedFunction             # false positive on validateTS
 CPPCHECK_FLAGS += --suppress=internalAstError           # false positive on ccan/list_for_each
 CPPCHECK_FLAGS += --suppress=*:external/skiboot/ccan/*  # skip checking headers in external code
+CPPCHECK_FLAGS += --suppress=unmatchedSuppression       # stop cppcheck from complaining if suppressions aren't hit
 cppcheck:
 	cppcheck $(CPPCHECK_FLAGS) $(INCLUDES) $(MAIN_SRCS)
 
