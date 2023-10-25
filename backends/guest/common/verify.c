@@ -466,17 +466,17 @@ int validate_variables_arguments(struct verify_args *args)
 			      "<var_name 1> <var_auth_file 1>"
 			      "...<var_name N> <var_auth_file N>\n");
 		return ARG_PARSE_FAIL;
+	} else if (args->current_variable_size != 0 && args->current_variable_size % 2) {
+		prlog(PR_ERR, "ERROR: current variable argument should be like -c "
+			      "<var_name 1> <var_ESL_file 1>...<var_name N> <var_ESL_file N>\n");
+		return ARG_PARSE_FAIL;
 	}
 
-	if (args->current_variable_size != 0) {
+	if ((args->update_variable_size != 0 && args->variable_path == NULL) ||
+	    args->current_variable_size != 0) {
 		if (args->write_flag) {
-			prlog(PR_ERR, "ERROR: cannot update files if current variable "
-				      "files are given. remove -w\n");
-			return ARG_PARSE_FAIL;
-		} else if (args->current_variable_size % 2) {
-			prlog(PR_ERR, "ERROR: current variable argument should be like -c "
-				      "<var_name 1> <var_ESL_file 1>"
-				      "...<var_name N> <var_ESL_file N>\n");
+			prlog(PR_ERR,
+			      "ERROR: cannot update files. remove -w. it is available when you use -u with -p\n");
 			return ARG_PARSE_FAIL;
 		}
 	}
