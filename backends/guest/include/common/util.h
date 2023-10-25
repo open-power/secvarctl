@@ -53,6 +53,10 @@ struct signature_type_info {
 
 extern const struct signature_type_info signature_type_list[];
 
+void print_timestamp(timestamp_t t);
+
+void read_timestamp(const uint8_t *esl_data);
+
 /*
  * creates the append header using append flag
  */

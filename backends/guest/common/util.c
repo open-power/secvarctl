@@ -38,6 +38,24 @@ const struct signature_type_info signature_type_list[] = {
 static uint8_t append[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
 static uint8_t replace[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
+void print_timestamp(timestamp_t t)
+{
+	printf("%04d-%02d-%02d %02d:%02d:%02d UTC\n", t.year, t.month, t.day, t.hour, t.minute,
+	       t.second);
+}
+
+void read_timestamp(const uint8_t *esl_data)
+{
+	timestamp_t timestamp;
+
+	if (esl_data == NULL)
+		return;
+
+	memcpy(&timestamp, esl_data + 1, TIMESTAMP_LEN - 1);
+	printf("\tTimestamp: ");
+	print_timestamp(timestamp);
+}
+
 /*
  * creates the append header using append flag
  */

@@ -71,6 +71,7 @@ static int update_variable(const char *variable_name, const uint8_t *auth_data,
 		prlog(PR_INFO, "\tappend update: %s\n\n", (append_update ? "True" : "False"));
 
 		if (*new_esl_data != NULL) {
+			read_timestamp(*new_esl_data);
 			rc = print_esl_buffer((*new_esl_data + TIMESTAMP_LEN),
 					      (*new_esl_data_size - TIMESTAMP_LEN), variable_name);
 			if (rc != SUCCESS)
@@ -101,7 +102,9 @@ static int get_current_esl_data(const uint8_t *esl_file, uint8_t **current_esl_d
 			free(buffer);
 			buffer = NULL;
 			buffer_size = 0;
-		} else if (buffer_size != TIMESTAMP_LEN) {
+		} else {
+			if (verbose >= PR_INFO)
+				read_timestamp(buffer);
 			rc = validate_esl(buffer + TIMESTAMP_LEN, buffer_size - TIMESTAMP_LEN);
 			if (rc != SUCCESS) {
 				free(buffer);

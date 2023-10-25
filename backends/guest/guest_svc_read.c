@@ -236,15 +236,6 @@ static int read_auth(const uint8_t *auth_data, size_t auth_data_len, const int i
 	return rc;
 }
 
-static void read_timestamp(const uint8_t *esl_data)
-{
-	timestamp_t timestamp;
-
-	memcpy(&timestamp, esl_data + 1, TIMESTAMP_LEN - 1);
-	printf("\tTimestamp: ");
-	print_timestamp(timestamp);
-}
-
 /*
  * Does the appropriate read command depending on is_readable on the file <path>/<var>/data
  *

@@ -13,12 +13,6 @@
 #include "common/util.h"
 #include "common/read.h"
 
-void print_timestamp(timestamp_t t)
-{
-	printf("%04d-%02d-%02d %02d:%02d:%02d UTC\n", t.year, t.month, t.day, t.hour, t.minute,
-	       t.second);
-}
-
 sv_esl_t *extract_esl_signature_list(const uint8_t *buf, size_t buflen)
 {
 	sv_esl_t *list = NULL;
