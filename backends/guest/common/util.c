@@ -31,6 +31,14 @@ const struct signature_type_info signature_type_list[] = {
 static uint8_t append[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
 static uint8_t replace[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
+/*
+ * check it whether given variable is trustedcadb
+ */
+bool is_trustedcadb_variable(const char *variable_name)
+{
+	return !strcmp(variable_name, TRUSTEDCADB_VARIABLE);
+}
+
 void print_timestamp(timestamp_t t)
 {
 	printf("%04d-%02d-%02d %02d:%02d:%02d UTC\n", t.year, t.month, t.day, t.hour, t.minute,

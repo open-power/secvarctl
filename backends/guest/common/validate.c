@@ -175,7 +175,7 @@ static int validate_single_esl(const uint8_t *esl_data, size_t esl_data_size, si
 			print_hex(cert, cert_size);
 		}
 	} else if (is_cert(sig_type))
-		rc = validate_cert(cert, cert_size);
+		rc = validate_cert(cert, cert_size, false);
 	else if (is_sbat(sig_type)) {
 		if (!validate_sbat(cert, cert_size)) {
 			prlog(PR_ERR, "ERROR: SBAT data format is invalid\n");
@@ -297,10 +297,11 @@ int validate_pkcs7(const uint8_t *cert_data, size_t cert_data_len)
  *
  * @param cert_data pointer to certificate data
  * @param cert_data_len size of certtificate data
+ * @param is_CA, CA certificate flag
  * @return CERT_FAIL if certificate had incorrect data
  * @return SUCCESS if certificate is valid else 
  */
-int validate_cert(const uint8_t *cert_data, size_t cert_data_len)
+int validate_cert(const uint8_t *cert_data, size_t cert_data_len, bool is_CA)
 {
 	int rc;
 	crypto_x509_t *x509;
@@ -338,6 +339,12 @@ int validate_cert(const uint8_t *cert_data, size_t cert_data_len)
 	rc = validate_x509_certificate(x509);
 	if (rc)
 		prlog(PR_ERR, "ERROR: x509 certificate is invalid (%d)\n", rc);
+	else if (is_CA) {
+		if (!crypto_x509_is_CA(x509)) {
+			prlog(PR_ERR, "ERROR: it is not CA certificate\n");
+			rc = CERT_FAIL;
+		}
+	}
 
 	if (!rc && verbose >= PR_INFO)
 		rc = print_cert_info(x509);

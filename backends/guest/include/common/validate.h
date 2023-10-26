@@ -76,9 +76,10 @@ int validate_esl(const uint8_t *esl_data, size_t esl_data_len);
  *
  * @param certBuf pointer to certificate data
  * @param buflen length of certBuf
+ * @param is_CA, CA certificate flag
  * @return CERT_FAIL if certificate had incorrect data
  * @return SUCCESS if certificate is valid
  */
-int validate_cert(const uint8_t *cert_data, size_t cert_data_len);
+int validate_cert(const uint8_t *cert_data, size_t cert_data_len, bool is_CA);
 
 #endif
