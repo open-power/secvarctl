@@ -92,8 +92,10 @@ static int get_current_esl_data(const uint8_t *esl_file, uint8_t **current_esl_d
 	size_t buffer_size = 0;
 	uint8_t *buffer = NULL;
 
-	if (is_file((char *)esl_file) != SUCCESS)
+	if (is_file((char *)esl_file) != SUCCESS) {
+		prlog(PR_ERR, "ERROR: %s is not a valid file\n", (char *)esl_file);
 		return INVALID_FILE;
+	}
 
 	buffer = (uint8_t *)get_data_from_file((char *)esl_file, SIZE_MAX, &buffer_size);
 	if (buffer != NULL) {
@@ -112,7 +114,7 @@ static int get_current_esl_data(const uint8_t *esl_file, uint8_t **current_esl_d
 			}
 		}
 	} else
-		return INVALID_FILE;
+		prlog(PR_WARNING, "WARNING: %s file does not have data\n", (char *)esl_file);
 
 	*current_esl_data = buffer;
 	*current_esl_data_size = buffer_size;
@@ -130,8 +132,10 @@ static int get_auth_data(const char *auth_file, uint8_t **auth_data, size_t *aut
 	size_t buffer_size = 0;
 	uint8_t *buffer = NULL;
 
-	if (is_file((char *)auth_file) != SUCCESS)
+	if (is_file((char *)auth_file) != SUCCESS) {
+		prlog(PR_ERR, "ERROR: %s is not a valid file\n", (char *)auth_file);
 		return INVALID_FILE;
+	}
 
 	buffer = (uint8_t *)get_data_from_file((char *)auth_file, SIZE_MAX, &buffer_size);
 	if (buffer != NULL) {
@@ -140,8 +144,10 @@ static int get_auth_data(const char *auth_file, uint8_t **auth_data, size_t *aut
 			free(buffer);
 			return rc;
 		}
-	} else
+	} else {
+		prlog(PR_WARNING, "WARNING: %s file does not have data\n", (char *)auth_file);
 		return INVALID_FILE;
+	}
 
 	*append_update = extract_append_header(buffer, buffer_size);
 	*auth_data = buffer;
