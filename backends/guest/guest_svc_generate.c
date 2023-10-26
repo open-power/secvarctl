@@ -70,7 +70,8 @@ static int generate_esl(const uint8_t *buffer, size_t buffer_size, struct genera
 			break;
 		}
 
-		rc = get_hash_data(buffer, buffer_size, hash_funct, hash_data, &hash_data_size);
+		rc = get_hash_data(buffer, buffer_size, hash_funct, args->variable_name, hash_data,
+				   &hash_data_size);
 		if (rc != SUCCESS) {
 			prlog(PR_ERR, "ERROR: failed to generate hash from file\n");
 			break;
@@ -91,8 +92,9 @@ static int generate_esl(const uint8_t *buffer, size_t buffer_size, struct genera
 		esl_guid = get_uuid(hash_funct);
 		break;
 	case 'c':
-		if (is_x509certificate(buffer, buffer_size, &cert_data, &cert_data_size) !=
-		    SUCCESS) {
+		rc = is_x509certificate(buffer, buffer_size, &cert_data, &cert_data_size,
+					is_trustedcadb_variable(args->variable_name));
+		if (rc != SUCCESS) {
 			prlog(PR_ERR, "ERROR: could not validate certificate\n");
 			break;
 		}
@@ -167,7 +169,8 @@ static int generate_sha256_hash(const uint8_t *data, size_t data_size, struct ge
 			rc = SUCCESS;
 			break;
 		case 'c':
-			rc = validate_cert(data, data_size);
+			rc = validate_cert(data, data_size,
+					   is_trustedcadb_variable(args->variable_name));
 			break;
 		case 'e':
 			rc = validate_esl(data, data_size);
