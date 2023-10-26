@@ -478,7 +478,7 @@ int validate_variables_arguments(struct verify_args *args)
 		return ARG_PARSE_FAIL;
 	}
 
-	if ((args->update_variable_size != 0 && args->variable_path == NULL) ||
+	if ((args->update_variable_size && args->variable_path == NULL) ||
 	    args->current_variable_size != 0) {
 		if (args->write_flag) {
 			prlog(PR_ERR,
