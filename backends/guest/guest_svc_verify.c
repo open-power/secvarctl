@@ -109,7 +109,7 @@ int guest_verify_command(int argc, char *argv[])
 		  "manually set current vars to be contents of CURRENT VAR LIST (see below for format)" },
 		{ "write", 'w', 0, 0,
 		  "if successful, submit the update to be commited upon reboot."
-		  " quivalent to `secvarctl -m guest write`" },
+		  " equivalent to `secvarctl -m guest write`" },
 		{ 0, 'u', "{UPDATE LIST}", OPTION_HIDDEN,
 		  "set update variables (see below for format)" },
 		{ "help", '?', 0, 0, "Give this help list", 1 },
@@ -130,7 +130,7 @@ int guest_verify_command(int argc, char *argv[])
 		" Where <var_name> is one of Guest secure boot variable"
 		" and <var_auth_file> is a properly generated authenticated variable file "
 		"that is"
-		" signed by a current variable with priviledges to approve the update\n\n"
+		" signed by a current variable with privileges to approve the update\n\n"
 		"CURRENT_VAR_LIST:\nOptional, only used when -c is used. formatted as:"
 		" ' -c <var_name 1> < var_ESL_file 1>...<var_name N> <var_ESL_file N> '"
 		" Where <var_name> is one of Guest secure boot variable and"
