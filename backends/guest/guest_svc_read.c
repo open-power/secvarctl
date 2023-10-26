@@ -126,7 +126,12 @@ static int read_cert(const uint8_t *cert_data, const size_t cert_data_len, const
 	rc = validate_x509_certificate(x509);
 	if (rc)
 		prlog(PR_ERR, "ERROR: x509 certificate is invalid (%d)\n", rc);
-	else
+	else if (is_trustedcadb_variable(variable_name)) {
+		if (!crypto_x509_is_CA(x509)) {
+			prlog(PR_ERR, "ERROR: it is not CA certificate\n");
+			rc = CERT_FAIL;
+		}
+	} else
 		rc = print_cert_info(x509);
 
 	crypto_x509_free(x509);

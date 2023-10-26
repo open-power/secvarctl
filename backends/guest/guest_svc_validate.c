@@ -123,7 +123,7 @@ int guest_validation_command(int argc, char *argv[])
 
 	switch (args.input_form) {
 	case CERT_FILE:
-		rc = validate_cert(buff, size);
+		rc = validate_cert(buff, size, false);
 		break;
 	case ESL_FILE:
 		rc = validate_esl(buff, size);

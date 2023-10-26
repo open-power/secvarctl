@@ -16,6 +16,7 @@
 #define KEK_VARIABLE (char *)"KEK"
 #define KEK_LEN 3
 #define SBAT_VARIABLE (char *)"sbat"
+#define TRUSTEDCADB_VARIABLE (char *)"trustedcadb"
 
 static const uuid_t PKS_CERT_DELETE_GUID = { { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 					       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } };
@@ -52,6 +53,11 @@ struct signature_type_info {
 };
 
 extern const struct signature_type_info signature_type_list[];
+
+/*
+ * check it whether given variable is trustedcadb
+ */
+bool is_trustedcadb_variable(const char *variable_name);
 
 void print_timestamp(timestamp_t t);
 

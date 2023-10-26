@@ -416,10 +416,11 @@ int create_auth_msg(const uint8_t *new_esl, const size_t new_esl_size,
  * @param buffer_size , length of buffer
  * @param cert_data, the certificate data
  * @param cert_data_size, the length of certificate data
+ * @param is_CA, CA certificate flag
  * @return SUCCESS or err number
  */
 int is_x509certificate(const uint8_t *buffer, const size_t buffer_size, uint8_t **cert_data,
-		       size_t *cert_data_size)
+		       size_t *cert_data_size, bool is_CA)
 {
 	int rc;
 	uint8_t *cert = NULL;
@@ -434,7 +435,7 @@ int is_x509certificate(const uint8_t *buffer, const size_t buffer_size, uint8_t 
 		return CERT_FAIL;
 	}
 
-	rc = validate_cert(cert, cert_size);
+	rc = validate_cert(cert, cert_size, is_CA);
 
 	if (rc) {
 		free(cert);
@@ -454,19 +455,21 @@ int is_x509certificate(const uint8_t *buffer, const size_t buffer_size, uint8_t 
  * @param buffer_size , length of buffer
  * @param hash_funct, index of hash function information to use for ESL GUID,
  *                   also helps in prevalation, if inform is '[c]ert' then this doesn't matter
+ * @param variable_name, name of the variable
  * @param hash_data, the generated hash data, buffer should be allocated before calling
  * @param hash_data_size, the length of hash data
  * @param esl_guid, signature type of ESL
  * @return SUCCESS or err number
  */
 int get_hash_data(const uint8_t *buffer, const size_t buffer_size, enum signature_type hash_funct,
-		  uint8_t *hash_data, size_t *hash_data_size)
+		  const char *variable_name, uint8_t *hash_data, size_t *hash_data_size)
 {
 	int rc = SUCCESS;
 	size_t crt_size = 0;
 	uint8_t *crt_der = NULL, *out_data = NULL;
 
-	rc = is_x509certificate(buffer, buffer_size, &crt_der, &crt_size);
+	rc = is_x509certificate(buffer, buffer_size, &crt_der, &crt_size,
+				is_trustedcadb_variable(variable_name));
 	if (rc == SUCCESS) {
 		rc = crypto_md_generate_hash(crt_der, crt_size, get_crypto_alg_id(hash_funct),
 					     &out_data, hash_data_size);
