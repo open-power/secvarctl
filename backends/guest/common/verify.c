@@ -71,9 +71,10 @@ static int update_variable(const char *variable_name, const uint8_t *auth_data,
 		prlog(PR_INFO, "\tappend update: %s\n\n", (append_update ? "True" : "False"));
 
 		if (*new_esl_data != NULL) {
-			read_timestamp(*new_esl_data);
-			rc = print_esl_buffer((*new_esl_data + TIMESTAMP_LEN),
-					      (*new_esl_data_size - TIMESTAMP_LEN), variable_name);
+			read_timestamp((struct signed_variable_header *)*new_esl_data);
+			rc = print_esl_buffer((*new_esl_data + GUEST_HEADER_LEN),
+					      (*new_esl_data_size - GUEST_HEADER_LEN),
+					      variable_name);
 			if (rc != SUCCESS)
 				return rc;
 		}
@@ -98,7 +99,7 @@ static int get_current_esl_data(const char *esl_file, uint8_t **current_esl_data
 	}
 
 	buffer = get_data_from_file(esl_file, SIZE_MAX, &buffer_size);
-	if (buffer != NULL && buffer_size >= TIMESTAMP_LEN) {
+	if (buffer != NULL && buffer_size >= GUEST_HEADER_LEN) {
 		if (buffer_size == DEFAULT_PK_LEN) {
 			if (verbose >= PR_DEBUG)
 				print_raw(buffer, buffer_size);
@@ -107,8 +108,9 @@ static int get_current_esl_data(const char *esl_file, uint8_t **current_esl_data
 			buffer_size = 0;
 		} else {
 			if (verbose >= PR_INFO)
-				read_timestamp(buffer);
-			rc = validate_esl(buffer + TIMESTAMP_LEN, buffer_size - TIMESTAMP_LEN);
+				read_timestamp((struct signed_variable_header *)buffer);
+			rc = validate_esl(buffer + GUEST_HEADER_LEN,
+					  buffer_size - GUEST_HEADER_LEN);
 			if (rc != SUCCESS) {
 				free(buffer);
 				return rc;
