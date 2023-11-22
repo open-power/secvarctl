@@ -10,7 +10,6 @@
 
 #define DEFAULT_PK_LEN 31
 #define APPEND_HEADER_LEN 8
-#define TIMESTAMP_LEN 8
 #define PK_VARIABLE "PK"
 #define PK_LEN 2
 #define KEK_VARIABLE "KEK"
@@ -52,6 +51,8 @@ struct signature_type_info {
 	size_t size;
 };
 
+#define GUEST_HEADER_LEN sizeof(struct signed_variable_header)
+
 extern const struct signature_type_info signature_type_list[];
 
 /*
@@ -61,7 +62,7 @@ bool is_trustedcadb_variable(const char *variable_name);
 
 void print_timestamp(timestamp_t t);
 
-void read_timestamp(const uint8_t *esl_data);
+void read_timestamp(const struct signed_variable_header *esl_data);
 
 /*
  * creates the append header using append flag
