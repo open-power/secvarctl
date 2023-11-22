@@ -100,7 +100,8 @@ static int get_current_esl_data(const char *esl_file, uint8_t **current_esl_data
 	buffer = get_data_from_file(esl_file, SIZE_MAX, &buffer_size);
 	if (buffer != NULL && buffer_size >= TIMESTAMP_LEN) {
 		if (buffer_size == DEFAULT_PK_LEN) {
-			print_raw(buffer, buffer_size);
+			if (verbose >= PR_DEBUG)
+				print_raw(buffer, buffer_size);
 			free(buffer);
 			buffer = NULL;
 			buffer_size = 0;
