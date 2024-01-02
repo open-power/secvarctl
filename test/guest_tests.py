@@ -92,7 +92,7 @@ def collect_test_data():
         if file.endswith(".auth"):
             auth_files.append(test_dir[1] + file)
     for file in os.listdir(test_dir[2]):
-        if file.endswith(".cert"):
+        if file.endswith(".crt"):
             cert_files.append(test_dir[2] + file)
     for file in os.listdir(test_dir[4]):
         if file.endswith(".pkcs7"):
