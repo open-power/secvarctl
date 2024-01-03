@@ -172,6 +172,23 @@ class Test(SecvarctlTest):
     #             f.write(f"POWER SECVAR LOCATION( {SECVARPATH} ) DOES NOT EXIST SO NO TESTS RAN\n")
     #             f.close()
 
+    def test_malformed_generate(self):
+        cert = cert_files[0]  # arbitrarily use the first cert for testing
+
+        # Generate without a inform:outform should fail
+        cmd = list(filter(lambda x: x, generate_esl("db", "", cert, "foo.esl")))
+        self.assertCmdFalse(cmd)
+
+        # Generate with bad inform:output should fail
+        cmd.append("beans")
+        self.assertCmdFalse(cmd)
+        cmd.pop(-1)
+
+        # Generate with more than one inform:outform should also fail
+        cmd.append("c:e")
+        cmd.append("c:e")
+        self.assertCmdFalse(cmd)
+
     def test_generate_esl_files(self):
         for var_name in variables:
             esl_file = gen_dir + var_name + ".esl"
