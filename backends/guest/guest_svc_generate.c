@@ -523,13 +523,6 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 	if (rc)
 		prlog(PR_ERR, "failed during argument parsing\n");
 
-	// Special case, filter out appends on PK
-	if (args->append_flag > 0 && args->variable_name != NULL &&
-	    strcmp(PK_VARIABLE, args->variable_name) == 0) {
-		prlog(PR_ERR, "ERROR: PK does not support the append flag\n");
-		rc = ARG_PARSE_FAIL;
-	}
-
 	return rc;
 }
 
@@ -665,6 +658,14 @@ int guest_generate_command(int argc, char *argv[])
 			prlog(PR_ERR,
 			      "ERROR: number of certificates does not equal number of keys, %d != %d\n",
 			      args.sign_cert_count, args.sign_key_count);
+		rc = ARG_PARSE_FAIL;
+		goto out;
+	}
+
+	/* special case, filter out appends on PK */
+	if (args.append_flag > 0 && args.variable_name != NULL &&
+	    strcmp(PK_VARIABLE, args.variable_name) == 0) {
+		prlog(PR_ERR, "ERROR: PK does not support the append flag\n");
 		rc = ARG_PARSE_FAIL;
 		goto out;
 	}
