@@ -483,6 +483,19 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 		args->append_flag = 1;
 		break;
 	case ARGP_KEY_ARG:
+		/* there should only be one format specifier, error if another is supplied */
+		if (args->input_form && args->output_form) {
+			prlog(PR_ERR, "ERROR: unknown additional positional argument %s\n", arg);
+			rc = ARG_PARSE_FAIL;
+			break;
+		}
+		/* both forms should be either set or NULL, this should never be reached. */
+		if (!args->input_form ^ !args->output_form) {
+			prlog(PR_ERR,
+			      "ERROR: only one of input_form/output_form is set, this should not happen\n");
+			rc = ARG_PARSE_FAIL;
+			break;
+		}
 		/* check if reset key is desired */
 		if (!strcmp(arg, "reset")) {
 			args->input_form = "reset";
@@ -493,14 +506,22 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 		/* else set input and output formats */
 		args->input_form = strtok(arg, ":");
 		args->output_form = strtok(NULL, ":");
+
+		/* verify both input and output forms are parsed correctly, error otherwise */
+		if (!args->input_form || !args->output_form) {
+			prlog(PR_ERR,
+			      "ERROR: '%s' is not in the correct '<input_format>:<output_format>' form, see usage...\n",
+			      arg);
+			rc = ARG_PARSE_FAIL;
+		}
 		break;
 	case ARGP_KEY_SUCCESS:
 		/* check that all essential args are given and valid */
 		if (args->help_flag)
 			break;
 		else if (args->input_form == NULL || args->output_form == NULL)
-			prlog(PR_ERR, "ERROR: incorrect '<input_format>:<output_format>', see "
-				      "usage...\n");
+			prlog(PR_ERR,
+			      "ERROR: invalid or missing '<input_format>:<output_format>', see usage...\n");
 		else if (args->time && validate_time(args->time))
 			prlog(PR_ERR, "invalid timestamp flag '-t YYYY-MM-DDThh:mm:ss' , "
 				      "see usage...\n");
