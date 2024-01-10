@@ -1,6 +1,7 @@
 import unittest
 import subprocess
 import os
+import signal
 
 SECTOOLS = os.environ.get("SECVAR_TOOL", "../bin/secvarctl-dbg")
 SECVARPATH = "/sys/firmware/secvar/vars/"
@@ -31,7 +32,11 @@ class SecvarctlTest(unittest.TestCase):
             print(f"Error in command '{' '.join(args)}")
             raise e
 
-        return CommandOutput(out)
+        ret = CommandOutput(out)
+        if out.returncode < 0:
+            sig = signal.Signals(-out.returncode).name
+            self.assertTrue(out.returncode >= 0, msg=f"Command exited via signal {sig}: '{' '.join(args)}'\n{ret}'")
+        return ret
 
     def assertCmd(self, args, expected: bool):
         tmp_assert, msg = {
