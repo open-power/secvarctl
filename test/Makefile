@@ -14,6 +14,8 @@ GNUTLS = 0
 HOST_BACKEND = 1
 GUEST_BACKEND = 1
 
+export ASAN_OPTIONS = abort_on_error=1
+
 define test_host
 	@$(py) host_tests.py
 	@$(py) host_generate_tests.py
