@@ -197,6 +197,12 @@ int print_esl_buffer(const uint8_t *buffer, size_t buffer_size, const char *var_
 	} curr_esl;
 	curr_esl.raw = NULL;
 
+	// Do not bother reading from zero-size buffers
+	if (buffer_size == 0) {
+		printf("(empty)\n");
+		return SUCCESS;
+	}
+
 	rc = next_esl_from_buffer(buffer, buffer_size, &curr_esl.raw, &esl_data_size);
 	if (rc) {
 		prlog(PR_ERR, "Error reading from esl buffer: %d\n", rc);
