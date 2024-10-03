@@ -193,7 +193,6 @@ def create_esl_files():
             format_type = file_to_esl
         else:
             format_type = cert_to_esl
-            key_file = os.path.join(X509_PATH, var_name + ".key")
             cert_file = os.path.join(X509_PATH, var_name + ".crt")
 
         generate_esl(var_name, format_type, cert_file, esl_file)
