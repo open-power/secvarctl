@@ -37,6 +37,8 @@ variable_by_KEK = [
     ["sbat_by_KEK", "sbat", "KEK"]
 ]
 
+variable_list = variable_by_PK + variable_by_KEK
+
 hash_algorithm = ["SHA1", "SHA224", "SHA256", "SHA384", "SHA512"]
 x509_hash_algorithm = ["SHA256", "SHA384", "SHA512"]
 
@@ -145,21 +147,14 @@ def create_goldenkey_files():
 
 def create_pkcs7_files():
     for hash_alg in hash_algorithm:
-        for var_by_PK in variable_by_PK:
-            if var_by_PK[1] != SBAT_name and hash_alg == "SHA256":
-                pkcs7_file = os.path.join(PKCS7_PATH, hash_alg + "_" + var_by_PK[0] + ".pkcs7")
-                key_file = os.path.join(X509_PATH, var_by_PK[2] + ".key")
-                cert_file = os.path.join(X509_PATH, var_by_PK[2] + ".crt")
-                var_cert_file = os.path.join(X509_PATH, var_by_PK[0] + ".crt")
+        for filename, varname, signer in variable_list:
+            if varname != SBAT_name and hash_alg == "SHA256":
+                pkcs7_file = os.path.join(PKCS7_PATH, hash_alg + "_" + filename + ".pkcs7")
+                key_file = os.path.join(X509_PATH, signer + ".key")
+                cert_file = os.path.join(X509_PATH, signer + ".crt")
+                var_cert_file = os.path.join(X509_PATH, filename + ".crt")
                 generate_pkcs7(var_cert_file, pkcs7_file, cert_file, key_file, hash_alg)
 
-        for var_by_KEK in variable_by_KEK:
-            if var_by_KEK[1] != SBAT_name and hash_alg == "SHA256":
-                pkcs7_file = os.path.join(PKCS7_PATH, hash_alg + "_" + var_by_KEK[0] + ".pkcs7")
-                key_file = os.path.join(X509_PATH, var_by_KEK[2] + ".key")
-                cert_file = os.path.join(X509_PATH, var_by_KEK[2] + ".crt")
-                var_cert_file = os.path.join(X509_PATH, var_by_KEK[0] + ".crt")
-                generate_pkcs7(var_cert_file, pkcs7_file, cert_file, key_file, hash_alg)
 
 def create_x509_cert_files():
     for var_name in variables:
@@ -171,17 +166,12 @@ def create_x509_cert_files():
             cert_file = os.path.join(X509_PATH, var_name + ".crt")
             generate_x509_cert(key_file, cert_file)
 
-    for var_by_PK in variable_by_PK:
-        if var_by_PK[1] != SBAT_name:
-            key_file = os.path.join(X509_PATH, var_by_PK[0] + ".key")
-            cert_file = os.path.join(X509_PATH, var_by_PK[0] + ".crt")
+    for filename, varname, _signer in variable_list:
+        if varname != SBAT_name:
+            key_file = os.path.join(X509_PATH, filename + ".key")
+            cert_file = os.path.join(X509_PATH, filename + ".crt")
             generate_x509_cert(key_file, cert_file)
 
-    for var_by_KEK in variable_by_KEK:
-        if var_by_KEK[1] != SBAT_name:
-            key_file = os.path.join(X509_PATH, var_by_KEK[0] + ".key")
-            cert_file = os.path.join(X509_PATH, var_by_KEK[0] + ".crt")
-            generate_x509_cert(key_file, cert_file)
 
 def create_esl_files():
 
@@ -198,48 +188,30 @@ def create_esl_files():
         generate_esl(var_name, format_type, cert_file, esl_file)
 
 def create_auth_files():
-    for var_by_PK in variable_by_PK:
-        auth_file = os.path.join(AUTH_PATH, var_by_PK[0] + ".auth")
-        PK_key_file = os.path.join(GOLD_PATH, var_by_PK[2], var_by_PK[2] + ".key")
-        PK_cert_file = os.path.join(GOLD_PATH, var_by_PK[2], var_by_PK[2] + ".crt")
+    for filename, varname, signer in variable_list:
+        auth_file = os.path.join(AUTH_PATH, filename + ".auth")
+        signer_key_file = os.path.join(GOLD_PATH, signer, signer + ".key")
+        signer_cert_file = os.path.join(GOLD_PATH, signer, signer + ".crt")
 
-        if var_by_PK[1] == SBAT_name:
-            cert_file = os.path.join(X509_PATH, var_by_PK[1] + ".csv")
+        if varname == SBAT_name:
+            cert_file = os.path.join(X509_PATH, varname + ".csv")
             format_type = file_to_auth
         else:
             format_type = cert_to_auth
-            cert_file = os.path.join(X509_PATH, var_by_PK[0] + ".crt")
+            cert_file = os.path.join(X509_PATH, filename + ".crt")
 
-        generate_auth(var_by_PK[1], PK_key_file, PK_cert_file, cert_file, auth_file, format_type, non_force)
+        generate_auth(varname, signer_key_file, signer_cert_file, cert_file, auth_file, format_type, non_force)
 
-    for var_by_KEK in variable_by_KEK:
-        auth_file = os.path.join(AUTH_PATH, var_by_KEK[0] + ".auth")
-        KEK_key_file = os.path.join(GOLD_PATH, var_by_KEK[2], var_by_KEK[2] + ".key")
-        KEK_cert_file = os.path.join(GOLD_PATH, var_by_KEK[2], var_by_KEK[2] + ".crt")
-
-        if var_by_KEK[1] == SBAT_name:
-            cert_file = os.path.join(X509_PATH, var_by_KEK[1] + ".csv")
-            format_type = file_to_auth
-        else:
-            format_type = cert_to_auth
-            cert_file = os.path.join(X509_PATH, var_by_KEK[0] + ".crt")
-
-        generate_auth(var_by_KEK[1], KEK_key_file, KEK_cert_file, cert_file, auth_file, format_type, non_force)
 
 def create_reset_auth_files():
     format_type = auth_reset
     cert_file = ""
-    for var_by_PK in variable_by_PK:
-        auth_file = os.path.join(AUTH_PATH, auth_reset + "_" + var_by_PK[0] + ".auth")
-        PK_key_file = os.path.join(GOLD_PATH, var_by_PK[2], var_by_PK[2] + ".key")
-        PK_cert_file = os.path.join(GOLD_PATH, var_by_PK[2], var_by_PK[2] + ".crt")
-        generate_auth(var_by_PK[1], PK_key_file, PK_cert_file, cert_file, auth_file, format_type, non_force)
+    for filename, varname, signer in variable_list:
+        auth_file = os.path.join(AUTH_PATH, auth_reset + "_" + filename + ".auth")
+        signer_key_file = os.path.join(GOLD_PATH, signer, signer + ".key")
+        signer_cert_file = os.path.join(GOLD_PATH, signer, signer + ".crt")
+        generate_auth(varname, signer_key_file, signer_cert_file, cert_file, auth_file, format_type, non_force)
 
-    for var_by_KEK in variable_by_KEK:
-        auth_file = os.path.join(AUTH_PATH, auth_reset + "_" + var_by_KEK[0] + ".auth")
-        KEK_key_file = os.path.join(GOLD_PATH, var_by_KEK[2], var_by_KEK[2] + ".key")
-        KEK_cert_file = os.path.join(GOLD_PATH, var_by_KEK[2], var_by_KEK[2] + ".crt")
-        generate_auth(var_by_KEK[1], KEK_key_file, KEK_cert_file, cert_file, auth_file, format_type, non_force)
 
 if __name__ == "__main__":
     create_environments()
