@@ -9,7 +9,7 @@ DATAPATH = os.path.join(os.path.curdir, "testdata", "guest")
 ESL_PATH = os.path.join(DATAPATH, "eslfiles")
 AUTH_PATH = os.path.join(DATAPATH, "authfiles")
 X509_PATH = os.path.join(DATAPATH, "x509certs")
-GOLD_PATH = os.path.join(DATAPATH, "goldenkeys")
+GOLD_PATH = os.path.join(DATAPATH, "goldenKeys")
 PKCS7_PATH = os.path.join(DATAPATH, "pkcs7files")
 
 
