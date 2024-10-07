@@ -31,7 +31,7 @@ jobs:
           - "opensuse/leap:15"
           - "opensuse/tumbleweed:latest"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
 
@@ -63,7 +63,7 @@ jobs:
         arch: ["x86_64", "ppc64le"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
 
