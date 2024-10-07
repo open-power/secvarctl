@@ -25,8 +25,8 @@ jobs:
         image:
           - "almalinux:8"
           - "almalinux:9"
-          - "fedora:37"
-          - "fedora:38"
+          - "fedora:39"
+          - "fedora:40"
           - "fedora:rawhide"
           - "opensuse/leap:15"
           - "opensuse/tumbleweed:latest"
