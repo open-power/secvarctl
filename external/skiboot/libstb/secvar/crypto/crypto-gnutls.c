@@ -216,7 +216,6 @@ out:
 }
 
 
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
 /*
  *generates a PKCS7 and create signature with private and public keys
  *@param pkcs7, the resulting PKCS7 DER buff, newData not appended, NOTE: REMEMBER TO UNALLOC THIS MEMORY
@@ -413,7 +412,6 @@ int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
     return rc;
 }
 
-#endif
 
 /**====================X509 Functions ====================**/
 int crypto_x509_get_der_len(crypto_x509_t *x509)

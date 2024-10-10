@@ -305,10 +305,8 @@ int validate_cert(const uint8_t *cert_data, size_t cert_data_len, bool is_CA)
 {
 	int rc;
 	crypto_x509_t *x509;
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
 	uint8_t *cert = NULL;
 	size_t cert_size = 0;
-#endif
 
 	x509 = crypto_x509_parse_der(cert_data, cert_data_len);
 	if (!x509) {
@@ -317,7 +315,6 @@ int validate_cert(const uint8_t *cert_data, size_t cert_data_len, bool is_CA)
        * check if we have compiled with pkcs7_write functions
        * if so we can try to convert pem to der and try again
        */
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
 		prlog(PR_INFO, "failed to parse x509 as DER, trying PEM...\n");
 		rc = crypto_convert_pem_to_der(cert_data, cert_data_len, &cert, &cert_size);
 		if (rc != CRYPTO_SUCCESS) {
@@ -330,10 +327,6 @@ int validate_cert(const uint8_t *cert_data, size_t cert_data_len, bool is_CA)
 		free(cert);
 		if (!x509)
 			return SV_X509_PARSE_ERROR;
-#else
-		prlog(PR_INFO, "ERROR: failed to parse x509. Make sure file is in DER not PEM\n");
-		return SV_X509_PARSE_ERROR;
-#endif
 	}
 
 	rc = validate_x509_certificate(x509);

@@ -88,11 +88,9 @@ void usage()
 	       "verify\t\tcompares proposed variable to the current "
 	       "variables,\n\t\t\t"
 	       "use 'secvarctl [MODE] verify --usage/help' for more information\n"
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
 	       "\tgenerate\tcreates relevant files for secure variable "
 	       "management,\n\t\t\t"
 	       "use 'secvarctl [MODE] generate --usage/help' for more information\n"
-#endif
 	       "\n");
 	enabled_backends();
 }
@@ -110,11 +108,8 @@ void help()
 	       "type\n\t\t"
 	       "verify - checks that the given files are correctly signed by the "
 	       "current variables\n"
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
 	       "\t\tgenerate - create files that are relevant to the secure "
-	       "variable management process\n"
-#endif
-	);
+	       "variable management process\n");
 
 	usage();
 }

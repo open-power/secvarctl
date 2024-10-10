@@ -102,7 +102,6 @@ static int read_cert(const uint8_t *cert_data, const size_t cert_data_len, const
        * check if we have compiled with pkcs7_write functions
        * if so we can try to convert pem to der and try again
        */
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
 		uint8_t *cert;
 		size_t cert_size;
 		prlog(PR_INFO, "failed to parse x509 as DER, trying PEM...\n");
@@ -117,10 +116,6 @@ static int read_cert(const uint8_t *cert_data, const size_t cert_data_len, const
 		free(cert);
 		if (!x509)
 			return SV_X509_PARSE_ERROR;
-#else
-		prlog(PR_INFO, "ERROR: failed to parse x509. Make sure file is in DER not PEM\n");
-		return SV_X509_PARSE_ERROR;
-#endif
 	}
 
 	rc = validate_x509_certificate(x509);
@@ -479,7 +474,4 @@ struct command guest_command_table[] = { { .name = "read", .func = guest_read_co
 					 { .name = "write", .func = guest_write_command },
 					 { .name = "validate", .func = guest_validation_command },
 					 { .name = "verify", .func = guest_verify_command },
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
-					 { .name = "generate", .func = guest_generate_command }
-#endif
-};
+					 { .name = "generate", .func = guest_generate_command } };

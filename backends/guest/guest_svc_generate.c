@@ -2,7 +2,6 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright 2022-2023 IBM Corp.
  */
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
 #include <string.h>
 #include <argp.h>
 #include "err.h"
@@ -490,7 +489,7 @@ static int parse_options(int key, char *arg, struct argp_state *state)
 			break;
 		}
 		/* both forms should be either set or NULL, this should never be reached. */
-		if (!args->input_form ^ !args->output_form) {
+		if ((!args->input_form) ^ (!args->output_form)) {
 			prlog(PR_ERR,
 			      "ERROR: only one of input_form/output_form is set, this should not happen\n");
 			rc = ARG_PARSE_FAIL;
@@ -753,4 +752,3 @@ out:
 
 	return rc;
 }
-#endif
