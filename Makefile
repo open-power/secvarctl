@@ -27,13 +27,6 @@ INCLUDES = -I.                                       \
            -I./external/libstb-secvar/include/secvar \
            -I./external/libstb-secvar/external
 
-#use CRYPTO_READ_ONLY for smaller executable but limited functionality
-#removes all write functions (secvarctl generate, pem_to_der etc.)
-CRYPTO_READ_ONLY = 0
-ifeq ($(strip $(CRYPTO_READ_ONLY)), 0)
-  _CFLAGS += -DSECVAR_CRYPTO_WRITE_FUNC
-endif
-
 # Set build version string
 include VERSION
 _CFLAGS += -DSECVARCTL_VERSION=\"$(SECVARCTL_VERSION)\"
@@ -141,7 +134,7 @@ $(BIN_DIR)/secvarctl-dbg: $(OBJDBG) $(LIBSTB_SECVAR)
 	$(CC) $(_CFLAGS) -g $^ $(STATICFLAG) $(SANITIZE_FLAGS) -fprofile-arcs -ftest-coverage -o $@ $(_LDFLAGS)
 
 $(LIBSTB_SECVAR):
-	$(MAKE) CFLAGS=-DSECVAR_CRYPTO_WRITE_FUNC -C $(LIBSTB_SECVAR_ROOT) lib/$(LIBSTB_SECVAR_ARCHIVE)
+	$(MAKE) -C $(LIBSTB_SECVAR_ROOT) lib/$(LIBSTB_SECVAR_ARCHIVE)
 
 
 secvarctl: $(BIN_DIR)/secvarctl

@@ -67,7 +67,6 @@ Being that the key management process is rather lengthy and difficult, `secvarct
  | Static Build | `By Default Static build` |	`By Default Static build` |
  | Dynamic Build | `DYNAMIC_LIB=1` |	`-DDYNAMIC_LIB=1` |
  | Reduced Size Build | `default` | `-DSTRIP=1` |
- | Build Without Crypto Write Functions | `CRYPTO_READ_ONLY=1` | `-CRYPTO_READ_ONLY=1` |
  | Build W Specific Mbedtls Library | `CFLAGS="-I<path>/include" LDFLAGS="-L<path>/library"` | `-DCUSTOM_MBEDTLS=<path>` |
  | Build for Coverage Tests | `make [options] coverage` | `-DCoverage=1` |
  | Build W Debug Symbols | `make DEBUG=1` | `default` |

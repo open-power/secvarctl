@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 /* Copyright 2021 IBM Corp.*/
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -1125,4 +1124,3 @@ out:
 
 	return rc;
 }
-#endif

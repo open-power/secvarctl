@@ -27,7 +27,6 @@ set( SECVARCTL_VERSION "${SECVARCTL_VERSION_MAJOR}.${SECVARCTL_VERSION_MINOR}.${
 message( STATUS "Detected version string as ${SECVARCTL_VERSION}" )
 
 target_compile_definitions( secvarctl PRIVATE
-  SECVAR_CRYPTO_WRITE_FUNC
   SECVARCTL_VERSION=\"${SECVARCTL_VERSION}\"
 )
 

@@ -21,13 +21,6 @@ else
   _LDFLAGS += -s
 endif
 
-#use CRYPTO_READ_ONLY for smaller executable but limited functionality
-#removes all write functions (secvarctl generate, pem_to_der etc.)
-CRYPTO_READ_ONLY = 0
-ifeq ($(strip $(CRYPTO_READ_ONLY)), 0)
-  _CFLAGS += -DSECVAR_CRYPTO_WRITE_FUNC
-endif
-
 DYNAMIC_LIB = 0
 STATIC_LIB = 1
 ifeq ($(strip $(DYNAMIC_LIB)), 1)
@@ -77,8 +70,7 @@ endif
 
 libstb-secvar:
 	@mkdir -p $(LIB_DIR)
-	@$(MAKE) -C $(GUEST_EXTERNAL_BACKEND_DIR) LIB_DIR=$(LIB_DIRS) STATIC_LIB=$(STATIC_LIB) \
-	            CRYPTO_READ_ONLY=$(CRYPTO_READ_ONLY)
+	@$(MAKE) -C $(GUEST_EXTERNAL_BACKEND_DIR) LIB_DIR=$(LIB_DIRS) STATIC_LIB=$(STATIC_LIB)
 
 clean:
 	@$(MAKE) -C $(GUEST_EXTERNAL_BACKEND_DIR) clean
