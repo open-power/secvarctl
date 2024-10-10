@@ -21,13 +21,10 @@
 #include <mbedtls/oid.h>
 // Nick Child edited paths below
 // #include "libstb/crypto/pkcs7/pkcs7.h"
-// #ifdef SECVAR_CRYPTO_WRITE_FUNC
 // #include "libstb/crypto/pkcs7/pkcs7_write.h"
 // #endif
 #include "external/extraMbedtls/include/pkcs7.h"
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
 #include "external/extraMbedtls/include/pkcs7_write.h"
-#endif
 #include <mbedtls/platform.h>
 
 crypto_pkcs7_t *crypto_pkcs7_parse_der(const unsigned char *buf, const int buflen)
@@ -86,7 +83,6 @@ int crypto_pkcs7_signed_hash_verify(crypto_pkcs7_t *pkcs7, crypto_x509_t *x509,
 	return mbedtls_pkcs7_signed_hash_verify(pkcs7, x509, hash, hash_len);
 }
 
-#ifdef SECVAR_CRYPTO_WRITE_FUNC
 int crypto_pkcs7_generate_w_signature(unsigned char **pkcs7, size_t *pkcs7Size,
 				      const unsigned char *newData,
 				      size_t newDataSize, const char **crtFiles,
@@ -232,7 +228,7 @@ int crypto_convert_pem_to_der(const unsigned char *input, size_t ilen,
 {
 	return mbedtls_convert_pem_to_der(input, ilen, output, olen);
 }
-#endif
+
 int crypto_x509_get_der_len(crypto_x509_t *x509)
 {
 	return x509->raw.len;
