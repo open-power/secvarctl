@@ -36,7 +36,7 @@ jobs:
           submodules: 'recursive'
 
       - name: prepare qemu
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: "${{ matrix.arch }}"
 
@@ -49,9 +49,9 @@ jobs:
         run: docker run -t --platform linux/${{ matrix.arch }} -v $(pwd):/build ${IMAGE_NAME} bash -c "cd build && ci/build-rpm.sh"
 
       - name: upload rpms
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.arch }}
+          name: ${{ env.IMAGE_NAME }}
           path: rpms/*
 
   staticbuild:
@@ -67,7 +67,7 @@ jobs:
         with:
           submodules: 'recursive'
 
-      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-qemu-action@v3
         with:
           platforms: "${{ matrix.arch }}"
 
@@ -78,9 +78,9 @@ jobs:
         run: docker run -t --platform linux/${{ matrix.arch }} -v $(pwd):/build -e ARCH=${{ matrix.arch }} alpine-${{ matrix.arch }} bash -c "cd build && ci/build-static.sh"
 
       - name: upload rpms
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: static
+          name: static-${{ matrix.arch }}
           path: secvarctl.${{ matrix.arch }}
 
   release:
@@ -88,10 +88,10 @@ jobs:
     needs: ["rpmbuild", "staticbuild"]
     steps:
       - name: download rpms
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: generate release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
